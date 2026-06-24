@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dépôt de documents CCF</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -330,17 +331,22 @@ let gristConnecte = false;
 
 /* ── Init Grist ── */
 function initGrist() {
-  // Attendre que Grist soit prêt avant de vérifier sa présence
   if (typeof grist !== "undefined") {
     gristConnecte = true;
-    grist.ready({ requiredAccess: "full" });
+    // Le SDK Grist est chargé — on utilise ready() avec callback
+    grist.ready({
+      requiredAccess: "full",
+      onEditOptions: function() {}
+    });
 
-    Promise.all([
-      grist.docApi.fetchTable("Classes"),
-      grist.docApi.fetchTable("ConfigEpreuves"),
-      grist.docApi.fetchTable("Enseignants"),
-      grist.docApi.fetchTable("Eleves")
-    ]).then(([cls, epr, ens, elv]) => {
+    // Charger les tables après que Grist soit prêt
+    setTimeout(() => {
+      Promise.all([
+        grist.docApi.fetchTable("Classes"),
+        grist.docApi.fetchTable("ConfigEpreuves"),
+        grist.docApi.fetchTable("Enseignants"),
+        grist.docApi.fetchTable("Eleves")
+      ]).then(([cls, epr, ens, elv]) => {
     // Classes
     classes = [];
     if (cls && cls.code_classe) {
@@ -372,10 +378,12 @@ function initGrist() {
       }
     }
     peuplerSelects();
-    }).catch(() => {
-      document.getElementById("notice").style.display = "block";
-      chargerDemoMode();
-    });
+      }).catch((e) => {
+        console.error("Erreur fetchTable:", e);
+        document.getElementById("notice").style.display = "block";
+        chargerDemoMode();
+      });
+    }, 500);
   } else {
     document.getElementById("notice").style.display = "block";
     chargerDemoMode();
