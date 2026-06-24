@@ -330,20 +330,17 @@ let gristConnecte = false;
 
 /* ── Init Grist ── */
 function initGrist() {
-  if (typeof grist === "undefined") {
-    document.getElementById("notice").style.display = "block";
-    chargerDemoMode();
-    return;
-  }
-  gristConnecte = true;
-  grist.ready({ requiredAccess: "full" });
+  // Attendre que Grist soit prêt avant de vérifier sa présence
+  if (typeof grist !== "undefined") {
+    gristConnecte = true;
+    grist.ready({ requiredAccess: "full" });
 
-  Promise.all([
-    grist.docApi.fetchTable("Classes"),
-    grist.docApi.fetchTable("ConfigEpreuves"),
-    grist.docApi.fetchTable("Enseignants"),
-    grist.docApi.fetchTable("Eleves")
-  ]).then(([cls, epr, ens, elv]) => {
+    Promise.all([
+      grist.docApi.fetchTable("Classes"),
+      grist.docApi.fetchTable("ConfigEpreuves"),
+      grist.docApi.fetchTable("Enseignants"),
+      grist.docApi.fetchTable("Eleves")
+    ]).then(([cls, epr, ens, elv]) => {
     // Classes
     classes = [];
     if (cls && cls.code_classe) {
@@ -375,7 +372,14 @@ function initGrist() {
       }
     }
     peuplerSelects();
-  }).catch(() => chargerDemoMode());
+    }).catch(() => {
+      document.getElementById("notice").style.display = "block";
+      chargerDemoMode();
+    });
+  } else {
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  }
 }
 
 function chargerDemoMode() {
