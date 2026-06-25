@@ -343,17 +343,15 @@ let gristConnecte = false;
 const ANNEE = "2026-2027";
 
 /* ── Init Grist ── */
-function initGrist() {
-  if (typeof grist !== "undefined") {
-    gristConnecte = true;
-    grist.ready({ requiredAccess: "full" });
-    setTimeout(() => {
-      Promise.all([
-        grist.docApi.fetchTable("Enseignants"),
-        grist.docApi.fetchTable("Classes"),
-        grist.docApi.fetchTable("ConfigEpreuves"),
-        grist.docApi.fetchTable("AffectationEnseignants")
-      ]).then(([ens, cls, epr, aff]) => {
+function chargerDonnees() {
+  gristConnecte = true;
+  document.getElementById("notice").style.display = "none";
+  Promise.all([
+    grist.docApi.fetchTable("Enseignants"),
+    grist.docApi.fetchTable("Classes"),
+    grist.docApi.fetchTable("ConfigEpreuves"),
+    grist.docApi.fetchTable("AffectationEnseignants")
+  ]).then(([ens, cls, epr, aff]) => {
         // Enseignants
         enseignants = [];
         if (ens && ens.nom_prenom) {
@@ -397,11 +395,24 @@ function initGrist() {
           }
         }
         rendreSidebar();
-      }).catch(() => {
-        document.getElementById("notice").style.display = "block";
-        chargerDemoMode();
-      });
-    }, 500);
+  }).catch((e) => {
+    console.error("Erreur fetchTable:", e);
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  });
+}
+
+function initGrist() {
+  if (typeof grist !== "undefined") {
+    grist.ready({ requiredAccess: "full" });
+    // Utiliser onOptions comme déclencheur de chargement
+    grist.onOptions(function() {
+      chargerDonnees();
+    });
+    // Fallback si onOptions ne se déclenche pas
+    setTimeout(() => {
+      if (!gristConnecte) chargerDonnees();
+    }, 1500);
   } else {
     document.getElementById("notice").style.display = "block";
     chargerDemoMode();

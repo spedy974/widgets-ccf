@@ -330,23 +330,15 @@ let selectedEleves = [];  // {id, nom}
 let gristConnecte = false;
 
 /* ── Init Grist ── */
-function initGrist() {
-  if (typeof grist !== "undefined") {
-    gristConnecte = true;
-    // Le SDK Grist est chargé — on utilise ready() avec callback
-    grist.ready({
-      requiredAccess: "full",
-      onEditOptions: function() {}
-    });
-
-    // Charger les tables après que Grist soit prêt
-    setTimeout(() => {
-      Promise.all([
-        grist.docApi.fetchTable("Classes"),
-        grist.docApi.fetchTable("ConfigEpreuves"),
-        grist.docApi.fetchTable("Enseignants"),
-        grist.docApi.fetchTable("Eleves")
-      ]).then(([cls, epr, ens, elv]) => {
+function chargerDonnees() {
+  gristConnecte = true;
+  document.getElementById("notice").style.display = "none";
+  Promise.all([
+    grist.docApi.fetchTable("Classes"),
+    grist.docApi.fetchTable("ConfigEpreuves"),
+    grist.docApi.fetchTable("Enseignants"),
+    grist.docApi.fetchTable("Eleves")
+  ]).then(([cls, epr, ens, elv]) => {
     // Classes
     classes = [];
     if (cls && cls.code_classe) {
@@ -378,12 +370,22 @@ function initGrist() {
       }
     }
     peuplerSelects();
-      }).catch((e) => {
-        console.error("Erreur fetchTable:", e);
-        document.getElementById("notice").style.display = "block";
-        chargerDemoMode();
-      });
-    }, 500);
+  }).catch((e) => {
+    console.error("Erreur fetchTable:", e);
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  });
+}
+
+function initGrist() {
+  if (typeof grist !== "undefined") {
+    grist.ready({ requiredAccess: "full" });
+    grist.onOptions(function() {
+      chargerDonnees();
+    });
+    setTimeout(() => {
+      if (!gristConnecte) chargerDonnees();
+    }, 1500);
   } else {
     document.getElementById("notice").style.display = "block";
     chargerDemoMode();
