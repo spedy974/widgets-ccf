@@ -344,6 +344,7 @@ const ANNEE = "2026-2027";
 
 /* ── Init Grist ── */
 function chargerDonnees() {
+  if (gristConnecte) return; // Éviter les appels multiples
   gristConnecte = true;
   document.getElementById("notice").style.display = "none";
   Promise.all([
@@ -405,14 +406,24 @@ function chargerDonnees() {
 function initGrist() {
   if (typeof grist !== "undefined") {
     grist.ready({ requiredAccess: "full" });
-    // Utiliser onOptions comme déclencheur de chargement
+
+    // Méthode 1 : onOptions (déclenché par Grist au chargement)
     grist.onOptions(function() {
-      chargerDonnees();
-    });
-    // Fallback si onOptions ne se déclenche pas
-    setTimeout(() => {
       if (!gristConnecte) chargerDonnees();
-    }, 1500);
+    });
+
+    // Méthode 2 : onRecord (déclenché quand une ligne est sélectionnée)
+    grist.onRecord(function() {
+      if (!gristConnecte) chargerDonnees();
+    });
+
+    // Méthode 3 : fallback progressif
+    [1000, 2000, 3000].forEach(delay => {
+      setTimeout(() => {
+        if (!gristConnecte) chargerDonnees();
+      }, delay);
+    });
+
   } else {
     document.getElementById("notice").style.display = "block";
     chargerDemoMode();
