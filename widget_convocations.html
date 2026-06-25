@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convocations CCF</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    background: #f7f6f3;
+    color: #2c2c2a;
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a18;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #4a6cf7;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #notice {
+    background: #faeeda;
+    border: 1px solid #f5c47566;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #633806;
+    margin-bottom: 14px;
+    display: none;
+  }
+
+  .form-group { margin-bottom: 14px; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #5f5e5a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+  }
+
+  select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid #d3d1c7;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #2c2c2a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  select:focus {
+    border-color: #4a6cf7;
+    box-shadow: 0 0 0 3px rgba(74,108,247,0.1);
+  }
+
+  /* Aperçu convocation */
+  .apercu {
+    background: #fff;
+    border: 1px solid #e2e0d8;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    display: none;
+  }
+
+  .apercu.visible { display: block; }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .info-item {
+    background: #f7f6f3;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .info-item .info-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #888780;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .info-item .info-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a18;
+  }
+
+  .eleves-preview {
+    margin-top: 12px;
+  }
+
+  .eleves-preview .preview-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #5f5e5a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+
+  .eleve-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-bottom: 1px solid #f1efe8;
+    font-size: 13px;
+  }
+
+  .eleve-num {
+    font-size: 11px;
+    color: #b4b2a9;
+    width: 20px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Boutons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .btn-primary {
+    background: #4a6cf7;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    cursor: pointer;
+    flex: 1;
+    transition: opacity 0.15s;
+  }
+
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { background: #b4b2a9; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: #f1efe8;
+    color: #5f5e5a;
+    border: 1.5px solid #d3d1c7;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 16px;
+    cursor: pointer;
+  }
+
+  .btn-secondary:hover { background: #e8e6de; }
+
+  .empty-state {
+    text-align: center;
+    color: #b4b2a9;
+    font-size: 13px;
+    padding: 20px;
+    background: #fff;
+    border: 1px dashed #d3d1c7;
+    border-radius: 6px;
+    margin-top: 12px;
+  }
+
+  /* ═══ ZONE D'IMPRESSION ═══ */
+  #zone-impression {
+    display: none;
+  }
+
+  @media print {
+    body > *:not(#zone-impression) { display: none !important; }
+    #zone-impression { display: block !important; }
+
+    .convocation-page {
+      page-break-after: always;
+      padding: 20mm;
+      font-family: "Times New Roman", serif;
+    }
+
+    .convocation-page:last-child { page-break-after: avoid; }
+
+    .entete {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 12px;
+    }
+
+    .entete-gauche .etablissement {
+      font-size: 13pt;
+      font-weight: bold;
+    }
+
+    .entete-gauche .sous-titre {
+      font-size: 10pt;
+      color: #333;
+      margin-top: 4px;
+    }
+
+    .entete-droite {
+      text-align: right;
+      font-size: 10pt;
+    }
+
+    .titre-convocation {
+      text-align: center;
+      font-size: 16pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 20px 0 8px;
+      letter-spacing: 2px;
+    }
+
+    .sous-titre-convocation {
+      text-align: center;
+      font-size: 11pt;
+      margin-bottom: 24px;
+      color: #333;
+    }
+
+    .bloc-info {
+      border: 1px solid #000;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      background: #f9f9f9;
+    }
+
+    .bloc-info table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .bloc-info td {
+      padding: 4px 8px;
+      font-size: 11pt;
+    }
+
+    .bloc-info td:first-child {
+      font-weight: bold;
+      width: 180px;
+      color: #333;
+    }
+
+    .tableau-eleves {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    .tableau-eleves th {
+      background: #000;
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 10pt;
+      text-align: left;
+    }
+
+    .tableau-eleves td {
+      padding: 6px 10px;
+      font-size: 10pt;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .tableau-eleves tr:nth-child(even) td {
+      background: #f5f5f5;
+    }
+
+    .col-emargement {
+      width: 120px;
+      text-align: center;
+    }
+
+    .col-observations {
+      width: 150px;
+    }
+
+    .signature-bloc {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .signature-item {
+      text-align: center;
+      width: 200px;
+    }
+
+    .signature-item .sig-label {
+      font-size: 10pt;
+      font-weight: bold;
+      margin-bottom: 40px;
+    }
+
+    .signature-item .sig-line {
+      border-top: 1px solid #000;
+      padding-top: 4px;
+      font-size: 9pt;
+      color: #666;
+    }
+
+    .pied-page {
+      position: fixed;
+      bottom: 10mm;
+      left: 20mm;
+      right: 20mm;
+      font-size: 8pt;
+      color: #666;
+      text-align: center;
+      border-top: 1px solid #ccc;
+      padding-top: 4px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="notice">⚠ Mode démonstration — Grist non connecté.</div>
+
+<h1>📋 Publipostage — Convocations CCF</h1>
+
+<div class="form-group">
+  <label for="sel-convocation">Sélectionner une convocation</label>
+  <select id="sel-convocation" onchange="afficherApercu()">
+    <option value="">Choisir une convocation…</option>
+  </select>
+</div>
+
+<div class="apercu" id="apercu">
+  <div class="info-grid" id="info-grid"></div>
+  <div class="eleves-preview">
+    <div class="preview-title" id="preview-title"></div>
+    <div id="eleves-preview-list"></div>
+  </div>
+</div>
+
+<div id="empty-state" class="empty-state" style="display:none">
+  Aucun élève trouvé pour cette classe.
+</div>
+
+<div class="btn-row">
+  <button class="btn-secondary" onclick="resetForm()">Effacer</button>
+  <button class="btn-primary" id="btn-imprimer" onclick="genererPDF()" disabled>
+    🖨️ Générer et imprimer le PDF
+  </button>
+</div>
+
+<!-- Zone impression invisible à l'écran -->
+<div id="zone-impression"></div>
+
+<script>
+/* ── État ── */
+let convocations = [];
+let classes = [];
+let epreuves = [];
+let enseignants = [];
+let eleves = [];
+let gristConnecte = false;
+
+/* ── Init Grist ── */
+function chargerDonnees() {
+  if (gristConnecte) return;
+  gristConnecte = true;
+  document.getElementById("notice").style.display = "none";
+
+  grist.docApi.listTables().then(tables => {
+    const nomConv = tables.find(t => t.toLowerCase().includes("convocation")) || "Convocations";
+    return Promise.all([
+      grist.docApi.fetchTable(nomConv),
+      grist.docApi.fetchTable("Classes"),
+      grist.docApi.fetchTable("ConfigEpreuves"),
+      grist.docApi.fetchTable("Enseignants"),
+      grist.docApi.fetchTable("Eleves")
+    ]);
+  }).then(([conv, cls, epr, ens, elv]) => {
+    // Convocations
+    convocations = [];
+    if (conv && conv.id) {
+      for (let i = 0; i < conv.id.length; i++) {
+        convocations.push({
+          id: conv.id[i],
+          classeId: conv.classe ? conv.classe[i] : null,
+          epreuveId: conv.epreuve ? conv.epreuve[i] : null,
+          enseignantId: conv.enseignant ? conv.enseignant[i] : null,
+          date: conv.date_ccf ? conv.date_ccf[i] : "",
+          heure: conv.heure_debut ? conv.heure_debut[i] : "",
+          salle: conv.salle ? conv.salle[i] : "",
+          annee: conv.annee_scolaire ? conv.annee_scolaire[i] : "",
+          statut: conv.statut ? conv.statut[i] : ""
+        });
+      }
+    }
+    // Classes
+    classes = [];
+    if (cls && cls.id) {
+      for (let i = 0; i < cls.id.length; i++) {
+        classes.push({ id: cls.id[i], code: cls.code_classe[i] });
+      }
+    }
+    // Épreuves
+    epreuves = [];
+    if (epr && epr.id) {
+      for (let i = 0; i < epr.id.length; i++) {
+        epreuves.push({
+          id: epr.id[i],
+          repere: epr.repere[i],
+          libelle: epr.libelle[i]
+        });
+      }
+    }
+    // Enseignants
+    enseignants = [];
+    if (ens && ens.id) {
+      for (let i = 0; i < ens.id.length; i++) {
+        enseignants.push({ id: ens.id[i], nom: ens.nom_prenom[i] });
+      }
+    }
+    // Élèves
+    eleves = [];
+    if (elv && elv.id) {
+      for (let i = 0; i < elv.id.length; i++) {
+        eleves.push({
+          id: elv.id[i],
+          nom: elv.nom_prenom[i],
+          numero: elv.numero_ordre ? elv.numero_ordre[i] : i + 1,
+          classeId: elv.classe ? elv.classe[i] : null
+        });
+      }
+    }
+    peuplerSelect();
+  }).catch(e => {
+    console.error("Erreur:", e);
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  });
+}
+
+function chargerDemoMode() {
+  gristConnecte = false;
+  classes = [
+    { id: 1, code: "TBAER" }, { id: 2, code: "1BAER" },
+    { id: 5, code: "CAP1" }
+  ];
+  epreuves = [
+    { id: 1, repere: "E1-A", libelle: "Mathématiques" },
+    { id: 2, repere: "E1-B", libelle: "Sciences physiques et chimiques" },
+    { id: 3, repere: "EG2", libelle: "Mathématiques et physique-chimie" }
+  ];
+  enseignants = [{ id: 1, nom: "ETHEVE Joseph Expédit" }];
+  eleves = [
+    { id: 1, nom: "DUPONT Lucas", numero: 1, classeId: 1 },
+    { id: 2, nom: "MARTIN Emma", numero: 2, classeId: 1 },
+    { id: 3, nom: "BERNARD Noah", numero: 3, classeId: 1 },
+    { id: 4, nom: "LEROY Maxime", numero: 1, classeId: 2 },
+    { id: 5, nom: "MOREAU Jade", numero: 2, classeId: 2 },
+    { id: 6, nom: "FONTAINE Jules", numero: 1, classeId: 5 }
+  ];
+  convocations = [
+    { id: 1, classeId: 1, epreuveId: 1, enseignantId: 1, date: "2026-10-15", heure: "08h00", salle: "Salle 12", annee: "2026-2027", statut: "Brouillon" },
+    { id: 2, classeId: 1, epreuveId: 2, enseignantId: 1, date: "2026-10-22", heure: "10h00", salle: "Salle 12", annee: "2026-2027", statut: "Brouillon" },
+    { id: 3, classeId: 2, epreuveId: 1, enseignantId: 1, date: "2026-11-05", heure: "08h00", salle: "Salle 08", annee: "2026-2027", statut: "Brouillon" }
+  ];
+  peuplerSelect();
+}
+
+function initGrist() {
+  if (typeof grist !== "undefined") {
+    grist.ready({ requiredAccess: "full" });
+    grist.onOptions(() => { if (!gristConnecte) chargerDonnees(); });
+    grist.onRecord(() => { if (!gristConnecte) chargerDonnees(); });
+    [1000, 2000, 3000].forEach(d => setTimeout(() => { if (!gristConnecte) chargerDonnees(); }, d));
+  } else {
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  }
+}
+
+/* ── Peupler le select ── */
+function peuplerSelect() {
+  const sel = document.getElementById("sel-convocation");
+  sel.innerHTML = '<option value="">Choisir une convocation…</option>';
+  convocations.forEach(c => {
+    const cls = classes.find(x => x.id === c.classeId);
+    const epr = epreuves.find(x => x.id === c.epreuveId);
+    const dateStr = c.date ? new Date(c.date * 1000).toLocaleDateString("fr-FR") : "—";
+    const label = `${cls ? cls.code : '?'} — ${epr ? epr.repere : '?'} — ${dateStr}`;
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
+
+/* ── Aperçu ── */
+function afficherApercu() {
+  const id = parseInt(document.getElementById("sel-convocation").value);
+  const apercu = document.getElementById("apercu");
+  const emptyState = document.getElementById("empty-state");
+  const btn = document.getElementById("btn-imprimer");
+
+  if (!id) {
+    apercu.classList.remove("visible");
+    emptyState.style.display = "none";
+    btn.disabled = true;
+    return;
+  }
+
+  const conv = convocations.find(c => c.id === id);
+  const cls = classes.find(x => x.id === conv.classeId);
+  const epr = epreuves.find(x => x.id === conv.epreuveId);
+  const ens = enseignants.find(x => x.id === conv.enseignantId);
+  const dateStr = conv.date ? new Date(conv.date * 1000).toLocaleDateString("fr-FR") : "—";
+
+  // Info grid
+  document.getElementById("info-grid").innerHTML = `
+    <div class="info-item">
+      <div class="info-label">Classe</div>
+      <div class="info-value">${cls ? cls.code : '—'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Épreuve</div>
+      <div class="info-value">${epr ? epr.repere + ' — ' + epr.libelle : '—'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Date</div>
+      <div class="info-value">${dateStr}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Heure</div>
+      <div class="info-value">${conv.heure || '—'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Salle</div>
+      <div class="info-value">${conv.salle || '—'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Enseignant</div>
+      <div class="info-value">${ens ? ens.nom : '—'}</div>
+    </div>
+  `;
+
+  // Liste élèves
+  const elevesClasse = eleves
+    .filter(e => e.classeId === conv.classeId)
+    .sort((a, b) => a.nom.localeCompare(b.nom));
+
+  if (elevesClasse.length === 0) {
+    apercu.classList.remove("visible");
+    emptyState.style.display = "block";
+    btn.disabled = true;
+    return;
+  }
+
+  document.getElementById("preview-title").textContent =
+    `${elevesClasse.length} élève${elevesClasse.length > 1 ? 's' : ''} convoqué${elevesClasse.length > 1 ? 's' : ''}`;
+
+  document.getElementById("eleves-preview-list").innerHTML =
+    elevesClasse.map((e, i) => `
+      <div class="eleve-preview-item">
+        <span class="eleve-num">${i + 1}</span>
+        <span>${e.nom}</span>
+      </div>
+    `).join("");
+
+  apercu.classList.add("visible");
+  emptyState.style.display = "none";
+  btn.disabled = false;
+}
+
+/* ── Génération PDF ── */
+function genererPDF() {
+  const id = parseInt(document.getElementById("sel-convocation").value);
+  if (!id) return;
+
+  const conv = convocations.find(c => c.id === id);
+  const cls = classes.find(x => x.id === conv.classeId);
+  const epr = epreuves.find(x => x.id === conv.epreuveId);
+  const ens = enseignants.find(x => x.id === conv.enseignantId);
+
+  const dateStr = conv.date
+    ? new Date(conv.date * 1000).toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+    : "—";
+
+  const elevesClasse = eleves
+    .filter(e => e.classeId === conv.classeId)
+    .sort((a, b) => a.nom.localeCompare(b.nom));
+
+  const today = new Date().toLocaleDateString("fr-FR");
+  const annee = conv.annee || "2026-2027";
+
+  const lignesEleves = elevesClasse.map((e, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${e.nom}</strong></td>
+      <td class="col-emargement"></td>
+      <td class="col-observations"></td>
+    </tr>
+  `).join("");
+
+  const html = `
+    <div class="convocation-page">
+
+      <div class="entete">
+        <div class="entete-gauche">
+          <div class="etablissement">Lycée Polyvalent Gérard Ethève</div>
+          <div class="sous-titre">La Réunion — Académie de La Réunion</div>
+          <div class="sous-titre">Année scolaire ${annee}</div>
+        </div>
+        <div class="entete-droite">
+          <div>Saint-Paul, le ${today}</div>
+          <div style="margin-top:8px;font-weight:bold">DOCUMENT CONFIDENTIEL</div>
+        </div>
+      </div>
+
+      <div class="titre-convocation">Convocation CCF</div>
+      <div class="sous-titre-convocation">
+        Contrôle en Cours de Formation — ${cls ? cls.code : ''} — ${epr ? epr.repere : ''}
+      </div>
+
+      <div class="bloc-info">
+        <table>
+          <tr>
+            <td>Classe :</td>
+            <td>${cls ? cls.code : '—'}</td>
+            <td>Épreuve :</td>
+            <td>${epr ? epr.repere + ' — ' + epr.libelle : '—'}</td>
+          </tr>
+          <tr>
+            <td>Date :</td>
+            <td>${dateStr}</td>
+            <td>Heure :</td>
+            <td>${conv.heure || '—'}</td>
+          </tr>
+          <tr>
+            <td>Salle :</td>
+            <td>${conv.salle || '—'}</td>
+            <td>Enseignant :</td>
+            <td>${ens ? ens.nom : '—'}</td>
+          </tr>
+          <tr>
+            <td>Nombre d'élèves :</td>
+            <td colspan="3">${elevesClasse.length} élève${elevesClasse.length > 1 ? 's' : ''}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="font-size:10pt;margin-bottom:12px">
+        Les élèves ci-dessous sont convoqués à l'épreuve de CCF mentionnée. 
+        Ils devront se présenter munis de leur carte d'étudiant et du matériel nécessaire.
+      </p>
+
+      <table class="tableau-eleves">
+        <thead>
+          <tr>
+            <th style="width:30px">N°</th>
+            <th>Nom et Prénom</th>
+            <th class="col-emargement">Émargement</th>
+            <th class="col-observations">Observations</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lignesEleves}
+        </tbody>
+      </table>
+
+      <div class="signature-bloc">
+        <div class="signature-item">
+          <div class="sig-label">L'enseignant</div>
+          <div class="sig-line">${ens ? ens.nom : ''}</div>
+        </div>
+        <div class="signature-item">
+          <div class="sig-label">Le chef d'établissement</div>
+          <div class="sig-line">Signature et cachet</div>
+        </div>
+        <div class="signature-item">
+          <div class="sig-label">Le RRUPN</div>
+          <div class="sig-line">ETHEVE Joseph Expédit</div>
+        </div>
+      </div>
+
+      <div class="pied-page">
+        Lycée Polyvalent Gérard Ethève — CCF ${annee} — ${cls ? cls.code : ''} — ${epr ? epr.repere : ''} — Généré le ${today}
+      </div>
+
+    </div>
+  `;
+
+  document.getElementById("zone-impression").innerHTML = html;
+  window.print();
+}
+
+/* ── Reset ── */
+function resetForm() {
+  document.getElementById("sel-convocation").value = "";
+  document.getElementById("apercu").classList.remove("visible");
+  document.getElementById("empty-state").style.display = "none";
+  document.getElementById("btn-imprimer").disabled = true;
+  document.getElementById("zone-impression").innerHTML = "";
+}
+
+document.addEventListener("DOMContentLoaded", initGrist);
+</script>
+</body>
+</html>
