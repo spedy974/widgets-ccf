@@ -364,8 +364,14 @@
 
 <div class="btn-row">
   <button class="btn-secondary" onclick="resetForm()">Effacer</button>
-  <button class="btn-primary" id="btn-imprimer" onclick="genererPDF()" disabled>
-    🖨️ Générer et imprimer le PDF
+  <button class="btn-primary" id="btn-listing" onclick="genererPDF('listing')" disabled>
+    🖨️ Listing global
+  </button>
+  <button class="btn-primary" id="btn-indiv" onclick="genererPDF('individuel')" disabled style="background:#1D9E75">
+    👤 Convocations individuelles
+  </button>
+  <button class="btn-primary" id="btn-complet" onclick="genererPDF('complet')" disabled style="background:#7c3aed">
+    📄 PDF complet (listing + convocations)
   </button>
 </div>
 
@@ -592,7 +598,8 @@ function afficherApercu() {
 }
 
 /* ── Génération PDF ── */
-function genererPDF() {
+function genererPDF(mode) {
+  mode = mode || 'complet';
   const id = parseInt(document.getElementById("sel-convocation").value);
   if (!id) return;
 
@@ -621,9 +628,9 @@ function genererPDF() {
     </tr>
   `).join("");
 
-  const html = `
+  // ── Page listing global ──
+  const pageListingGlobal = `
     <div class="convocation-page">
-
       <div class="entete">
         <div class="entete-gauche">
           <div class="etablissement">Lycée Polyvalent Gérard Ethève</div>
@@ -635,31 +642,23 @@ function genererPDF() {
           <div style="margin-top:8px;font-weight:bold">DOCUMENT CONFIDENTIEL</div>
         </div>
       </div>
-
-      <div class="titre-convocation">Convocation CCF</div>
+      <div class="titre-convocation">Listing de convocation CCF</div>
       <div class="sous-titre-convocation">
-        Contrôle en Cours de Formation — ${cls ? cls.code : ''} — ${epr ? epr.repere : ''}
+        ${cls ? cls.code : ''} — ${epr ? epr.repere + ' — ' + epr.libelle : ''}
       </div>
-
       <div class="bloc-info">
         <table>
           <tr>
-            <td>Classe :</td>
-            <td>${cls ? cls.code : '—'}</td>
-            <td>Épreuve :</td>
-            <td>${epr ? epr.repere + ' — ' + epr.libelle : '—'}</td>
+            <td>Classe :</td><td>${cls ? cls.code : '—'}</td>
+            <td>Épreuve :</td><td>${epr ? epr.repere + ' — ' + epr.libelle : '—'}</td>
           </tr>
           <tr>
-            <td>Date :</td>
-            <td>${dateStr}</td>
-            <td>Heure :</td>
-            <td>${conv.heure || '—'}</td>
+            <td>Date :</td><td>${dateStr}</td>
+            <td>Heure :</td><td>${conv.heure || '—'}</td>
           </tr>
           <tr>
-            <td>Salle :</td>
-            <td>${conv.salle || '—'}</td>
-            <td>Enseignant :</td>
-            <td>${ens ? ens.nom : '—'}</td>
+            <td>Salle :</td><td>${conv.salle || '—'}</td>
+            <td>Enseignant :</td><td>${ens ? ens.nom : '—'}</td>
           </tr>
           <tr>
             <td>Nombre d'élèves :</td>
@@ -667,12 +666,6 @@ function genererPDF() {
           </tr>
         </table>
       </div>
-
-      <p style="font-size:10pt;margin-bottom:12px">
-        Les élèves ci-dessous sont convoqués à l'épreuve de CCF mentionnée. 
-        Ils devront se présenter munis de leur carte d'étudiant et du matériel nécessaire.
-      </p>
-
       <table class="tableau-eleves">
         <thead>
           <tr>
@@ -682,11 +675,8 @@ function genererPDF() {
             <th class="col-observations">Observations</th>
           </tr>
         </thead>
-        <tbody>
-          ${lignesEleves}
-        </tbody>
+        <tbody>${lignesEleves}</tbody>
       </table>
-
       <div class="signature-bloc">
         <div class="signature-item">
           <div class="sig-label">L'enseignant</div>
@@ -701,13 +691,89 @@ function genererPDF() {
           <div class="sig-line">ETHEVE Joseph Expédit</div>
         </div>
       </div>
-
       <div class="pied-page">
         Lycée Polyvalent Gérard Ethève — CCF ${annee} — ${cls ? cls.code : ''} — ${epr ? epr.repere : ''} — Généré le ${today}
       </div>
+    </div>`;
 
+  // ── Pages convocations individuelles ──
+  const pagesIndividuelles = elevesClasse.map((eleve, idx) => `
+    <div class="convocation-page">
+      <div class="entete">
+        <div class="entete-gauche">
+          <div class="etablissement">Lycée Polyvalent Gérard Ethève</div>
+          <div class="sous-titre">La Réunion — Académie de La Réunion</div>
+          <div class="sous-titre">Année scolaire ${annee}</div>
+        </div>
+        <div class="entete-droite">
+          <div>Saint-Paul, le ${today}</div>
+          <div style="margin-top:8px;font-weight:bold">DOCUMENT CONFIDENTIEL</div>
+        </div>
+      </div>
+
+      <div class="titre-convocation">Convocation individuelle CCF</div>
+      <div class="sous-titre-convocation">
+        Contrôle en Cours de Formation
+      </div>
+
+      <div class="bloc-info" style="margin-bottom:24px">
+        <table>
+          <tr>
+            <td style="font-size:12pt;font-weight:bold;color:#000">Élève :</td>
+            <td colspan="3" style="font-size:14pt;font-weight:bold;color:#000">${eleve.nom}</td>
+          </tr>
+          <tr>
+            <td>Classe :</td><td>${cls ? cls.code : '—'}</td>
+            <td>Épreuve :</td><td>${epr ? epr.repere + ' — ' + epr.libelle : '—'}</td>
+          </tr>
+          <tr>
+            <td>Date :</td><td>${dateStr}</td>
+            <td>Heure :</td><td>${conv.heure || '—'}</td>
+          </tr>
+          <tr>
+            <td>Salle :</td><td>${conv.salle || '—'}</td>
+            <td>Enseignant :</td><td>${ens ? ens.nom : '—'}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="font-size:11pt;margin-bottom:24px;line-height:1.6">
+        Vous êtes convoqué(e) à l'épreuve de Contrôle en Cours de Formation (CCF) 
+        mentionnée ci-dessus. Vous devrez vous présenter muni(e) de votre carte d'étudiant 
+        et du matériel nécessaire à l'épreuve.
+      </p>
+
+      <p style="font-size:10pt;margin-bottom:32px;color:#333">
+        Tout retard ou absence devra être justifié auprès de l'administration dans les 
+        48 heures suivant l'épreuve.
+      </p>
+
+      <div class="signature-bloc">
+        <div class="signature-item">
+          <div class="sig-label">L'élève (accusé de réception)</div>
+          <div class="sig-line">${eleve.nom}</div>
+        </div>
+        <div class="signature-item">
+          <div class="sig-label">L'enseignant</div>
+          <div class="sig-line">${ens ? ens.nom : ''}</div>
+        </div>
+        <div class="signature-item">
+          <div class="sig-label">Le RRUPN</div>
+          <div class="sig-line">ETHEVE Joseph Expédit</div>
+        </div>
+      </div>
+
+      <div class="pied-page">
+        Lycée Polyvalent Gérard Ethève — CCF ${annee} — ${cls ? cls.code : ''} — ${epr ? epr.repere : ''} — ${eleve.nom} — Généré le ${today}
+      </div>
     </div>
-  `;
+  `).join("");
+
+  // ── Assembler selon le mode ──
+  let html = "";
+  if (mode === 'listing') html = pageListingGlobal;
+  else if (mode === 'individuel') html = pagesIndividuelles;
+  else html = pageListingGlobal + pagesIndividuelles; // complet
 
   document.getElementById("zone-impression").innerHTML = html;
   window.print();
@@ -718,7 +784,7 @@ function resetForm() {
   document.getElementById("sel-convocation").value = "";
   document.getElementById("apercu").classList.remove("visible");
   document.getElementById("empty-state").style.display = "none";
-  document.getElementById("btn-imprimer").disabled = true;
+  ['btn-listing','btn-indiv','btn-complet'].forEach(id => document.getElementById(id).disabled = true);
   document.getElementById("zone-impression").innerHTML = "";
 }
 
