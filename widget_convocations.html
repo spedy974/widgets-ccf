@@ -364,7 +364,7 @@
 
 <div class="btn-row">
   <button class="btn-secondary" onclick="resetForm()">Effacer</button>
-  <button class="btn-primary" id="btn-listing" onclick="genererPDF('listing')" disabled>
+  <button class="btn-primary" id="btn-listing" onclick="genererPDF('listing')" disabled style="background:#1a5fc8">
     🖨️ Listing global
   </button>
   <button class="btn-primary" id="btn-indiv" onclick="genererPDF('individuel')" disabled style="background:#1D9E75">
@@ -575,7 +575,7 @@ function afficherApercu() {
   if (elevesClasse.length === 0) {
     apercu.classList.remove("visible");
     emptyState.style.display = "block";
-    btn.disabled = true;
+    ['btn-listing','btn-indiv','btn-complet'].forEach(b => document.getElementById(b).disabled = true);
     return;
   }
 
