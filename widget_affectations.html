@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Affectations des classes</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    background: #f7f6f3;
+    color: #2c2c2a;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    grid-column: 1 / -1;
+    background: #fff;
+    border-bottom: 2px solid #4a6cf7;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a18;
+  }
+
+  header .annee {
+    margin-left: auto;
+    font-size: 12px;
+    color: #5f5e5a;
+    font-weight: 600;
+  }
+
+  /* Panneau gauche — liste enseignants */
+  .sidebar {
+    background: #fff;
+    border-right: 1px solid #e2e0d8;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #888780;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 8px 14px 6px;
+  }
+
+  .enseignant-item {
+    padding: 9px 14px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.1s;
+  }
+
+  .enseignant-item:hover { background: #f7f6f3; }
+
+  .enseignant-item.active {
+    background: #eef1fe;
+    border-left-color: #4a6cf7;
+  }
+
+  .enseignant-item .nom {
+    font-weight: 600;
+    font-size: 13px;
+    color: #1a1a18;
+  }
+
+  .enseignant-item .matiere {
+    font-size: 11px;
+    color: #888780;
+    margin-top: 2px;
+  }
+
+  .enseignant-item .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    background: #e8f0fe;
+    color: #1a5fc8;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-top: 3px;
+  }
+
+  /* Panneau droit */
+  .main {
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: #b4b2a9;
+    font-size: 13px;
+    padding: 40px 0;
+  }
+
+  /* Carte enseignant sélectionné */
+  .ens-card {
+    background: #fff;
+    border: 1px solid #e2e0d8;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ens-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #4a6cf7;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ens-info .nom { font-weight: 700; font-size: 14px; }
+  .ens-info .detail { font-size: 12px; color: #888780; margin-top: 2px; }
+
+  /* Affectations existantes */
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #5f5e5a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .affectations-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .affectation-row {
+    background: #fff;
+    border: 1px solid #e2e0d8;
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .affectation-row .classe-tag {
+    font-weight: 700;
+    background: #e8f0fe;
+    color: #1a5fc8;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    min-width: 70px;
+    text-align: center;
+  }
+
+  .affectation-row .epreuve-tag {
+    background: #f1efe8;
+    color: #5f5e5a;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    flex: 1;
+  }
+
+  .affectation-row .annee-tag {
+    font-size: 11px;
+    color: #b4b2a9;
+  }
+
+  .btn-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #d3d1c7;
+    font-size: 16px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.1s, background 0.1s;
+    line-height: 1;
+  }
+
+  .btn-delete:hover { color: #e24b4a; background: #fcebeb; }
+
+  .no-affectation {
+    text-align: center;
+    color: #b4b2a9;
+    font-size: 13px;
+    padding: 16px;
+    background: #fff;
+    border: 1px dashed #d3d1c7;
+    border-radius: 6px;
+  }
+
+  /* Formulaire d'ajout */
+  .add-form {
+    background: #fff;
+    border: 1px solid #e2e0d8;
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 120px auto;
+    gap: 8px;
+    align-items: end;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #5f5e5a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+
+  select, input[type="text"] {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1.5px solid #d3d1c7;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #2c2c2a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  select:focus, input:focus {
+    border-color: #4a6cf7;
+    box-shadow: 0 0 0 3px rgba(74,108,247,0.1);
+  }
+
+  select.error { border-color: #e24b4a; }
+
+  .btn-add {
+    background: #4a6cf7;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+    height: 36px;
+  }
+
+  .btn-add:hover { opacity: 0.88; }
+  .btn-add:disabled { background: #b4b2a9; cursor: not-allowed; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: transform 0.25s, opacity 0.25s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.success { background: #1D9E75; color: #fff; }
+  #toast.error-t { background: #a32d2d; color: #fff; }
+
+  #notice {
+    grid-column: 1/-1;
+    background: #faeeda;
+    border-bottom: 1px solid #f5c47566;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: #633806;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="notice">⚠ Mode démonstration — Grist non connecté.</div>
+
+<header>
+  <span style="font-size:20px">👥</span>
+  <h1>Affectation des classes aux enseignants</h1>
+  <span class="annee" id="annee-label">2026-2027</span>
+</header>
+
+<div class="sidebar">
+  <div class="sidebar-title">Enseignants</div>
+  <div id="enseignants-list"></div>
+</div>
+
+<div class="main" id="main-content">
+  <div class="empty-state">← Sélectionne un enseignant pour voir et gérer ses affectations.</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ── État ── */
+let enseignants = [];
+let classes = [];
+let epreuves = [];
+let affectations = [];
+let selectedEnsId = null;
+let gristConnecte = false;
+const ANNEE = "2026-2027";
+
+/* ── Init Grist ── */
+function initGrist() {
+  if (typeof grist !== "undefined") {
+    gristConnecte = true;
+    grist.ready({ requiredAccess: "full" });
+    setTimeout(() => {
+      Promise.all([
+        grist.docApi.fetchTable("Enseignants"),
+        grist.docApi.fetchTable("Classes"),
+        grist.docApi.fetchTable("ConfigEpreuves"),
+        grist.docApi.fetchTable("AffectationEnseignants")
+      ]).then(([ens, cls, epr, aff]) => {
+        // Enseignants
+        enseignants = [];
+        if (ens && ens.nom_prenom) {
+          for (let i = 0; i < ens.id.length; i++) {
+            enseignants.push({
+              id: ens.id[i],
+              nom: ens.nom_prenom[i],
+              matiere: ens.matiere_principale ? ens.matiere_principale[i] : "",
+              role: ens.role ? ens.role[i] : "Enseignant"
+            });
+          }
+        }
+        // Classes
+        classes = [];
+        if (cls && cls.code_classe) {
+          for (let i = 0; i < cls.id.length; i++) {
+            classes.push({ id: cls.id[i], code: cls.code_classe[i] });
+          }
+        }
+        // Épreuves
+        epreuves = [];
+        if (epr && epr.repere) {
+          for (let i = 0; i < epr.id.length; i++) {
+            epreuves.push({
+              id: epr.id[i],
+              label: epr.repere[i] + " — " + epr.libelle[i]
+            });
+          }
+        }
+        // Affectations
+        affectations = [];
+        if (aff && aff.id) {
+          for (let i = 0; i < aff.id.length; i++) {
+            affectations.push({
+              id: aff.id[i],
+              enseignantId: aff.enseignant ? aff.enseignant[i] : null,
+              classeId: aff.classe ? aff.classe[i] : null,
+              epreuveId: aff.epreuve ? aff.epreuve[i] : null,
+              annee: aff.annee_scolaire ? aff.annee_scolaire[i] : ANNEE
+            });
+          }
+        }
+        rendreSidebar();
+      }).catch(() => {
+        document.getElementById("notice").style.display = "block";
+        chargerDemoMode();
+      });
+    }, 500);
+  } else {
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  }
+}
+
+function chargerDemoMode() {
+  enseignants = [
+    { id: 1, nom: "ETHEVE Joseph Expédit", matiere: "Maths-Sciences", role: "RRUPN" },
+    { id: 2, nom: "BOULANGER Jean", matiere: "Lettres-Histoire", role: "Enseignant" },
+    { id: 3, nom: "MARTIN Sophie", matiere: "Anglais", role: "Enseignant" },
+    { id: 4, nom: "DUBOIS Paul", matiere: "Atelier MVA", role: "Enseignant" }
+  ];
+  classes = [
+    { id: 1, code: "TBAER" }, { id: 2, code: "1BAER" },
+    { id: 3, code: "1BMVA1" }, { id: 4, code: "1BMVA2" },
+    { id: 5, code: "CAP1" }, { id: 6, code: "CAP2" }
+  ];
+  epreuves = [
+    { id: 1, label: "E1-A — Mathématiques" },
+    { id: 2, label: "E1-B — Sciences physiques" },
+    { id: 3, label: "EG2 — Maths et physique-chimie" },
+    { id: 4, label: "E3-A — Réalisation d'intervention" }
+  ];
+  affectations = [
+    { id: 1, enseignantId: 1, classeId: 1, epreuveId: 1, annee: ANNEE },
+    { id: 2, enseignantId: 1, classeId: 2, epreuveId: 2, annee: ANNEE },
+    { id: 3, enseignantId: 2, classeId: 1, epreuveId: 3, annee: ANNEE }
+  ];
+  rendreSidebar();
+}
+
+/* ── Sidebar ── */
+function rendreSidebar() {
+  const container = document.getElementById("enseignants-list");
+  container.innerHTML = enseignants.map(e => {
+    const nbAff = affectations.filter(a => a.enseignantId === e.id && a.annee === ANNEE).length;
+    return `
+      <div class="enseignant-item ${selectedEnsId === e.id ? 'active' : ''}"
+           onclick="selectionnerEnseignant(${e.id})">
+        <div class="nom">${e.nom}</div>
+        <div class="matiere">${e.matiere || '—'}</div>
+        ${nbAff > 0 ? `<span class="badge">${nbAff} affectation${nbAff > 1 ? 's' : ''}</span>` : ''}
+      </div>`;
+  }).join("");
+}
+
+/* ── Sélection enseignant ── */
+function selectionnerEnseignant(id) {
+  selectedEnsId = id;
+  rendreSidebar();
+  rendreMain();
+}
+
+/* ── Panneau principal ── */
+function rendreMain() {
+  const ens = enseignants.find(e => e.id === selectedEnsId);
+  if (!ens) return;
+
+  const affEns = affectations.filter(a => a.enseignantId === selectedEnsId && a.annee === ANNEE);
+  const initiales = ens.nom.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+
+  const main = document.getElementById("main-content");
+  main.innerHTML = `
+    <!-- Carte enseignant -->
+    <div class="ens-card">
+      <div class="ens-avatar">${initiales}</div>
+      <div class="ens-info">
+        <div class="nom">${ens.nom}</div>
+        <div class="detail">${ens.matiere || '—'} · ${ens.role}</div>
+      </div>
+    </div>
+
+    <!-- Affectations existantes -->
+    <div>
+      <div class="section-title">
+        Affectations ${ANNEE}
+        <span style="font-size:11px;color:#b4b2a9;font-weight:400">${affEns.length} affectation${affEns.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="affectations-grid" id="affectations-grid">
+        ${affEns.length === 0
+          ? '<div class="no-affectation">Aucune affectation pour cette année. Utilisez le formulaire ci-dessous pour en ajouter.</div>'
+          : affEns.map(a => {
+              const cls = classes.find(c => c.id === a.classeId);
+              const epr = epreuves.find(e => e.id === a.epreuveId);
+              return `
+                <div class="affectation-row">
+                  <span class="classe-tag">${cls ? cls.code : '?'}</span>
+                  <span class="epreuve-tag">${epr ? epr.label : '?'}</span>
+                  <span class="annee-tag">${a.annee}</span>
+                  <button class="btn-delete" onclick="supprimerAffectation(${a.id})" title="Supprimer">×</button>
+                </div>`;
+            }).join("")
+        }
+      </div>
+    </div>
+
+    <!-- Formulaire ajout -->
+    <div class="add-form">
+      <div class="section-title" style="margin-bottom:12px">Ajouter une affectation</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Classe</label>
+          <select id="add-classe">
+            <option value="">Choisir…</option>
+            ${classes.map(c => `<option value="${c.id}">${c.code}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Épreuve</label>
+          <select id="add-epreuve">
+            <option value="">Choisir…</option>
+            ${epreuves.map(e => `<option value="${e.id}">${e.label}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Année scolaire</label>
+          <input type="text" id="add-annee" value="${ANNEE}">
+        </div>
+        <button class="btn-add" onclick="ajouterAffectation()">+ Affecter</button>
+      </div>
+    </div>
+  `;
+}
+
+/* ── Ajouter affectation ── */
+async function ajouterAffectation() {
+  const classeId = parseInt(document.getElementById("add-classe").value);
+  const epreuveId = parseInt(document.getElementById("add-epreuve").value);
+  const annee = document.getElementById("add-annee").value.trim();
+
+  if (!classeId || !epreuveId || !annee) {
+    showToast("Remplis tous les champs", "error-t");
+    return;
+  }
+
+  // Vérifier doublon
+  const doublon = affectations.find(a =>
+    a.enseignantId === selectedEnsId &&
+    a.classeId === classeId &&
+    a.epreuveId === epreuveId &&
+    a.annee === annee
+  );
+  if (doublon) {
+    showToast("Cette affectation existe déjà", "error-t");
+    return;
+  }
+
+  try {
+    let newId = Date.now();
+    if (gristConnecte) {
+      const result = await grist.docApi.applyUserActions([["AddRecord", "AffectationEnseignants", null, {
+        enseignant: selectedEnsId,
+        classe: classeId,
+        epreuve: epreuveId,
+        annee_scolaire: annee
+      }]]);
+      newId = result.retValues[0];
+    }
+    affectations.push({ id: newId, enseignantId: selectedEnsId, classeId, epreuveId, annee });
+    rendreSidebar();
+    rendreMain();
+    showToast("✓ Affectation ajoutée", "success");
+  } catch(e) {
+    showToast("Erreur d'enregistrement", "error-t");
+    console.error(e);
+  }
+}
+
+/* ── Supprimer affectation ── */
+async function supprimerAffectation(id) {
+  if (!confirm("Supprimer cette affectation ?")) return;
+  try {
+    if (gristConnecte) {
+      await grist.docApi.applyUserActions([["RemoveRecord", "AffectationEnseignants", id]]);
+    }
+    affectations = affectations.filter(a => a.id !== id);
+    rendreSidebar();
+    rendreMain();
+    showToast("Affectation supprimée", "success");
+  } catch(e) {
+    showToast("Erreur de suppression", "error-t");
+    console.error(e);
+  }
+}
+
+/* ── Toast ── */
+function showToast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + type;
+  setTimeout(() => { t.className = ""; }, 2800);
+}
+
+document.addEventListener("DOMContentLoaded", initGrist);
+</script>
+</body>
+</html>
