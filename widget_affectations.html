@@ -344,15 +344,28 @@ const ANNEE = "2026-2027";
 
 /* ── Init Grist ── */
 function chargerDonnees() {
-  if (gristConnecte) return; // Éviter les appels multiples
+  if (gristConnecte) return;
   gristConnecte = true;
   document.getElementById("notice").style.display = "none";
-  Promise.all([
-    grist.docApi.fetchTable("Enseignants"),
-    grist.docApi.fetchTable("Classes"),
-    grist.docApi.fetchTable("ConfigEpreuves"),
-    grist.docApi.fetchTable("AffectationEnseignants")
-  ]).then(([ens, cls, epr, aff]) => {
+
+  // Lister toutes les tables disponibles d'abord
+  grist.docApi.listTables().then(tables => {
+    console.log("Tables disponibles:", tables);
+
+    // Trouver le nom exact de la table d'affectations
+    const nomAff = tables.find(t =>
+      t.toLowerCase().includes("affectation")
+    ) || "AffectationEnseignants";
+
+    console.log("Table affectations trouvée:", nomAff);
+
+    return Promise.all([
+      grist.docApi.fetchTable("Enseignants"),
+      grist.docApi.fetchTable("Classes"),
+      grist.docApi.fetchTable("ConfigEpreuves"),
+      grist.docApi.fetchTable(nomAff)
+    ]);
+  }).then(([ens, cls, epr, aff]) => {
         // Enseignants
         enseignants = [];
         if (ens && ens.nom_prenom) {
@@ -397,7 +410,8 @@ function chargerDonnees() {
         }
         rendreSidebar();
   }).catch((e) => {
-    console.error("Erreur fetchTable:", e);
+    console.error("Erreur chargement:", e);
+    gristConnecte = false;
     document.getElementById("notice").style.display = "block";
     chargerDemoMode();
   });
