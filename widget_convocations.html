@@ -526,12 +526,10 @@ function afficherApercu() {
   const id = parseInt(document.getElementById("sel-convocation").value);
   const apercu = document.getElementById("apercu");
   const emptyState = document.getElementById("empty-state");
-  const btn = document.getElementById("btn-imprimer");
-
   if (!id) {
     apercu.classList.remove("visible");
     emptyState.style.display = "none";
-    btn.disabled = true;
+    ['btn-listing','btn-indiv','btn-complet'].forEach(b => document.getElementById(b).disabled = true);
     return;
   }
 
@@ -594,7 +592,7 @@ function afficherApercu() {
 
   apercu.classList.add("visible");
   emptyState.style.display = "none";
-  btn.disabled = false;
+  ['btn-listing','btn-indiv','btn-complet'].forEach(b => document.getElementById(b).disabled = false);
 }
 
 /* ── Génération PDF ── */
