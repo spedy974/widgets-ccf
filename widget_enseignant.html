@@ -108,11 +108,63 @@
   .tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
   .tag { background: #e8ecfe; color: #2d4ecc; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
   .tag button { background: none; border: none; cursor: pointer; color: #2d4ecc; font-size: 13px; padding: 0; line-height: 1; }
+
+  /* ÉCRAN IDENTIFICATION */
+  #ecran-identification {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg); z-index: 1000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  #ecran-identification .id-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px 28px;
+    width: 100%; max-width: 380px; text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+  }
+  #ecran-identification .id-logo { font-size: 40px; margin-bottom: 12px; }
+  #ecran-identification h2 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+  #ecran-identification .id-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+  #ecran-identification select {
+    width: 100%; padding: 10px 12px; border: 2px solid var(--border);
+    border-radius: 8px; font-size: 14px; color: var(--text);
+    background: var(--card); outline: none; margin-bottom: 16px;
+    transition: border-color 0.15s;
+  }
+  #ecran-identification select:focus { border-color: var(--blue); }
+  #ecran-identification .btn-connexion {
+    width: 100%; padding: 11px; background: var(--blue); color: #fff;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  #ecran-identification .btn-connexion:hover { opacity: 0.88; }
+  #ecran-identification .btn-connexion:disabled { background: var(--muted); cursor: not-allowed; }
+  #ecran-identification .id-footer { font-size: 11px; color: var(--muted); margin-top: 16px; line-height: 1.6; }
 </style>
 </head>
 <body>
 
 <div id="notice">⚠ Mode démonstration — Grist non connecté.</div>
+
+<!-- ÉCRAN IDENTIFICATION -->
+<div id="ecran-identification">
+  <div class="id-card">
+    <div class="id-logo">👨‍🏫</div>
+    <h2>Mon espace CCF</h2>
+    <div class="id-subtitle">Lycée Polyvalent Gérard Ethève — 2026-2027</div>
+    <select id="sel-identite" onchange="document.getElementById('btn-connexion').disabled = !this.value">
+      <option value="">Sélectionner votre nom…</option>
+    </select>
+    <button class="btn-connexion" id="btn-connexion" onclick="confirmerIdentite()" disabled>
+      Accéder à mon espace →
+    </button>
+    <div class="id-footer">
+      Votre sélection sera mémorisée pour vos prochaines visites.<br>
+      En cas d'erreur, actualisez la page.
+    </div>
+  </div>
+</div>
 
 <!-- HEADER -->
 <div class="app-header">
@@ -359,7 +411,13 @@ function chargerDonnees() {
     epreuves = parseTable(epr);
     eleves = parseTable(elv);
 
-    // Identifier l'utilisateur connecté via son email Grist
+    // Stocker les données brutes pour les utiliser après identification
+    window._pl_raw    = pl;
+    window._nt_raw    = nt;
+    window._conv_raw  = conv;
+    window._stock_raw = stock;
+
+    // Tenter getUserProfile d'abord, sinon afficher l'écran de sélection
     const tryGetProfile = typeof grist.getUserProfile === "function"
       ? grist.getUserProfile()
       : Promise.resolve(null);
@@ -367,36 +425,43 @@ function chargerDonnees() {
     tryGetProfile.then(profile => {
       if (profile && profile.email) {
         monEmail = profile.email;
-        const moi = enseignants.find(e => e.email_academique === monEmail);
+        const moi = enseignants.find(e =>
+          e.email_academique && e.email_academique.toLowerCase() === monEmail.toLowerCase()
+        );
         if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
       }
-      // Si pas de profil détecté, on affiche quand même tout
-      document.getElementById("user-name").textContent = monNom || monEmail || "Mon espace CCF";
 
-      plannings = parseTable(pl).filter(p => !monId || p.enseignant === monId);
-      notes = parseTable(nt).filter(n => !monId || n.enseignant === monId);
-      convocations = parseTable(conv).filter(c => !monId || c.enseignant === monId);
-      stockageDocs = parseTable(stock).filter(s => !monId || s.enseignant === monId);
-
-      peuplerSelects();
-      rendreListePlanning();
-      rendreListeNotes();
-      rendreListeDocs();
-      peuplerConvocations();
-      updateBadges();
+      if (monId) {
+        // Profil détecté automatiquement
+        initialiserInterface();
+      } else {
+        // Pas de profil → vérifier localStorage puis afficher sélection
+        try {
+          const savedId = localStorage.getItem('ccf_enseignant_id');
+          const savedNom = localStorage.getItem('ccf_enseignant_nom');
+          if (savedId && savedNom) {
+            monId = parseInt(savedId);
+            monNom = savedNom;
+            initialiserInterface();
+            return;
+          }
+        } catch(e) {}
+        // Afficher l'écran de sélection
+        afficherEcranIdentification();
+      }
     }).catch(() => {
-      // getUserProfile non disponible — on continue sans filtrer par utilisateur
-      document.getElementById("user-name").textContent = "Mon espace CCF";
-      plannings = parseTable(pl);
-      notes = parseTable(nt);
-      convocations = parseTable(conv);
-      stockageDocs = parseTable(stock);
-      peuplerSelects();
-      rendreListePlanning();
-      rendreListeNotes();
-      rendreListeDocs();
-      peuplerConvocations();
-      updateBadges();
+      // getUserProfile non disponible
+      try {
+        const savedId = localStorage.getItem('ccf_enseignant_id');
+        const savedNom = localStorage.getItem('ccf_enseignant_nom');
+        if (savedId && savedNom) {
+          monId = parseInt(savedId);
+          monNom = savedNom;
+          initialiserInterface();
+          return;
+        }
+      } catch(e) {}
+      afficherEcranIdentification();
     });
 
   }).catch(e => {
@@ -416,6 +481,66 @@ function parseTable(data) {
     keys.forEach(k => { if (k !== 'id') obj[k] = data[k][i]; });
     return obj;
   });
+}
+
+/* ══════════════════════════════════════════
+   IDENTIFICATION
+══════════════════════════════════════════ */
+function afficherEcranIdentification() {
+  const ecran = document.getElementById("ecran-identification");
+  const sel = document.getElementById("sel-identite");
+  ecran.style.display = "flex";
+
+  // Peupler la liste des enseignants
+  sel.innerHTML = '<option value="">Sélectionner votre nom…</option>';
+  enseignants
+    .filter(e => e.role !== "Direction")
+    .sort((a, b) => a.nom_prenom.localeCompare(b.nom_prenom))
+    .forEach(e => {
+      const o = document.createElement("option");
+      o.value = e.id;
+      o.textContent = e.nom_prenom;
+      sel.appendChild(o);
+    });
+}
+
+function confirmerIdentite() {
+  const sel = document.getElementById("sel-identite");
+  const id = parseInt(sel.value);
+  if (!id) return;
+
+  const ens = enseignants.find(e => e.id === id);
+  if (!ens) return;
+
+  monId = ens.id;
+  monNom = ens.nom_prenom;
+
+  // Mémoriser dans localStorage
+  try {
+    localStorage.setItem('ccf_enseignant_id', monId);
+    localStorage.setItem('ccf_enseignant_nom', monNom);
+  } catch(e) {}
+
+  // Cacher l'écran et initialiser
+  document.getElementById("ecran-identification").style.display = "none";
+  initialiserInterface();
+}
+
+function initialiserInterface() {
+  document.getElementById("ecran-identification").style.display = "none";
+  document.getElementById("user-name").textContent = monNom || "Mon espace CCF";
+
+  plannings   = parseTable(window._pl_raw).filter(p => !monId || p.enseignant === monId);
+  notes       = parseTable(window._nt_raw).filter(n => !monId || n.enseignant === monId);
+  convocations= parseTable(window._conv_raw).filter(c => !monId || c.enseignant === monId);
+  stockageDocs= parseTable(window._stock_raw).filter(s => !monId || s.enseignant === monId);
+
+  peuplerSelects();
+  rendreListePlanning();
+  rendreListeNotes();
+  rendreListeDocs();
+  peuplerConvocations();
+  updateBadges();
 }
 
 function initGrist() {
