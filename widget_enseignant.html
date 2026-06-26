@@ -333,6 +333,7 @@ function showTab(id) {
 function chargerDonnees() {
   if (gristConnecte) return;
   gristConnecte = true;
+  // Masquer immédiatement le bandeau dès que Grist lance le chargement
   document.getElementById("notice").style.display = "none";
 
   grist.docApi.listTables().then(tables => {
@@ -346,34 +347,57 @@ function chargerDonnees() {
       grist.docApi.fetchTable("PlanningDesCCF"),
       grist.docApi.fetchTable("Notes"),
       grist.docApi.fetchTable("Convocations"),
-      grist.docApi.fetchTable(nomStock),
-      grist.getUserProfile().catch(() => null)
+      grist.docApi.fetchTable(nomStock)
     ]);
-  }).then(([ens, cls, epr, elv, pl, nt, conv, stock, profile]) => {
+  }).then(([ens, cls, epr, elv, pl, nt, conv, stock]) => {
 
-    // Profil utilisateur
-    if (profile && profile.email) {
-      monEmail = profile.email;
-      const moi = parseTable(ens).find(e => e.email_academique === monEmail);
-      if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
-      document.getElementById("user-name").textContent = monNom || monEmail;
-    }
+    // Masquer le bandeau dès que les données arrivent
+    document.getElementById("notice").style.display = "none";
 
     enseignants = parseTable(ens);
     classes = parseTable(cls);
     epreuves = parseTable(epr);
     eleves = parseTable(elv);
-    plannings = parseTable(pl).filter(p => !monId || p.enseignant === monId);
-    notes = parseTable(nt).filter(n => !monId || n.enseignant === monId);
-    convocations = parseTable(conv).filter(c => !monId || c.enseignant === monId);
-    stockageDocs = parseTable(stock).filter(s => !monId || s.enseignant === monId);
 
-    peuplerSelects();
-    rendreListePlanning();
-    rendreListeNotes();
-    rendreListeDocs();
-    peuplerConvocations();
-    updateBadges();
+    // Identifier l'utilisateur connecté via son email Grist
+    const tryGetProfile = typeof grist.getUserProfile === "function"
+      ? grist.getUserProfile()
+      : Promise.resolve(null);
+
+    tryGetProfile.then(profile => {
+      if (profile && profile.email) {
+        monEmail = profile.email;
+        const moi = enseignants.find(e => e.email_academique === monEmail);
+        if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
+      }
+      // Si pas de profil détecté, on affiche quand même tout
+      document.getElementById("user-name").textContent = monNom || monEmail || "Mon espace CCF";
+
+      plannings = parseTable(pl).filter(p => !monId || p.enseignant === monId);
+      notes = parseTable(nt).filter(n => !monId || n.enseignant === monId);
+      convocations = parseTable(conv).filter(c => !monId || c.enseignant === monId);
+      stockageDocs = parseTable(stock).filter(s => !monId || s.enseignant === monId);
+
+      peuplerSelects();
+      rendreListePlanning();
+      rendreListeNotes();
+      rendreListeDocs();
+      peuplerConvocations();
+      updateBadges();
+    }).catch(() => {
+      // getUserProfile non disponible — on continue sans filtrer par utilisateur
+      document.getElementById("user-name").textContent = "Mon espace CCF";
+      plannings = parseTable(pl);
+      notes = parseTable(nt);
+      convocations = parseTable(conv);
+      stockageDocs = parseTable(stock);
+      peuplerSelects();
+      rendreListePlanning();
+      rendreListeNotes();
+      rendreListeDocs();
+      peuplerConvocations();
+      updateBadges();
+    });
 
   }).catch(e => {
     console.error(e);
