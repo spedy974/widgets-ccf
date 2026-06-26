@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestion CCF — Lycée Gérard Ethève</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --rrupn: #4a6cf7;
+    --enseignant: #1D9E75;
+    --direction: #7c3aed;
+    --bg: #f4f3f0;
+    --card-bg: #ffffff;
+    --text: #1a1a18;
+    --muted: #6b6b68;
+    --border: #e2e0d8;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 32px 16px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+    max-width: 600px;
+  }
+
+  .header .logo {
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+
+  .header .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .header .annee {
+    display: inline-block;
+    background: #e8ecfe;
+    color: #2d4ecc;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    padding: 3px 12px;
+    margin-top: 6px;
+  }
+
+  /* ── Sélection profil ── */
+  .profil-section {
+    width: 100%;
+    max-width: 860px;
+  }
+
+  .profil-section h2 {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+
+  .profils-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .profil-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .profil-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  }
+
+  .profil-card.selected {
+    border-width: 2.5px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  }
+
+  .profil-card.rrupn.selected { border-color: var(--rrupn); background: #f0f3ff; }
+  .profil-card.enseignant.selected { border-color: var(--enseignant); background: #f0faf6; }
+  .profil-card.direction.selected { border-color: var(--direction); background: #f8f0ff; }
+
+  .profil-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+
+  .profil-name {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .profil-card.rrupn .profil-name { color: var(--rrupn); }
+  .profil-card.enseignant .profil-name { color: var(--enseignant); }
+  .profil-card.direction .profil-name { color: var(--direction); }
+
+  .profil-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .profil-check {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .profil-card.rrupn.selected .profil-check { background: var(--rrupn); display: flex; }
+  .profil-card.enseignant.selected .profil-check { background: var(--enseignant); display: flex; }
+  .profil-card.direction.selected .profil-check { background: var(--direction); display: flex; }
+
+  /* ── Menu fonctionnalités ── */
+  .menu-section {
+    width: 100%;
+    max-width: 860px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .menu-section.visible { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .menu-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .menu-item {
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+
+  .menu-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    border-color: currentColor;
+  }
+
+  .menu-item .item-icon { font-size: 24px; }
+
+  .menu-item .item-label {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .menu-item .item-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* Couleurs par profil */
+  .rrupn-item { color: var(--rrupn); }
+  .rrupn-item:hover { background: #f0f3ff; }
+
+  .ens-item { color: var(--enseignant); }
+  .ens-item:hover { background: #f0faf6; }
+
+  .dir-item { color: var(--direction); }
+  .dir-item:hover { background: #f8f0ff; }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 48px;
+    text-align: center;
+    font-size: 11px;
+    color: #b4b2a9;
+    line-height: 1.8;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .profils-grid { grid-template-columns: 1fr; }
+    .menu-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">🎓</div>
+  <h1>Gestion des CCF</h1>
+  <div class="subtitle">Lycée Polyvalent Gérard Ethève — La Réunion</div>
+  <div class="subtitle">Académie de La Réunion</div>
+  <span class="annee">Année scolaire 2026-2027</span>
+</div>
+
+<!-- SÉLECTION PROFIL -->
+<div class="profil-section">
+  <h2>Qui êtes-vous ?</h2>
+  <div class="profils-grid">
+
+    <div class="profil-card rrupn" onclick="selectionnerProfil('rrupn')">
+      <div class="profil-check">✓</div>
+      <div class="profil-icon">🛡️</div>
+      <div class="profil-name">RRUPN</div>
+      <div class="profil-desc">Référent Ressource des Usages Pédagogiques Numériques — Accès complet</div>
+    </div>
+
+    <div class="profil-card enseignant" onclick="selectionnerProfil('enseignant')">
+      <div class="profil-check">✓</div>
+      <div class="profil-icon">👨‍🏫</div>
+      <div class="profil-name">Enseignant</div>
+      <div class="profil-desc">Saisie des notes, planning CCF, dépôt de documents, convocations</div>
+    </div>
+
+    <div class="profil-card direction" onclick="selectionnerProfil('direction')">
+      <div class="profil-check">✓</div>
+      <div class="profil-icon">🏫</div>
+      <div class="profil-name">Direction</div>
+      <div class="profil-desc">Consultation de l'avancement, programmation et archivage</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MENU RRUPN -->
+<div class="menu-section" id="menu-rrupn">
+  <div class="menu-title">Accès RRUPN — Toutes les fonctionnalités</div>
+  <div class="menu-grid">
+    <a class="menu-item rrupn-item" href="LIEN_TABLEAU_BORD" target="_blank">
+      <span class="item-icon">📊</span>
+      <span class="item-label">Tableau de bord CCF</span>
+      <span class="item-desc">Avancement global de l'établissement</span>
+    </a>
+    <a class="menu-item rrupn-item" href="LIEN_PLANNING" target="_blank">
+      <span class="item-icon">📅</span>
+      <span class="item-label">Planning des CCF</span>
+      <span class="item-desc">Calendrier de programmation</span>
+    </a>
+    <a class="menu-item rrupn-item" href="LIEN_NOTES" target="_blank">
+      <span class="item-icon">📝</span>
+      <span class="item-label">Gestion des notes</span>
+      <span class="item-desc">Saisie et publication des notes CCF</span>
+    </a>
+    <a class="menu-item rrupn-item" href="LIEN_CONVOCATIONS" target="_blank">
+      <span class="item-icon">📋</span>
+      <span class="item-label">Convocations</span>
+      <span class="item-desc">Publipostage des convocations PDF</span>
+    </a>
+    <a class="menu-item rrupn-item" href="LIEN_AFFECTATIONS" target="_blank">
+      <span class="item-icon">👥</span>
+      <span class="item-label">Affectations</span>
+      <span class="item-desc">Classes par enseignant</span>
+    </a>
+    <a class="menu-item rrupn-item" href="LIEN_STOCKAGE" target="_blank">
+      <span class="item-icon">🗄️</span>
+      <span class="item-label">Stockage documents</span>
+      <span class="item-desc">Coffre-fort documentaire</span>
+    </a>
+    <a class="menu-item rrupn-item" href="LIEN_ADMINISTRATION" target="_blank">
+      <span class="item-icon">⚙️</span>
+      <span class="item-label">Administration</span>
+      <span class="item-desc">Référentiels, élèves, enseignants</span>
+    </a>
+  </div>
+</div>
+
+<!-- MENU ENSEIGNANT -->
+<div class="menu-section" id="menu-enseignant">
+  <div class="menu-title">Accès Enseignant — Vos fonctionnalités</div>
+  <div class="menu-grid">
+    <a class="menu-item ens-item" href="LIEN_MON_PLANNING" target="_blank">
+      <span class="item-icon">📅</span>
+      <span class="item-label">Mon planning CCF</span>
+      <span class="item-desc">Programmer mes épreuves dans l'année</span>
+    </a>
+    <a class="menu-item ens-item" href="LIEN_MES_NOTES" target="_blank">
+      <span class="item-icon">📝</span>
+      <span class="item-label">Mes notes</span>
+      <span class="item-desc">Saisir les notes de mes élèves</span>
+    </a>
+    <a class="menu-item ens-item" href="LIEN_MES_CONVOCATIONS" target="_blank">
+      <span class="item-icon">📋</span>
+      <span class="item-label">Mes convocations</span>
+      <span class="item-desc">Générer les convocations PDF</span>
+    </a>
+    <a class="menu-item ens-item" href="LIEN_MES_DOCS" target="_blank">
+      <span class="item-icon">🗄️</span>
+      <span class="item-label">Mes documents</span>
+      <span class="item-desc">Déclarer un dépôt au coffre</span>
+    </a>
+    <a class="menu-item ens-item" href="LIEN_TABLEAU_BORD" target="_blank">
+      <span class="item-icon">📊</span>
+      <span class="item-label">Tableau de bord</span>
+      <span class="item-desc">Avancement de mes classes</span>
+    </a>
+  </div>
+</div>
+
+<!-- MENU DIRECTION -->
+<div class="menu-section" id="menu-direction">
+  <div class="menu-title">Accès Direction — Consultation</div>
+  <div class="menu-grid">
+    <a class="menu-item dir-item" href="LIEN_TABLEAU_BORD" target="_blank">
+      <span class="item-icon">📊</span>
+      <span class="item-label">Tableau de bord CCF</span>
+      <span class="item-desc">Avancement global par classe et matière</span>
+    </a>
+    <a class="menu-item dir-item" href="LIEN_PLANNING" target="_blank">
+      <span class="item-icon">📅</span>
+      <span class="item-label">Programmation CCF</span>
+      <span class="item-desc">Calendrier de toutes les épreuves</span>
+    </a>
+    <a class="menu-item dir-item" href="LIEN_STOCKAGE" target="_blank">
+      <span class="item-icon">🗄️</span>
+      <span class="item-label">Archivage documents</span>
+      <span class="item-desc">État du coffre-fort documentaire</span>
+    </a>
+    <a class="menu-item dir-item" href="LIEN_CONVOCATIONS" target="_blank">
+      <span class="item-icon">📋</span>
+      <span class="item-label">Convocations</span>
+      <span class="item-desc">Consultation des convocations émises</span>
+    </a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>Lycée Polyvalent Gérard Ethève — Académie de La Réunion</div>
+  <div>Application Gestion CCF — Développée avec Grist sur apps.education.fr</div>
+  <div style="margin-top:4px">RRUPN : ETHEVE Joseph Expédit</div>
+</footer>
+
+<script>
+  // ── URL de base Grist ──
+  // Remplace p/XX par le numéro de page correspondant dans ton document Grist
+  const BASE = "https://grist.numerique.gouv.fr/o/docs/7RpAwffKC5ei/Gestion-des-CCF/p/";
+
+  const LIENS = {
+    LIEN_TABLEAU_BORD:     BASE + "XX_TABLEAU_BORD",
+    LIEN_PLANNING:         BASE + "XX_PLANNING",
+    LIEN_NOTES:            BASE + "XX_NOTES",
+    LIEN_CONVOCATIONS:     BASE + "XX_CONVOCATIONS",
+    LIEN_AFFECTATIONS:     BASE + "XX_AFFECTATIONS",
+    LIEN_STOCKAGE:         BASE + "XX_STOCKAGE",
+    LIEN_ADMINISTRATION:   BASE + "XX_ADMINISTRATION",
+    LIEN_MON_PLANNING:     BASE + "XX_MON_PLANNING",
+    LIEN_MES_NOTES:        BASE + "XX_MES_NOTES",
+    LIEN_MES_CONVOCATIONS: BASE + "XX_CONVOCATIONS",
+    LIEN_MES_DOCS:         BASE + "XX_MES_DOCS",
+  };
+
+  // Remplacer les placeholders dans les liens
+  document.querySelectorAll('.menu-item').forEach(item => {
+    const href = item.getAttribute('href');
+    if (LIENS[href]) item.setAttribute('href', LIENS[href]);
+  });
+
+  // ── Sélection de profil ──
+  function selectionnerProfil(profil) {
+    // Mettre à jour les cartes
+    document.querySelectorAll('.profil-card').forEach(c => c.classList.remove('selected'));
+    document.querySelector('.profil-card.' + profil).classList.add('selected');
+
+    // Afficher le bon menu
+    document.querySelectorAll('.menu-section').forEach(m => m.classList.remove('visible'));
+    document.getElementById('menu-' + profil).classList.add('visible');
+
+    // Mémoriser le choix dans localStorage
+    try { localStorage.setItem('ccf_profil', profil); } catch(e) {}
+
+    // Scroll vers le menu
+    setTimeout(() => {
+      document.getElementById('menu-' + profil).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+
+  // Restaurer le dernier profil choisi
+  try {
+    const last = localStorage.getItem('ccf_profil');
+    if (last) selectionnerProfil(last);
+  } catch(e) {}
+</script>
+</body>
+</html>
