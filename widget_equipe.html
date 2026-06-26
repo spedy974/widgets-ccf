@@ -15,13 +15,11 @@
 
   #notice { background: #faeeda; border: 1px solid #f5c47566; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #633806; margin-bottom: 14px; display: none; }
 
-  /* HEADER */
   .page-header { margin-bottom: 20px; }
   .page-header h1 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
   .page-header .sub { font-size: 12px; color: var(--muted); }
 
-  /* STATS */
-  .stats-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stats-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
   .stat-pill { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; color: var(--muted); }
   .stat-pill strong { color: var(--text); }
 
@@ -31,42 +29,53 @@
   .filtre-btn:hover { border-color: #4a6cf7; color: #4a6cf7; }
   .filtre-btn.active { background: #4a6cf7; color: #fff; border-color: #4a6cf7; }
 
-  /* GRILLE MATIÈRES */
-  .matieres-grid { display: flex; flex-direction: column; gap: 16px; }
+  /* SECTIONS MATIÈRE */
+  .matieres-grid { display: flex; flex-direction: column; gap: 14px; }
 
   .matiere-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 
-  .matiere-header { padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
-  .matiere-color-bar { width: 4px; height: 32px; border-radius: 2px; flex-shrink: 0; }
-  .matiere-nom { font-size: 14px; font-weight: 700; }
-  .matiere-count { margin-left: auto; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .matiere-header { padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+  .color-bar { width: 4px; height: 32px; border-radius: 2px; flex-shrink: 0; }
+  .matiere-nom { font-size: 14px; font-weight: 700; flex: 1; }
+  .matiere-count { font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 10px; }
 
-  /* ENSEIGNANTS */
-  .enseignants-list { padding: 0 12px 12px; display: flex; flex-wrap: wrap; gap: 10px; }
+  /* CARTES ENSEIGNANTS */
+  .enseignants-list { padding: 12px; display: flex; flex-wrap: wrap; gap: 10px; }
 
-  .ens-card { display: flex; align-items: flex-start; gap: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; flex: 1; min-width: 220px; max-width: 320px; transition: box-shadow 0.15s; }
-  .ens-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-color: #d3d1c7; }
+  .ens-card {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+    flex: 1; min-width: 230px; max-width: 320px;
+    transition: box-shadow 0.15s;
+  }
+  .ens-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-color: #c8c6be; }
 
-  .ens-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .ens-avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800; flex-shrink: 0;
+  }
 
-  .ens-info .nom { font-size: 13px; font-weight: 600; line-height: 1.3; }
-  .ens-info .role-badge { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 3px; padding: 1px 5px; margin-top: 3px; }
+  .ens-info { flex: 1; min-width: 0; }
+  .ens-nom { font-size: 13px; font-weight: 700; line-height: 1.3; margin-bottom: 3px; }
 
-  /* COULEURS PAR MATIÈRE */
-  .m-maths    { --mc: #4a6cf7; --ml: #e8ecfe; --mt: #2d4ecc; }
-  .m-sciences { --mc: #1D9E75; --ml: #e0f5ee; --mt: #0d6e50; }
-  .m-lettres  { --mc: #e24b4a; --ml: #fee2e2; --mt: #991b1b; }
-  .m-anglais  { --mc: #f59e0b; --ml: #fef3c7; --mt: #92400e; }
-  .m-arts     { --mc: #7c3aed; --ml: #f3e8ff; --mt: #6d28d9; }
-  .m-atelier  { --mc: #0891b2; --ml: #e0f2fe; --mt: #155e75; }
-  .m-pse      { --mc: #059669; --ml: #d1fae5; --mt: #065f46; }
-  .m-hg       { --mc: #d97706; --ml: #fef3c7; --mt: #92400e; }
-  .m-autre    { --mc: #888780; --ml: #f1efe8; --mt: #5f5e5a; }
-  .m-rrupn    { --mc: #1a1a18; --ml: #f1efe8; --mt: #1a1a18; }
+  .ens-email {
+    display: block; font-size: 11px; text-decoration: none;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 5px; transition: opacity 0.15s;
+  }
+  .ens-email:hover { opacity: 0.7; text-decoration: underline; }
 
-  .matiere-section { --mc: #888780; --ml: #f1efe8; --mt: #5f5e5a; }
+  .ens-badges { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .badge { font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 6px; }
+
+  /* Épreuves dispensées */
+  .ens-epreuves { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 3px; }
+  .epreuve-tag { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; }
 
   .empty-state { text-align: center; color: var(--muted); font-size: 13px; padding: 32px; }
+  .loading { text-align: center; color: var(--muted); font-size: 13px; padding: 40px; }
 </style>
 </head>
 <body>
@@ -74,95 +83,81 @@
 <div id="notice">⚠ Mode démonstration — Grist non connecté.</div>
 
 <div class="page-header">
-  <h1>Équipe enseignante CCF</h1>
-  <div class="sub">Lycée Polyvalent Gérard Ethève — 2026-2027</div>
+  <h1>👩‍🏫 Équipe enseignante CCF</h1>
+  <div class="sub">Lycée Polyvalent Gérard Ethève — 2026-2027 — Regroupement par matière dispensée</div>
 </div>
 
 <div class="stats-row" id="stats-row"></div>
 <div class="filtres" id="filtres"></div>
-<div class="matieres-grid" id="matieres-grid"></div>
+<div id="contenu"><div class="loading">Chargement…</div></div>
 
 <script>
 let gristConnecte = false;
-let enseignants = [], affectations = [], epreuves = [];
+let enseignants = [], affectations = [], epreuves = [], classes = [];
 let filtreCourant = 'tous';
 
-const MATIERES_CONFIG = {
-  "Maths-Sciences":  { classe: "m-maths",   label: "Maths & Sciences physiques" },
-  "Mathématiques":   { classe: "m-maths",   label: "Mathématiques" },
-  "Sciences":        { classe: "m-sciences", label: "Sciences physiques" },
-  "Lettres-Histoire":{ classe: "m-lettres",  label: "Lettres & Histoire-Géo" },
-  "Français":        { classe: "m-lettres",  label: "Français" },
-  "Anglais":         { classe: "m-anglais",  label: "Langue vivante (Anglais)" },
-  "Arts appliqués":  { classe: "m-arts",     label: "Arts appliqués" },
-  "Atelier MVA":     { classe: "m-atelier",  label: "Atelier — Maintenance Véhicules" },
-  "Atelier AERO":    { classe: "m-atelier",  label: "Atelier — Aéronautique" },
-  "PSE":             { classe: "m-pse",      label: "Prévention, Santé, Environnement" },
-  "RRUPN":           { classe: "m-rrupn",    label: "Administration & Numérique" },
-  "Direction":       { classe: "m-rrupn",    label: "Direction" },
-};
+/* ══ COULEURS PAR MATIÈRE ══ */
+function couleurMatiere(libelle) {
+  const l = (libelle || "").toLowerCase();
+  if (l.includes("math"))                          return ["#4a6cf7","#e8ecfe","#2d4ecc"];
+  if (l.includes("physi") || l.includes("chimi") || l.includes("scien")) return ["#1D9E75","#e0f5ee","#0d6e50"];
+  if (l.includes("franç") || l.includes("lettre") || l.includes("oral") || l.includes("écrit")) return ["#e24b4a","#fee2e2","#991b1b"];
+  if (l.includes("histoi") || l.includes("géogr") || l.includes("emc")) return ["#d97706","#fef3c7","#92400e"];
+  if (l.includes("angl") || l.includes("langue")) return ["#f59e0b","#fef3c7","#78350f"];
+  if (l.includes("art"))                           return ["#7c3aed","#f3e8ff","#6d28d9"];
+  if (l.includes("préventi") || l.includes("pse") || l.includes("santé")) return ["#059669","#d1fae5","#065f46"];
+  if (l.includes("chef d") || l.includes("oeuvre")) return ["#0891b2","#e0f2fe","#155e75"];
+  if (l.includes("intervent") || l.includes("réalisa") || l.includes("véhicule")) return ["#7c3aed","#ede9fe","#5b21b6"];
+  if (l.includes("diagnost") || l.includes("mécan") || l.includes("pilot")) return ["#0284c7","#e0f2fe","#075985"];
+  if (l.includes("inspecti") || l.includes("montage") || l.includes("essai") || l.includes("contrôle")) return ["#0891b2","#cffafe","#164e63"];
+  if (l.includes("préparati") || l.includes("maintenance")) return ["#6366f1","#eef2ff","#4338ca"];
+  return ["#888780","#f1efe8","#5f5e5a"];
+}
 
 const ROLE_COLORS = {
-  "RRUPN":                  { bg: "#1a1a18", text: "#fff" },
-  "Chef secrétariat examen":{ bg: "#4a6cf7", text: "#fff" },
-  "Direction":              { bg: "#7c3aed", text: "#fff" },
-  "Enseignant":             { bg: "#e8ecfe", text: "#2d4ecc" },
+  "RRUPN":                   { bg: "#1a1a18", text: "#fff" },
+  "Chef secrétariat examen": { bg: "#4a6cf7", text: "#fff" },
+  "Direction":               { bg: "#7c3aed", text: "#fff" },
+  "Enseignant":              { bg: "#e8ecfe", text: "#2d4ecc" },
 };
-
-function getConfig(matiere) {
-  for (const [key, val] of Object.entries(MATIERES_CONFIG)) {
-    if (matiere && matiere.toLowerCase().includes(key.toLowerCase())) return val;
-  }
-  return { classe: "m-autre", label: matiere || "Autre" };
-}
 
 function initiales(nom) {
   if (!nom) return "?";
-  return nom.trim().split(/\s+/).filter(p => p === p.toUpperCase() || p.length > 2).slice(0, 2).map(p => p[0]).join("").toUpperCase() || nom.slice(0, 2).toUpperCase();
+  const parts = nom.trim().split(/\s+/);
+  const majParts = parts.filter(p => p === p.toUpperCase() && p.length > 1);
+  if (majParts.length >= 1) {
+    const prenom = parts.find(p => p !== p.toUpperCase());
+    return ((prenom ? prenom[0] : '') + majParts[0][0]).toUpperCase().slice(0,2);
+  }
+  return parts.slice(0,2).map(p => p[0]).join("").toUpperCase();
 }
 
-function couleurAvatar(matiere) {
-  const cfg = getConfig(matiere);
-  const map = {
-    "m-maths":    ["#4a6cf7","#e8ecfe","#2d4ecc"],
-    "m-sciences": ["#1D9E75","#e0f5ee","#0d6e50"],
-    "m-lettres":  ["#e24b4a","#fee2e2","#991b1b"],
-    "m-anglais":  ["#f59e0b","#fef3c7","#92400e"],
-    "m-arts":     ["#7c3aed","#f3e8ff","#6d28d9"],
-    "m-atelier":  ["#0891b2","#e0f2fe","#155e75"],
-    "m-pse":      ["#059669","#d1fae5","#065f46"],
-    "m-hg":       ["#d97706","#fef3c7","#92400e"],
-    "m-rrupn":    ["#1a1a18","#f1efe8","#1a1a18"],
-    "m-autre":    ["#888780","#f1efe8","#5f5e5a"],
-  };
-  return map[cfg.classe] || map["m-autre"];
-}
-
-/* ══ INIT ══ */
+/* ══ INIT GRIST ══ */
 function chargerDonnees() {
   if (gristConnecte) return;
   gristConnecte = true;
   document.getElementById("notice").style.display = "none";
 
-  // Chargement direct sans listTables pour éviter les blocages
   grist.docApi.fetchTable("Enseignants").then(ens => {
     enseignants = parseTable(ens);
     console.log("Enseignants chargés:", enseignants.length);
 
-    // Charger affectations en parallèle (optionnel — ne bloque pas si absent)
-    const loadAff = grist.docApi.listTables()
-      .then(tables => {
-        const nomAff = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
-        return grist.docApi.fetchTable(nomAff);
-      })
-      .catch(() => null);
-
-    return loadAff;
-  }).then(aff => {
-    if (aff) affectations = parseTable(aff);
+    return grist.docApi.listTables();
+  }).then(tables => {
+    const nomAff = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
+    return Promise.all([
+      grist.docApi.fetchTable(nomAff),
+      grist.docApi.fetchTable("ConfigEpreuves"),
+      grist.docApi.fetchTable("Classes"),
+    ]);
+  }).then(([aff, epr, cls]) => {
+    affectations = parseTable(aff);
+    epreuves     = parseTable(epr);
+    classes      = parseTable(cls);
+    console.log("Affectations:", affectations.length, "Épreuves:", epreuves.length);
     rendreTout();
   }).catch(e => {
-    console.error("Erreur chargement Enseignants:", e);
+    console.error("Erreur:", e);
     gristConnecte = false;
     document.getElementById("notice").style.display = "block";
     chargerDemoMode();
@@ -198,75 +193,127 @@ function chargerDemoMode() {
     { id: 3, nom_prenom: "CHETANNEAU Claire", email_academique: "claire.chetanneau@ac-reunion.fr", role: "Enseignant", matiere_principale: "Lettres-Histoire" },
     { id: 4, nom_prenom: "BOULANGER Jean", email_academique: "jean.boulanger@ac-reunion.fr", role: "Enseignant", matiere_principale: "Atelier MVA" },
     { id: 5, nom_prenom: "MARTIN Sophie", email_academique: "sophie.martin@ac-reunion.fr", role: "Enseignant", matiere_principale: "Anglais" },
-    { id: 6, nom_prenom: "DUBOIS Paul", email_academique: "paul.dubois@ac-reunion.fr", role: "Enseignant", matiere_principale: "Atelier AERO" },
-    { id: 7, nom_prenom: "ARTHEMISE Jean-Hugues", email_academique: "jh.arthemise@ac-reunion.fr", role: "Direction", matiere_principale: "Direction" },
   ];
-  affectations = [];
-  epreuves = [];
+  epreuves = [
+    { id: 1, repere: "E1-A", libelle: "Mathématiques", bloc_enseignement: "Général" },
+    { id: 2, repere: "E1-B", libelle: "Sciences physiques", bloc_enseignement: "Général" },
+    { id: 3, repere: "EG2", libelle: "Maths et physique-chimie", bloc_enseignement: "Général" },
+    { id: 4, repere: "E4-A", libelle: "Langue vivante A écrite", bloc_enseignement: "Général" },
+    { id: 5, repere: "EG1-A", libelle: "Français écrit", bloc_enseignement: "Général" },
+    { id: 6, repere: "E3-A", libelle: "Réalisation d'intervention", bloc_enseignement: "Professionnel" },
+  ];
+  classes = [{ id: 1, code_classe: "TBAER" }, { id: 2, code_classe: "CAP1" }];
+  affectations = [
+    { id: 1, enseignant: 1, epreuve: 1, classe: 1 },
+    { id: 2, enseignant: 1, epreuve: 2, classe: 1 },
+    { id: 3, enseignant: 2, epreuve: 1, classe: 2 },
+    { id: 4, enseignant: 2, epreuve: 3, classe: 2 },
+    { id: 5, enseignant: 3, epreuve: 5, classe: 1 },
+    { id: 6, enseignant: 4, epreuve: 6, classe: 1 },
+    { id: 7, enseignant: 5, epreuve: 4, classe: 1 },
+  ];
   rendreTout();
 }
 
 /* ══ RENDU ══ */
 function rendreTout() {
-  // Grouper par matière
-  const groupes = {};
-  enseignants.forEach(e => {
-    const mat = e.matiere_principale || "Autre";
-    if (!groupes[mat]) groupes[mat] = [];
-    groupes[mat].push(e);
-  });
+  // Construire le regroupement par épreuve (libellé)
+  // Pour chaque épreuve, trouver les enseignants affectés
+  const groupesParEpreuve = {};
+
+  if (affectations.length > 0) {
+    // Regroupement via AffectationEnseignants
+    affectations.forEach(aff => {
+      const ens = enseignants.find(e => e.id === aff.enseignant);
+      const epr = epreuves.find(e => e.id === aff.epreuve);
+      if (!ens || !epr) return;
+
+      const key = epr.libelle || epr.repere;
+      if (!groupesParEpreuve[key]) {
+        groupesParEpreuve[key] = { epreuve: epr, enseignants: new Map() };
+      }
+      // Ajouter l'enseignant s'il n'est pas déjà dans ce groupe
+      if (!groupesParEpreuve[key].enseignants.has(ens.id)) {
+        groupesParEpreuve[key].enseignants.set(ens.id, {
+          enseignant: ens,
+          classes: []
+        });
+      }
+      // Ajouter la classe à cet enseignant dans ce groupe
+      const cls = classes.find(c => c.id === aff.classe);
+      if (cls) {
+        groupesParEpreuve[key].enseignants.get(ens.id).classes.push(cls.code_classe);
+      }
+    });
+  } else {
+    // Fallback : regroupement par matiere_principale
+    enseignants.forEach(ens => {
+      const key = ens.matiere_principale || "Non affecté";
+      if (!groupesParEpreuve[key]) {
+        groupesParEpreuve[key] = { epreuve: { libelle: key, repere: "" }, enseignants: new Map() };
+      }
+      groupesParEpreuve[key].enseignants.set(ens.id, { enseignant: ens, classes: [] });
+    });
+  }
 
   // Stats
-  const statsEl = document.getElementById("stats-row");
-  statsEl.innerHTML = `
-    <div class="stat-pill"><strong>${enseignants.length}</strong> enseignants</div>
-    <div class="stat-pill"><strong>${Object.keys(groupes).length}</strong> matières</div>
-    <div class="stat-pill"><strong>${enseignants.filter(e => e.role === "RRUPN" || e.role === "Chef secrétariat examen").length}</strong> administrateur(s)</div>
+  const nbMatieres = Object.keys(groupesParEpreuve).length;
+  const nbEnsTotal = enseignants.length;
+  document.getElementById("stats-row").innerHTML = `
+    <div class="stat-pill"><strong>${nbEnsTotal}</strong> enseignant${nbEnsTotal > 1 ? 's' : ''}</div>
+    <div class="stat-pill"><strong>${nbMatieres}</strong> matière${nbMatieres > 1 ? 's' : ''} / épreuve${nbMatieres > 1 ? 's' : ''}</div>
+    <div class="stat-pill"><strong>${affectations.length}</strong> affectation${affectations.length > 1 ? 's' : ''}</div>
   `;
 
   // Filtres
   const filtresEl = document.getElementById("filtres");
-  filtresEl.innerHTML = `<button class="filtre-btn ${filtreCourant === 'tous' ? 'active' : ''}" onclick="filtrer('tous', this)">Tous</button>`;
-  Object.keys(groupes).sort().forEach(mat => {
-    const cfg = getConfig(mat);
-    filtresEl.innerHTML += `<button class="filtre-btn ${filtreCourant === mat ? 'active' : ''}" onclick="filtrer('${mat.replace(/'/g,"\\'")}', this)">${cfg.label}</button>`;
+  filtresEl.innerHTML = `<button class="filtre-btn ${filtreCourant === 'tous' ? 'active' : ''}" onclick="filtrer('tous', this)">Toutes les matières</button>`;
+  Object.keys(groupesParEpreuve).sort().forEach(key => {
+    const colors = couleurMatiere(key);
+    filtresEl.innerHTML += `
+      <button class="filtre-btn ${filtreCourant === key ? 'active' : ''}"
+        style="${filtreCourant === key ? `background:${colors[0]};color:#fff;border-color:${colors[0]}` : ''}"
+        onclick="filtrer('${key.replace(/'/g,"\\'")}', this)">${key}</button>`;
   });
 
   // Grille
-  const grille = document.getElementById("matieres-grid");
-  const matieresFiltrees = filtreCourant === 'tous' ? Object.keys(groupes) : Object.keys(groupes).filter(m => m === filtreCourant);
+  const cles = filtreCourant === 'tous'
+    ? Object.keys(groupesParEpreuve).sort()
+    : Object.keys(groupesParEpreuve).filter(k => k === filtreCourant);
 
-  if (!matieresFiltrees.length) {
-    grille.innerHTML = '<div class="empty-state">Aucun enseignant trouvé.</div>';
+  const contenu = document.getElementById("contenu");
+
+  if (!cles.length) {
+    contenu.innerHTML = '<div class="empty-state">Aucune donnée trouvée.</div>';
     return;
   }
 
-  grille.innerHTML = matieresFiltrees.sort().map(mat => {
-    const ensListe = groupes[mat];
-    const cfg = getConfig(mat);
-    const colors = couleurAvatar(mat);
+  contenu.innerHTML = `<div class="matieres-grid">${cles.map(key => {
+    const groupe = groupesParEpreuve[key];
+    const epr = groupe.epreuve;
+    const colors = couleurMatiere(key);
+    const ensListe = Array.from(groupe.enseignants.values());
 
-    const ensCartes = ensListe.map(e => {
+    const cartes = ensListe.map(({ enseignant: e, classes: cls }) => {
       const init = initiales(e.nom_prenom);
       const roleStyle = ROLE_COLORS[e.role] || ROLE_COLORS["Enseignant"];
-      const nbAff = affectations.filter(a => a.enseignant === e.id).length;
+      const classesUniques = [...new Set(cls)];
       return `
         <div class="ens-card">
-          <div class="ens-avatar" style="background:${colors[1]};color:${colors[2]};border:2px solid ${colors[0]}20">${init}</div>
-          <div class="ens-info" style="flex:1;min-width:0">
-            <div class="nom" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.nom_prenom}</div>
-            <div style="margin-top:3px">
-              <a href="mailto:${e.email_academique || ''}"
-                 style="font-size:11px;color:${colors[0]};text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px"
-                 title="${e.email_academique || ''}"
-                 onmouseover="this.style.textDecoration='underline'"
-                 onmouseout="this.style.textDecoration='none'">
-                ${e.email_academique || '—'}
-              </a>
-            </div>
-            <div style="display:flex;gap:4px;align-items:center;margin-top:4px;flex-wrap:wrap">
-              <span class="role-badge" style="background:${roleStyle.bg};color:${roleStyle.text}">${e.role}</span>
-              ${nbAff > 0 ? `<span style="font-size:10px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1px 6px">${nbAff} classe${nbAff > 1 ? 's' : ''}</span>` : ''}
+          <div class="ens-avatar" style="background:${colors[1]};color:${colors[2]};border:2px solid ${colors[0]}40">
+            ${init}
+          </div>
+          <div class="ens-info">
+            <div class="ens-nom">${e.nom_prenom}</div>
+            <a class="ens-email" href="mailto:${e.email_academique || ''}"
+               style="color:${colors[0]}" title="${e.email_academique || ''}">
+              ✉ ${e.email_academique || '—'}
+            </a>
+            <div class="ens-badges">
+              <span class="badge" style="background:${roleStyle.bg};color:${roleStyle.text}">${e.role}</span>
+              ${classesUniques.length > 0
+                ? classesUniques.map(c => `<span class="badge" style="background:${colors[1]};color:${colors[2]}">${c}</span>`).join('')
+                : ''}
             </div>
           </div>
         </div>`;
@@ -274,19 +321,29 @@ function rendreTout() {
 
     return `
       <div class="matiere-section">
-        <div class="matiere-header" style="background:${couleurAvatar(mat)[1]}20;border-bottom:1px solid var(--border)">
-          <div class="matiere-color-bar" style="background:${couleurAvatar(mat)[0]}"></div>
-          <div class="matiere-nom" style="color:${couleurAvatar(mat)[2]}">${cfg.label}</div>
-          <div class="matiere-count" style="background:${couleurAvatar(mat)[1]};color:${couleurAvatar(mat)[2]}">${ensListe.length} enseignant${ensListe.length > 1 ? 's' : ''}</div>
+        <div class="matiere-header" style="background:${colors[1]}50">
+          <div class="color-bar" style="background:${colors[0]}"></div>
+          <div>
+            <div class="matiere-nom" style="color:${colors[2]}">${key}</div>
+            ${epr.repere ? `<div style="font-size:11px;color:${colors[0]};font-weight:600">Repère : ${epr.repere} · ${epr.bloc_enseignement || ''}</div>` : ''}
+          </div>
+          <div class="matiere-count" style="background:${colors[1]};color:${colors[2]}">
+            ${ensListe.length} enseignant${ensListe.length > 1 ? 's' : ''}
+          </div>
         </div>
-        <div class="enseignants-list">${ensCartes}</div>
+        <div class="enseignants-list">${cartes}</div>
       </div>`;
-  }).join("");
+  }).join("")}</div>`;
 }
 
 function filtrer(mat, btn) {
   filtreCourant = mat;
-  document.querySelectorAll('.filtre-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.filtre-btn').forEach(b => {
+    b.classList.remove('active');
+    b.style.background = '';
+    b.style.color = '';
+    b.style.borderColor = '';
+  });
   btn.classList.add('active');
   rendreTout();
 }
