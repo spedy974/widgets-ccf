@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon espace CCF</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #4a6cf7; --green: #1D9E75; --orange: #f59e0b;
+    --purple: #7c3aed; --red: #e24b4a;
+    --bg: #f7f6f3; --card: #fff; --border: #e2e0d8;
+    --text: #2c2c2a; --muted: #888780;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  .app-header { background: var(--card); border-bottom: 2px solid var(--blue); padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  .app-header .user-info { flex: 1; }
+  .app-header .user-name { font-weight: 700; font-size: 15px; }
+  .app-header .user-role { font-size: 11px; color: var(--muted); }
+  .app-header .logo { font-size: 22px; }
+
+  /* TABS */
+  .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab { padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+  .tab:hover { color: var(--text); background: var(--bg); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab .badge { background: var(--blue); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; }
+
+  /* CONTENT */
+  .tab-content { display: none; padding: 16px; }
+  .tab-content.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .card-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+
+  /* FORM */
+  .form-group { margin-bottom: 12px; }
+  label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  select, input[type="text"], input[type="date"], input[type="number"], textarea {
+    width: 100%; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 6px;
+    font-size: 13px; color: var(--text); background: var(--card); outline: none; transition: border-color 0.15s;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(74,108,247,0.1); }
+  textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* BUTTONS */
+  .btn { border: none; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 16px; cursor: pointer; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-orange { background: var(--orange); color: #fff; }
+  .btn-purple { background: var(--purple); color: #fff; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { background: var(--bg); padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #f1efe8; vertical-align: middle; }
+  .data-table tr:hover td { background: var(--bg); }
+
+  /* BADGES */
+  .pill { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 700; }
+  .pill-blue { background: #e8ecfe; color: #2d4ecc; }
+  .pill-green { background: #e0f5ee; color: #0d6e50; }
+  .pill-orange { background: #fef3c7; color: #92400e; }
+  .pill-red { background: #fee2e2; color: #991b1b; }
+  .pill-gray { background: #f1efe8; color: var(--muted); }
+
+  /* STATUT COULEUR */
+  .statut-realise { color: var(--green); font-weight: 700; }
+  .statut-avenir { color: var(--blue); }
+  .statut-retard { color: var(--red); font-weight: 700; }
+  .statut-nonplanifie { color: var(--muted); font-style: italic; }
+
+  /* NOTES COULEUR */
+  .note-vert { background: #EAF3DE; border-radius: 4px; padding: 2px 8px; font-weight: 700; color: #2d6a1e; }
+  .note-orange { background: #FAEEDA; border-radius: 4px; padding: 2px 8px; font-weight: 700; color: #92400e; }
+  .note-rouge { background: #FCEBEB; border-radius: 4px; padding: 2px 8px; font-weight: 700; color: #991b1b; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 24px; }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; opacity: 0; transition: transform 0.25s, opacity 0.25s; pointer-events: none; z-index: 999; }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.ok { background: var(--green); color: #fff; }
+  #toast.err { background: var(--red); color: #fff; }
+
+  #notice { background: #faeeda; border: 1px solid #f5c47566; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #633806; margin: 8px; display: none; }
+
+  /* ELEVES SELECTION */
+  .eleves-box { border: 1.5px solid var(--border); border-radius: 6px; background: var(--card); }
+  .eleves-search-row { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  .eleves-search-row input { flex: 1; border: none; outline: none; font-size: 13px; background: transparent; }
+  .eleves-list-box { max-height: 140px; overflow-y: auto; }
+  .eleve-opt { display: flex; align-items: center; gap: 8px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
+  .eleve-opt:hover { background: var(--bg); }
+  .eleve-opt.checked { background: #eef1fe; }
+  .eleve-opt input[type="checkbox"] { accent-color: var(--blue); }
+  .tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .tag { background: #e8ecfe; color: #2d4ecc; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+  .tag button { background: none; border: none; cursor: pointer; color: #2d4ecc; font-size: 13px; padding: 0; line-height: 1; }
+</style>
+</head>
+<body>
+
+<div id="notice">⚠ Mode démonstration — Grist non connecté.</div>
+
+<!-- HEADER -->
+<div class="app-header">
+  <span class="logo">👨‍🏫</span>
+  <div class="user-info">
+    <div class="user-name" id="user-name">Mon espace CCF</div>
+    <div class="user-role">Lycée Polyvalent Gérard Ethève — 2026-2027</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('planning')">📅 Mon planning <span class="badge" id="badge-planning">0</span></div>
+  <div class="tab" onclick="showTab('notes')">📝 Mes notes <span class="badge" id="badge-notes">0</span></div>
+  <div class="tab" onclick="showTab('convocations')">📋 Mes convocations</div>
+  <div class="tab" onclick="showTab('documents')">🗄️ Mes documents</div>
+</div>
+
+<!-- ═══ ONGLET PLANNING ═══ -->
+<div class="tab-content active" id="tab-planning">
+
+  <!-- Formulaire ajout -->
+  <div class="card">
+    <div class="card-title">Programmer une épreuve CCF</div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Classe</label>
+        <select id="pl-classe" onchange="filtrerEpreuvesPlanning()"><option value="">Choisir…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Épreuve</label>
+        <select id="pl-epreuve"><option value="">Choisir…</option></select>
+      </div>
+    </div>
+    <div class="row3">
+      <div class="form-group">
+        <label>Séquence</label>
+        <select id="pl-sequence">
+          <option value="Séquence 1">Séquence 1</option>
+          <option value="Séquence 2">Séquence 2</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date prévue</label>
+        <input type="date" id="pl-date">
+      </div>
+      <div class="form-group">
+        <label>Salle</label>
+        <input type="text" id="pl-salle" placeholder="ex. Salle 12">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Commentaire</label>
+      <textarea id="pl-commentaire" rows="2" placeholder="Remarques éventuelles…"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="ajouterPlanning()">+ Ajouter au planning</button>
+    </div>
+  </div>
+
+  <!-- Liste planning -->
+  <div class="card">
+    <div class="card-title">Mes épreuves programmées</div>
+    <div id="planning-list"><div class="empty">Aucune épreuve programmée.</div></div>
+  </div>
+</div>
+
+<!-- ═══ ONGLET NOTES ═══ -->
+<div class="tab-content" id="tab-notes">
+
+  <div class="card">
+    <div class="card-title">Saisir une note CCF</div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Élève</label>
+        <select id="nt-classe" onchange="filtrerElevesNotes()"><option value="">Classe d'abord…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Élève</label>
+        <select id="nt-eleve"><option value="">Choisir un élève…</option></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Épreuve</label>
+      <select id="nt-epreuve"><option value="">Choisir une épreuve…</option></select>
+    </div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Note séquence 1 (/20)</label>
+        <input type="number" id="nt-seq1" min="0" max="20" step="0.5" placeholder="0 — 20">
+      </div>
+      <div class="form-group">
+        <label>Date séquence 1</label>
+        <input type="date" id="nt-date1">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Note séquence 2 (/20)</label>
+        <input type="number" id="nt-seq2" min="0" max="20" step="0.5" placeholder="0 — 20 (optionnel)">
+      </div>
+      <div class="form-group">
+        <label>Date séquence 2</label>
+        <input type="date" id="nt-date2">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="saisirNote()">✓ Enregistrer la note</button>
+    </div>
+  </div>
+
+  <!-- Liste notes -->
+  <div class="card">
+    <div class="card-title">Mes notes saisies</div>
+    <div id="notes-list"><div class="empty">Aucune note saisie.</div></div>
+  </div>
+</div>
+
+<!-- ═══ ONGLET CONVOCATIONS ═══ -->
+<div class="tab-content" id="tab-convocations">
+  <div class="card">
+    <div class="card-title">Générer une convocation PDF</div>
+    <div class="form-group">
+      <label>Sélectionner une convocation</label>
+      <select id="conv-sel" onchange="afficherApercuConv()"><option value="">Choisir…</option></select>
+    </div>
+    <div id="conv-apercu" style="display:none;margin-top:12px">
+      <div class="row2" id="conv-info-grid"></div>
+      <div id="conv-eleves-preview" style="margin-top:10px"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="conv-btn-listing" onclick="imprimerConv('listing')" disabled>🖨️ Listing global</button>
+      <button class="btn btn-green" id="conv-btn-indiv" onclick="imprimerConv('individuel')" disabled>👤 Convocations individuelles</button>
+      <button class="btn btn-purple" id="conv-btn-complet" onclick="imprimerConv('complet')" disabled>📄 PDF complet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ONGLET DOCUMENTS ═══ -->
+<div class="tab-content" id="tab-documents">
+  <div class="card">
+    <div class="card-title">Déclarer un dépôt de documents CCF</div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Classe</label>
+        <select id="doc-classe" onchange="filtrerElevesDoc()"><option value="">Choisir…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Épreuve</label>
+        <select id="doc-epreuve"><option value="">Choisir…</option></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Date de dépôt</label>
+      <input type="date" id="doc-date">
+    </div>
+    <div class="form-group">
+      <label>Élèves absents / abandon (eleves_AB)</label>
+      <div class="eleves-box">
+        <div class="eleves-search-row">
+          <span>🔍</span>
+          <input type="text" id="doc-search" placeholder="Rechercher un élève…" oninput="filtrerListeDoc()" disabled>
+        </div>
+        <div class="eleves-list-box" id="doc-eleves-list">
+          <div class="empty">Sélectionne d'abord une classe.</div>
+        </div>
+      </div>
+      <div class="tags-row" id="doc-tags"></div>
+    </div>
+    <div class="form-group">
+      <label>Commentaire</label>
+      <textarea id="doc-commentaire" placeholder="Observations…"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-orange" onclick="declarerDepot()">📁 Enregistrer le dépôt</button>
+    </div>
+  </div>
+
+  <!-- Liste dépôts -->
+  <div class="card">
+    <div class="card-title">Mes dépôts déclarés</div>
+    <div id="docs-list"><div class="empty">Aucun dépôt déclaré.</div></div>
+  </div>
+</div>
+
+<!-- Zone impression -->
+<div id="zone-impression" style="display:none"></div>
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════
+   ÉTAT GLOBAL
+══════════════════════════════════════════ */
+let gristConnecte = false;
+let monEmail = "";
+let monId = null;
+let monNom = "";
+
+let enseignants = [], classes = [], epreuves = [], eleves = [];
+let plannings = [], notes = [], convocations = [], stockageDocs = [];
+let docElevesClasse = [], docSelectedEleves = [];
+
+const ANNEE = "2026-2027";
+
+/* ══════════════════════════════════════════
+   NAVIGATION ONGLETS
+══════════════════════════════════════════ */
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+/* ══════════════════════════════════════════
+   INIT GRIST
+══════════════════════════════════════════ */
+function chargerDonnees() {
+  if (gristConnecte) return;
+  gristConnecte = true;
+  document.getElementById("notice").style.display = "none";
+
+  grist.docApi.listTables().then(tables => {
+    const nomAff = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
+    const nomStock = tables.find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
+    return Promise.all([
+      grist.docApi.fetchTable("Enseignants"),
+      grist.docApi.fetchTable("Classes"),
+      grist.docApi.fetchTable("ConfigEpreuves"),
+      grist.docApi.fetchTable("Eleves"),
+      grist.docApi.fetchTable("PlanningDesCCF"),
+      grist.docApi.fetchTable("Notes"),
+      grist.docApi.fetchTable("Convocations"),
+      grist.docApi.fetchTable(nomStock),
+      grist.getUserProfile().catch(() => null)
+    ]);
+  }).then(([ens, cls, epr, elv, pl, nt, conv, stock, profile]) => {
+
+    // Profil utilisateur
+    if (profile && profile.email) {
+      monEmail = profile.email;
+      const moi = parseTable(ens).find(e => e.email_academique === monEmail);
+      if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
+      document.getElementById("user-name").textContent = monNom || monEmail;
+    }
+
+    enseignants = parseTable(ens);
+    classes = parseTable(cls);
+    epreuves = parseTable(epr);
+    eleves = parseTable(elv);
+    plannings = parseTable(pl).filter(p => !monId || p.enseignant === monId);
+    notes = parseTable(nt).filter(n => !monId || n.enseignant === monId);
+    convocations = parseTable(conv).filter(c => !monId || c.enseignant === monId);
+    stockageDocs = parseTable(stock).filter(s => !monId || s.enseignant === monId);
+
+    peuplerSelects();
+    rendreListePlanning();
+    rendreListeNotes();
+    rendreListeDocs();
+    peuplerConvocations();
+    updateBadges();
+
+  }).catch(e => {
+    console.error(e);
+    gristConnecte = false;
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  });
+}
+
+// Helper : transformer un objet fetchTable en tableau d'objets
+function parseTable(data) {
+  if (!data || !data.id) return [];
+  const keys = Object.keys(data);
+  return data.id.map((id, i) => {
+    const obj = { id };
+    keys.forEach(k => { if (k !== 'id') obj[k] = data[k][i]; });
+    return obj;
+  });
+}
+
+function initGrist() {
+  if (typeof grist !== "undefined") {
+    grist.ready({ requiredAccess: "full" });
+    grist.onOptions(() => { if (!gristConnecte) chargerDonnees(); });
+    grist.onRecord(() => { if (!gristConnecte) chargerDonnees(); });
+    [1000, 2000, 3500].forEach(d => setTimeout(() => { if (!gristConnecte) chargerDonnees(); }, d));
+  } else {
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  }
+}
+
+function chargerDemoMode() {
+  monNom = "ETHEVE Joseph Expédit"; monId = 1; monEmail = "expedit.etheve@ac-reunion.fr";
+  document.getElementById("user-name").textContent = monNom;
+  enseignants = [{ id: 1, nom_prenom: monNom, email_academique: monEmail, role: "RRUPN" }];
+  classes = [{ id: 1, code_classe: "TBAER" }, { id: 2, code_classe: "1BAER" }, { id: 5, code_classe: "CAP1" }];
+  epreuves = [
+    { id: 1, repere: "E1-A", libelle: "Mathématiques", diplome: 1 },
+    { id: 2, repere: "E1-B", libelle: "Sciences physiques", diplome: 1 },
+    { id: 3, repere: "EG2", libelle: "Maths et physique-chimie", diplome: 3 }
+  ];
+  eleves = [
+    { id: 1, nom_prenom: "DUPONT Lucas", classe: 1, numero_ordre: 1 },
+    { id: 2, nom_prenom: "MARTIN Emma", classe: 1, numero_ordre: 2 },
+    { id: 3, nom_prenom: "BERNARD Noah", classe: 1, numero_ordre: 3 },
+    { id: 4, nom_prenom: "LEROY Maxime", classe: 2, numero_ordre: 1 },
+    { id: 5, nom_prenom: "FONTAINE Jules", classe: 5, numero_ordre: 1 }
+  ];
+  plannings = [
+    { id: 1, enseignant: 1, classe: 1, epreuve: 1, sequence: "Séquence 1", date_prevue: "2026-10-15", salle: "Salle 12", statut: "À venir" }
+  ];
+  notes = [
+    { id: 1, enseignant: 1, eleve: 1, epreuve: 1, note_seq1: 8, note_seq2: 5, note_finale: 13, couleur: "vert", publier: false }
+  ];
+  convocations = [
+    { id: 1, enseignant: 1, classe: 1, epreuve: 1, date_ccf: "2026-10-15", heure_debut: "08h00", salle: "Salle 12", annee_scolaire: ANNEE }
+  ];
+  stockageDocs = [];
+  peuplerSelects();
+  rendreListePlanning();
+  rendreListeNotes();
+  rendreListeDocs();
+  peuplerConvocations();
+  updateBadges();
+}
+
+/* ══════════════════════════════════════════
+   PEUPLER LES SELECTS
+══════════════════════════════════════════ */
+function peuplerSelects() {
+  // Classes
+  ['pl-classe', 'nt-classe', 'doc-classe'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Choisir une classe…</option>';
+    classes.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c.id; o.textContent = c.code_classe;
+      sel.appendChild(o);
+    });
+  });
+
+  // Notes - épreuves
+  const selNtEpr = document.getElementById("nt-epreuve");
+  selNtEpr.innerHTML = '<option value="">Choisir une épreuve…</option>';
+  epreuves.forEach(e => {
+    const o = document.createElement("option");
+    o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
+    selNtEpr.appendChild(o);
+  });
+}
+
+function filtrerEpreuvesPlanning() {
+  const classeId = parseInt(document.getElementById("pl-classe").value);
+  const sel = document.getElementById("pl-epreuve");
+  sel.innerHTML = '<option value="">Choisir une épreuve…</option>';
+  epreuves.forEach(e => {
+    const o = document.createElement("option");
+    o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
+    sel.appendChild(o);
+  });
+}
+
+function filtrerElevesNotes() {
+  const classeId = parseInt(document.getElementById("nt-classe").value);
+  const sel = document.getElementById("nt-eleve");
+  sel.innerHTML = '<option value="">Choisir un élève…</option>';
+  eleves.filter(e => e.classe === classeId).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom)).forEach(e => {
+    const o = document.createElement("option");
+    o.value = e.id; o.textContent = e.nom_prenom;
+    sel.appendChild(o);
+  });
+}
+
+/* ══════════════════════════════════════════
+   BADGES
+══════════════════════════════════════════ */
+function updateBadges() {
+  document.getElementById("badge-planning").textContent = plannings.length;
+  document.getElementById("badge-notes").textContent = notes.length;
+}
+
+/* ══════════════════════════════════════════
+   PLANNING
+══════════════════════════════════════════ */
+async function ajouterPlanning() {
+  const classeId = parseInt(document.getElementById("pl-classe").value);
+  const epreuveId = parseInt(document.getElementById("pl-epreuve").value);
+  const sequence = document.getElementById("pl-sequence").value;
+  const date = document.getElementById("pl-date").value;
+  const salle = document.getElementById("pl-salle").value.trim();
+  const commentaire = document.getElementById("pl-commentaire").value.trim();
+
+  if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
+
+  try {
+    let newId = Date.now();
+    if (gristConnecte) {
+      const r = await grist.docApi.applyUserActions([["AddRecord", "PlanningDesCCF", null, {
+        enseignant: monId, classe: classeId, epreuve: epreuveId,
+        sequence, date_prevue: date, salle, commentaire
+      }]]);
+      newId = r.retValues[0];
+    }
+    const cls = classes.find(c => c.id === classeId);
+    const epr = epreuves.find(e => e.id === epreuveId);
+    const today = new Date().toISOString().split('T')[0];
+    const statut = date < today ? "En retard" : "À venir";
+    plannings.push({ id: newId, enseignant: monId, classe: classeId, epreuve: epreuveId, sequence, date_prevue: date, salle, commentaire, statut });
+    rendreListePlanning();
+    updateBadges();
+    // Reset
+    document.getElementById("pl-classe").value = "";
+    document.getElementById("pl-epreuve").value = "";
+    document.getElementById("pl-date").value = "";
+    document.getElementById("pl-salle").value = "";
+    document.getElementById("pl-commentaire").value = "";
+    toast("✓ Épreuve ajoutée au planning", "ok");
+  } catch(e) { toast("Erreur d'enregistrement", "err"); }
+}
+
+function rendreListePlanning() {
+  const container = document.getElementById("planning-list");
+  if (!plannings.length) { container.innerHTML = '<div class="empty">Aucune épreuve programmée.</div>'; return; }
+  container.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Classe</th><th>Épreuve</th><th>Séquence</th><th>Date prévue</th><th>Salle</th><th>Statut</th></tr></thead>
+      <tbody>${plannings.map(p => {
+        const cls = classes.find(c => c.id === p.classe);
+        const epr = epreuves.find(e => e.id === p.epreuve);
+        const dateStr = p.date_prevue ? new Date(p.date_prevue).toLocaleDateString("fr-FR") : "—";
+        const statutClass = p.statut === "Réalisé" ? "statut-realise" : p.statut === "En retard" ? "statut-retard" : p.statut === "À venir" ? "statut-avenir" : "statut-nonplanifie";
+        return `<tr>
+          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
+          <td>${epr ? epr.repere + ' — ' + epr.libelle : '?'}</td>
+          <td>${p.sequence || '—'}</td>
+          <td>${dateStr}</td>
+          <td>${p.salle || '—'}</td>
+          <td class="${statutClass}">${p.statut || 'À venir'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+/* ══════════════════════════════════════════
+   NOTES
+══════════════════════════════════════════ */
+async function saisirNote() {
+  const classeId = parseInt(document.getElementById("nt-classe").value);
+  const eleveId = parseInt(document.getElementById("nt-eleve").value);
+  const epreuveId = parseInt(document.getElementById("nt-epreuve").value);
+  const seq1 = parseFloat(document.getElementById("nt-seq1").value) || 0;
+  const seq2 = parseFloat(document.getElementById("nt-seq2").value) || 0;
+  const date1 = document.getElementById("nt-date1").value;
+  const date2 = document.getElementById("nt-date2").value;
+
+  if (!eleveId || !epreuveId) { toast("Sélectionne un élève et une épreuve", "err"); return; }
+
+  const finale = seq1 + seq2;
+  const couleur = finale >= 6 ? "vert" : finale >= 4 ? "orange" : "rouge";
+
+  try {
+    let newId = Date.now();
+    if (gristConnecte) {
+      const r = await grist.docApi.applyUserActions([["AddRecord", "Notes", null, {
+        enseignant: monId, eleve: eleveId, epreuve: epreuveId,
+        note_seq1: seq1, note_seq2: seq2, date_seq1: date1, date_seq2: date2, publier: false
+      }]]);
+      newId = r.retValues[0];
+    }
+    notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: epreuveId, note_seq1: seq1, note_seq2: seq2, note_finale: finale, couleur, publier: false });
+    rendreListeNotes();
+    updateBadges();
+    document.getElementById("nt-eleve").value = "";
+    document.getElementById("nt-seq1").value = "";
+    document.getElementById("nt-seq2").value = "";
+    document.getElementById("nt-date1").value = "";
+    document.getElementById("nt-date2").value = "";
+    toast("✓ Note enregistrée", "ok");
+  } catch(e) { toast("Erreur d'enregistrement", "err"); }
+}
+
+function rendreListeNotes() {
+  const container = document.getElementById("notes-list");
+  if (!notes.length) { container.innerHTML = '<div class="empty">Aucune note saisie.</div>'; return; }
+  container.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Élève</th><th>Épreuve</th><th>Séq.1</th><th>Séq.2</th><th>Finale</th><th>Statut</th></tr></thead>
+      <tbody>${notes.map(n => {
+        const elv = eleves.find(e => e.id === n.eleve);
+        const epr = epreuves.find(e => e.id === n.epreuve);
+        const noteClass = n.couleur === "vert" ? "note-vert" : n.couleur === "orange" ? "note-orange" : "note-rouge";
+        return `<tr>
+          <td>${elv ? elv.nom_prenom : '?'}</td>
+          <td>${epr ? epr.repere : '?'}</td>
+          <td>${n.note_seq1 || '—'}</td>
+          <td>${n.note_seq2 || '—'}</td>
+          <td><span class="${noteClass}">${n.note_finale !== undefined ? n.note_finale : '—'}</span></td>
+          <td>${n.publier ? '<span class="pill pill-green">Publiée</span>' : '<span class="pill pill-gray">Confidentielle</span>'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+/* ══════════════════════════════════════════
+   CONVOCATIONS
+══════════════════════════════════════════ */
+function peuplerConvocations() {
+  const sel = document.getElementById("conv-sel");
+  sel.innerHTML = '<option value="">Choisir une convocation…</option>';
+  convocations.forEach(c => {
+    const cls = classes.find(x => x.id === c.classe);
+    const epr = epreuves.find(x => x.id === c.epreuve);
+    const dateStr = c.date_ccf ? new Date(c.date_ccf).toLocaleDateString("fr-FR") : "—";
+    const o = document.createElement("option");
+    o.value = c.id;
+    o.textContent = `${cls ? cls.code_classe : '?'} — ${epr ? epr.repere : '?'} — ${dateStr}`;
+    sel.appendChild(o);
+  });
+}
+
+function afficherApercuConv() {
+  const id = parseInt(document.getElementById("conv-sel").value);
+  const apercu = document.getElementById("conv-apercu");
+  ['conv-btn-listing','conv-btn-indiv','conv-btn-complet'].forEach(b => document.getElementById(b).disabled = !id);
+  if (!id) { apercu.style.display = "none"; return; }
+
+  const conv = convocations.find(c => c.id === id);
+  const cls = classes.find(x => x.id === conv.classe);
+  const epr = epreuves.find(x => x.id === conv.epreuve);
+  const ens = enseignants.find(x => x.id === conv.enseignant);
+  const dateStr = conv.date_ccf ? new Date(conv.date_ccf).toLocaleDateString("fr-FR") : "—";
+
+  document.getElementById("conv-info-grid").innerHTML = `
+    <div style="background:var(--bg);border-radius:6px;padding:8px 10px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Classe</div><div style="font-weight:700">${cls ? cls.code_classe : '—'}</div></div>
+    <div style="background:var(--bg);border-radius:6px;padding:8px 10px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Épreuve</div><div style="font-weight:700">${epr ? epr.repere + ' — ' + epr.libelle : '—'}</div></div>
+    <div style="background:var(--bg);border-radius:6px;padding:8px 10px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Date</div><div style="font-weight:700">${dateStr}</div></div>
+    <div style="background:var(--bg);border-radius:6px;padding:8px 10px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Heure / Salle</div><div style="font-weight:700">${conv.heure_debut || '—'} — ${conv.salle || '—'}</div></div>`;
+
+  const elevesClasse = eleves.filter(e => e.classe === conv.classe).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+  document.getElementById("conv-eleves-preview").innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">${elevesClasse.length} élèves convoqués</div>` +
+    elevesClasse.slice(0, 5).map((e,i) => `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">${i+1}. ${e.nom_prenom}</div>`).join("") +
+    (elevesClasse.length > 5 ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">+ ${elevesClasse.length - 5} autres…</div>` : "");
+
+  apercu.style.display = "block";
+}
+
+function imprimerConv(mode) {
+  const id = parseInt(document.getElementById("conv-sel").value);
+  if (!id) return;
+  const conv = convocations.find(c => c.id === id);
+  const cls = classes.find(x => x.id === conv.classe);
+  const epr = epreuves.find(x => x.id === conv.epreuve);
+  const ens = enseignants.find(x => x.id === conv.enseignant);
+  const today = new Date().toLocaleDateString("fr-FR");
+  const dateStr = conv.date_ccf ? new Date(conv.date_ccf).toLocaleDateString("fr-FR", { weekday:"long", year:"numeric", month:"long", day:"numeric" }) : "—";
+  const annee = conv.annee_scolaire || ANNEE;
+  const elevesClasse = eleves.filter(e => e.classe === conv.classe).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+
+  const lignesEleves = elevesClasse.map((e, i) => `<tr><td>${i+1}</td><td><strong>${e.nom_prenom}</strong></td><td style="width:120px;text-align:center"></td><td style="width:150px"></td></tr>`).join("");
+
+  const pageListing = `<div style="page-break-after:always;padding:20mm;font-family:serif">
+    <div style="display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:20px">
+      <div><strong style="font-size:13pt">Lycée Polyvalent Gérard Ethève</strong><br><span style="font-size:10pt">La Réunion — Année scolaire ${annee}</span></div>
+      <div style="text-align:right;font-size:10pt">Saint-Paul, le ${today}</div>
+    </div>
+    <div style="text-align:center;font-size:16pt;font-weight:bold;text-transform:uppercase;margin:20px 0 8px;letter-spacing:2px">Listing de convocation CCF</div>
+    <div style="text-align:center;font-size:11pt;margin-bottom:24px;color:#333">${cls ? cls.code_classe : ''} — ${epr ? epr.repere + ' — ' + epr.libelle : ''}</div>
+    <div style="border:1px solid #000;padding:12px 16px;margin-bottom:20px;background:#f9f9f9">
+      <table style="width:100%;border-collapse:collapse;font-size:11pt">
+        <tr><td style="font-weight:bold;width:180px;padding:4px 8px">Classe :</td><td style="padding:4px 8px">${cls ? cls.code_classe : '—'}</td><td style="font-weight:bold;padding:4px 8px">Épreuve :</td><td style="padding:4px 8px">${epr ? epr.repere + ' — ' + epr.libelle : '—'}</td></tr>
+        <tr><td style="font-weight:bold;padding:4px 8px">Date :</td><td style="padding:4px 8px">${dateStr}</td><td style="font-weight:bold;padding:4px 8px">Heure :</td><td style="padding:4px 8px">${conv.heure_debut || '—'}</td></tr>
+        <tr><td style="font-weight:bold;padding:4px 8px">Salle :</td><td style="padding:4px 8px">${conv.salle || '—'}</td><td style="font-weight:bold;padding:4px 8px">Enseignant :</td><td style="padding:4px 8px">${ens ? ens.nom_prenom : '—'}</td></tr>
+      </table>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:10pt">
+      <thead><tr style="background:#000;color:#fff"><th style="padding:6px 10px;text-align:left">N°</th><th style="padding:6px 10px;text-align:left">Nom et Prénom</th><th style="padding:6px 10px;text-align:center;width:120px">Émargement</th><th style="padding:6px 10px;text-align:left;width:150px">Observations</th></tr></thead>
+      <tbody>${lignesEleves}</tbody>
+    </table>
+  </div>`;
+
+  const pagesIndiv = elevesClasse.map(eleve => `<div style="page-break-after:always;padding:20mm;font-family:serif">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr>
+        <td style="width:45%;vertical-align:top">
+          <div style="font-size:9pt;font-weight:bold;text-transform:uppercase">ACADÉMIE DE LA RÉUNION</div>
+          <div style="font-size:7pt;color:#555;font-style:italic">Liberté — Égalité — Fraternité</div>
+          <div style="font-size:9pt;font-weight:bold;margin-top:8px">Lycée Gérard Ethève</div>
+        </td>
+        <td style="width:55%;vertical-align:top;text-align:right;font-size:9pt">
+          Le ${today}<br><br>
+          Monsieur Le Proviseur<br>du lycée Polyvalent Gérard Ethève<br>
+          <strong>A ${eleve.nom_prenom}</strong>
+        </td>
+      </tr>
+    </table>
+    <div style="font-size:9pt;line-height:1.8;margin-bottom:20px">
+      Affaire suivie par : ${ens ? ens.nom_prenom : '—'}<br>
+      <strong>Classe : ${cls ? cls.code_classe : '—'}</strong><br>
+      <strong>Session : ${annee}</strong>
+    </div>
+    <div style="border:1.5px solid #000;padding:10px 20px;text-align:center;margin:20px 0;font-size:12pt;font-weight:bold">
+      Convocation à l'examen du ${epr ? epr.repere + ' — ' + epr.libelle : '—'} en CCF
+    </div>
+    <p style="font-size:9pt;margin-bottom:16px;line-height:1.6">Pour l'examen du <strong>${epr ? epr.repere + ' — ' + epr.libelle : '—'}</strong> en CCF, veuillez vous présenter 5 minutes avant le début de chaque épreuve, aux lieux, dates et horaires indiqués ci-dessous :</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:9pt">
+      <thead><tr style="background:#e8d5d5"><th style="border:1px solid #999;padding:6px 8px">Date</th><th style="border:1px solid #999;padding:6px 8px">Heure</th><th style="border:1px solid #999;padding:6px 8px">Épreuve</th><th style="border:1px solid #999;padding:6px 8px">Durée (min)</th><th style="border:1px solid #999;padding:6px 8px">Salle</th></tr></thead>
+      <tbody>
+        <tr><td style="border:1px solid #999;padding:8px;text-align:center">${dateStr}</td><td style="border:1px solid #999;padding:8px;text-align:center">${conv.heure_debut || '—'}</td><td style="border:1px solid #999;padding:8px;text-align:center">${epr ? epr.repere : '—'}</td><td style="border:1px solid #999;padding:8px;text-align:center">—</td><td style="border:1px solid #999;padding:8px;text-align:center">${conv.salle || '—'}</td></tr>
+        <tr><td style="border:1px solid #999;padding:8px">&nbsp;</td><td style="border:1px solid #999;padding:8px">&nbsp;</td><td style="border:1px solid #999;padding:8px">&nbsp;</td><td style="border:1px solid #999;padding:8px">&nbsp;</td><td style="border:1px solid #999;padding:8px">&nbsp;</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:9pt;margin-bottom:16px"><u><strong>Matériel nécessaire :</strong></u> Calculatrice, stylo, règle</p>
+    <p style="font-size:9pt;font-style:italic;margin-bottom:30px">Toute absence devra faire l'objet d'un justificatif valable (certificat médical)</p>
+    <div style="text-align:right;font-size:9pt;font-family:monospace">
+      Le proviseur<br>Lycée Gérard ETHEVE<br>
+      <div style="margin:8px 0;border-bottom:1px solid #000;width:120px;display:inline-block"></div><br>
+      <div style="border:1px solid #999;padding:6px 12px;display:inline-block;margin-top:4px;font-size:8pt">ARTHEMISE J-H</div>
+    </div>
+  </div>`).join("");
+
+  let html = "";
+  if (mode === 'listing') html = pageListing;
+  else if (mode === 'individuel') html = pagesIndiv;
+  else html = pageListing + pagesIndiv;
+
+  const zone = document.getElementById("zone-impression");
+  zone.style.display = "block";
+  zone.innerHTML = html;
+  window.print();
+  setTimeout(() => { zone.style.display = "none"; zone.innerHTML = ""; }, 1000);
+}
+
+/* ══════════════════════════════════════════
+   DOCUMENTS
+══════════════════════════════════════════ */
+function filtrerElevesDoc() {
+  const classeId = parseInt(document.getElementById("doc-classe").value);
+  docSelectedEleves = [];
+  renderDocTags();
+  const sel = document.getElementById("doc-search");
+  if (!classeId) {
+    docElevesClasse = [];
+    document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
+    sel.disabled = true;
+    return;
+  }
+  docElevesClasse = eleves.filter(e => e.classe === classeId).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+  sel.disabled = false;
+  sel.value = "";
+  renderDocEleves(docElevesClasse);
+
+  // Épreuves
+  const selEpr = document.getElementById("doc-epreuve");
+  selEpr.innerHTML = '<option value="">Choisir une épreuve…</option>';
+  epreuves.forEach(e => {
+    const o = document.createElement("option");
+    o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
+    selEpr.appendChild(o);
+  });
+}
+
+function filtrerListeDoc() {
+  const q = document.getElementById("doc-search").value.toLowerCase();
+  const filtres = q ? docElevesClasse.filter(e => e.nom_prenom.toLowerCase().includes(q)) : docElevesClasse;
+  renderDocEleves(filtres);
+}
+
+function renderDocEleves(liste) {
+  const container = document.getElementById("doc-eleves-list");
+  if (!liste.length) { container.innerHTML = '<div class="empty">Aucun élève.</div>'; return; }
+  container.innerHTML = liste.map(e => {
+    const checked = docSelectedEleves.some(s => s.id === e.id);
+    return `<div class="eleve-opt ${checked ? 'checked' : ''}" onclick="toggleDocEleve(${e.id}, '${e.nom_prenom.replace(/'/g,"\\'")}', this)">
+      <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation()">
+      ${e.nom_prenom}
+    </div>`;
+  }).join("");
+}
+
+function toggleDocEleve(id, nom, el) {
+  const idx = docSelectedEleves.findIndex(s => s.id === id);
+  if (idx >= 0) { docSelectedEleves.splice(idx, 1); el.classList.remove("checked"); el.querySelector("input").checked = false; }
+  else { docSelectedEleves.push({ id, nom }); el.classList.add("checked"); el.querySelector("input").checked = true; }
+  renderDocTags();
+}
+
+function retirerDocEleve(id) {
+  docSelectedEleves = docSelectedEleves.filter(s => s.id !== id);
+  filtrerListeDoc();
+  renderDocTags();
+}
+
+function renderDocTags() {
+  document.getElementById("doc-tags").innerHTML = docSelectedEleves.map(e =>
+    `<span class="tag">${e.nom}<button onclick="retirerDocEleve(${e.id})">×</button></span>`
+  ).join("");
+}
+
+async function declarerDepot() {
+  const classeId = parseInt(document.getElementById("doc-classe").value);
+  const epreuveId = parseInt(document.getElementById("doc-epreuve").value);
+  const date = document.getElementById("doc-date").value;
+  const commentaire = document.getElementById("doc-commentaire").value.trim();
+
+  if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
+
+  try {
+    let newId = Date.now();
+    if (gristConnecte) {
+      const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
+      const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, {
+        la_classe: classeId, epreuve: epreuveId, enseignant: monId,
+        date_depot: date, eleves_AB: docSelectedEleves.map(e => e.id),
+        commentaire, archive: false
+      }]]);
+      newId = r.retValues[0];
+    }
+    const cls = classes.find(c => c.id === classeId);
+    const epr = epreuves.find(e => e.id === epreuveId);
+    stockageDocs.push({ id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monId, date_depot: date, commentaire, archive: false });
+    rendreListeDocs();
+    document.getElementById("doc-classe").value = "";
+    document.getElementById("doc-epreuve").innerHTML = '<option value="">Choisir une épreuve…</option>';
+    document.getElementById("doc-date").value = "";
+    document.getElementById("doc-commentaire").value = "";
+    docSelectedEleves = [];
+    renderDocTags();
+    document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
+    document.getElementById("doc-search").disabled = true;
+    toast("✓ Dépôt déclaré", "ok");
+  } catch(e) { toast("Erreur d'enregistrement", "err"); }
+}
+
+function rendreListeDocs() {
+  const container = document.getElementById("docs-list");
+  if (!stockageDocs.length) { container.innerHTML = '<div class="empty">Aucun dépôt déclaré.</div>'; return; }
+  container.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Classe</th><th>Épreuve</th><th>Date dépôt</th><th>Archivé</th></tr></thead>
+      <tbody>${stockageDocs.map(d => {
+        const cls = classes.find(c => c.id === (d.la_classe || d.classe));
+        const epr = epreuves.find(e => e.id === d.epreuve);
+        const dateStr = d.date_depot ? new Date(d.date_depot).toLocaleDateString("fr-FR") : "—";
+        return `<tr>
+          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
+          <td>${epr ? epr.repere : '?'}</td>
+          <td>${dateStr}</td>
+          <td>${d.archive ? '<span class="pill pill-green">✓ Archivé</span>' : '<span class="pill pill-gray">En attente</span>'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+function toast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "show " + type;
+  setTimeout(() => { t.className = ""; }, 2800);
+}
+
+/* ══════════════════════════════════════════
+   IMPRESSION
+══════════════════════════════════════════ */
+const style = document.createElement("style");
+style.textContent = `@media print { body > *:not(#zone-impression) { display: none !important; } #zone-impression { display: block !important; } }`;
+document.head.appendChild(style);
+
+document.addEventListener("DOMContentLoaded", initGrist);
+</script>
+</body>
+</html>
