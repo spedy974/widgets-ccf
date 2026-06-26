@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Repères des épreuves CCF</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    background: #f7f6f3;
+    color: #2c2c2a;
+    padding: 16px;
+  }
+
+  #notice {
+    background: #faeeda;
+    border: 1px solid #f5c47566;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #633806;
+    margin-bottom: 14px;
+    display: none;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e2e0d8;
+  }
+
+  .page-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a18;
+  }
+
+  .page-header .etab {
+    font-size: 13px;
+    color: #888780;
+    margin-top: 2px;
+  }
+
+  /* Grille des diplômes */
+  .diplomes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+
+  /* Tableau par diplôme */
+  .diplome-bloc {
+    background: #fff;
+    border: 1px solid #e2e0d8;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* En-tête diplôme */
+  .diplome-header {
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid rgba(0,0,0,0.1);
+  }
+
+  .diplome-header.bac-pro-mva { background: #faeeda; color: #8B4513; border-color: #c8781a; }
+  .diplome-header.bac-pro-aero { background: #faeeda; color: #8B4513; border-color: #c8781a; }
+  .diplome-header.cap-mva { background: #FFCCCC; color: #8B0000; border-color: #cc4444; }
+  .diplome-header.default { background: #e8ecfe; color: #2d4ecc; border-color: #4a6cf7; }
+
+  /* En-têtes colonnes */
+  .col-headers {
+    display: grid;
+    grid-template-columns: 80px 50px 1fr;
+    background: #f7f6f3;
+    border-bottom: 1px solid #e2e0d8;
+  }
+
+  .col-headers .col-h {
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #888780;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-right: 1px solid #e2e0d8;
+  }
+
+  .col-headers .col-h:last-child { border-right: none; }
+
+  /* Groupes Général / Professionnel */
+  .bloc-group {
+    display: flex;
+    border-bottom: 1px solid #e2e0d8;
+  }
+
+  .bloc-group:last-child { border-bottom: none; }
+
+  /* Label vertical du groupe */
+  .group-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: center;
+    padding: 8px 4px;
+    min-width: 22px;
+    border-right: 1px solid #e2e0d8;
+    color: #5f5e5a;
+    background: #fafaf7;
+  }
+
+  /* Lignes d'épreuves */
+  .epreuves-list { flex: 1; }
+
+  .epreuve-row {
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    border-bottom: 1px solid #f1efe8;
+    min-height: 28px;
+    align-items: center;
+  }
+
+  .epreuve-row:last-child { border-bottom: none; }
+
+  /* Repère */
+  .repere {
+    padding: 4px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    border-right: 1px solid #e2e0d8;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .repere.general { color: #1a4480; background: #dce8f7; }
+  .repere.professionnel { color: #2d6a1e; background: #e4f0d4; }
+
+  /* Libellé */
+  .libelle {
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #2c2c2a;
+    line-height: 1.3;
+  }
+
+  .libelle.general { background: #eef4fc; }
+  .libelle.professionnel { background: #f2f8ea; }
+
+  /* Chargement */
+  .loading {
+    text-align: center;
+    color: #888780;
+    font-size: 13px;
+    padding: 40px;
+  }
+
+  /* Filtre */
+  .filtre-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filtre-btn {
+    padding: 4px 12px;
+    border: 1.5px solid #e2e0d8;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #fff;
+    color: #5f5e5a;
+    transition: all 0.15s;
+  }
+
+  .filtre-btn:hover { border-color: #4a6cf7; color: #4a6cf7; }
+  .filtre-btn.active { background: #4a6cf7; color: #fff; border-color: #4a6cf7; }
+
+  /* Compteur */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: #888780;
+  }
+
+  .stats-bar strong { color: #2c2c2a; }
+</style>
+</head>
+<body>
+
+<div id="notice">⚠ Mode démonstration — Grist non connecté.</div>
+
+<div class="page-header">
+  <div>
+    <h1>Repères des épreuves en CCF</h1>
+    <div class="etab">Lycée Polyvalent Gérard Ethève — La Réunion</div>
+  </div>
+</div>
+
+<div class="filtre-bar" id="filtre-bar">
+  <button class="filtre-btn active" onclick="filtrerDiplome('tous', this)">Tous les diplômes</button>
+</div>
+
+<div class="stats-bar" id="stats-bar"></div>
+
+<div id="contenu"><div class="loading">Chargement des épreuves…</div></div>
+
+<script>
+let gristConnecte = false;
+let diplomes = [];
+let epreuves = [];
+let filtreCourant = 'tous';
+
+/* ══ INIT ══ */
+function chargerDonnees() {
+  if (gristConnecte) return;
+  gristConnecte = true;
+  document.getElementById("notice").style.display = "none";
+
+  Promise.all([
+    grist.docApi.fetchTable("Diplomes"),
+    grist.docApi.fetchTable("ConfigEpreuves")
+  ]).then(([dip, epr]) => {
+    document.getElementById("notice").style.display = "none";
+
+    diplomes = parseTable(dip);
+    epreuves = parseTable(epr);
+
+    peuplerFiltres();
+    rendreTous();
+  }).catch(e => {
+    console.error(e);
+    gristConnecte = false;
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  });
+}
+
+function parseTable(data) {
+  if (!data || !data.id) return [];
+  const keys = Object.keys(data);
+  return data.id.map((id, i) => {
+    const obj = { id };
+    keys.forEach(k => { if (k !== 'id') obj[k] = data[k][i]; });
+    return obj;
+  });
+}
+
+function initGrist() {
+  if (typeof grist !== "undefined") {
+    grist.ready({ requiredAccess: "full" });
+    grist.onOptions(() => { if (!gristConnecte) chargerDonnees(); });
+    grist.onRecord(() => { if (!gristConnecte) chargerDonnees(); });
+    [1000, 2000, 3500].forEach(d => setTimeout(() => { if (!gristConnecte) chargerDonnees(); }, d));
+  } else {
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  }
+}
+
+function chargerDemoMode() {
+  diplomes = [
+    { id: 1, code: "BPRO-MVA", libelle: "BAC PRO MVA" },
+    { id: 2, code: "BPRO-AERO", libelle: "BAC PRO AERO" },
+    { id: 3, code: "CAP-MVA", libelle: "CAP MVA" }
+  ];
+  epreuves = [
+    { id: 1, diplome: 1, repere: "E1-A", libelle: "Mathématiques", bloc_enseignement: "Général" },
+    { id: 2, diplome: 1, repere: "E1-B", libelle: "Sciences physiques et chimiques", bloc_enseignement: "Général" },
+    { id: 3, diplome: 1, repere: "E4-A", libelle: "Langue vivante A : écrite / Anglais", bloc_enseignement: "Général" },
+    { id: 4, diplome: 1, repere: "E4-B", libelle: "Langue vivante A : orale / Anglais", bloc_enseignement: "Général" },
+    { id: 5, diplome: 1, repere: "E6", libelle: "Arts appliqués et cultures artistiques", bloc_enseignement: "Général" },
+    { id: 6, diplome: 1, repere: "EC1-A", libelle: "Chef d'œuvre : présentation orale", bloc_enseignement: "Professionnel" },
+    { id: 7, diplome: 1, repere: "EC1-B", libelle: "Chef d'œuvre : note de la scolarité", bloc_enseignement: "Professionnel" },
+    { id: 8, diplome: 1, repere: "E3-A", libelle: "Réalisation d'intervention sur véhicule", bloc_enseignement: "Professionnel" },
+    { id: 9, diplome: 1, repere: "E3-B", libelle: "Diagnostic sur système mécanique", bloc_enseignement: "Professionnel" },
+    { id: 10, diplome: 1, repere: "E3-C", libelle: "Diagnostic sur système pilote", bloc_enseignement: "Professionnel" },
+    { id: 11, diplome: 2, repere: "E1-A", libelle: "Mathématiques", bloc_enseignement: "Général" },
+    { id: 12, diplome: 2, repere: "E1-B", libelle: "Sciences physiques et chimiques", bloc_enseignement: "Général" },
+    { id: 13, diplome: 2, repere: "E4-A", libelle: "Langue vivante A écrite / Anglais", bloc_enseignement: "Général" },
+    { id: 14, diplome: 2, repere: "E4-B", libelle: "Langue vivante A orale / Anglais", bloc_enseignement: "Général" },
+    { id: 15, diplome: 2, repere: "E6", libelle: "Arts appliqués et cultures artistiques", bloc_enseignement: "Général" },
+    { id: 16, diplome: 2, repere: "EC1-A", libelle: "Chef d'œuvre : présentation orale", bloc_enseignement: "Professionnel" },
+    { id: 17, diplome: 2, repere: "EC1-B", libelle: "Chef d'œuvre : note de la scolarité", bloc_enseignement: "Professionnel" },
+    { id: 18, diplome: 2, repere: "E3-A", libelle: "Inspection et relation en entreprise", bloc_enseignement: "Professionnel" },
+    { id: 19, diplome: 2, repere: "E3-B", libelle: "Montage - démontage", bloc_enseignement: "Professionnel" },
+    { id: 20, diplome: 2, repere: "E3-C", libelle: "Essais, réglage et mise en œuvre", bloc_enseignement: "Professionnel" },
+    { id: 21, diplome: 2, repere: "E3-D", libelle: "Réalisation et contrôle", bloc_enseignement: "Professionnel" },
+    { id: 22, diplome: 2, repere: "EVAB", libelle: "Évaluation de la scolarité européenne", bloc_enseignement: "Professionnel" },
+    { id: 23, diplome: 3, repere: "EG1-A", libelle: "Français écrit", bloc_enseignement: "Général" },
+    { id: 24, diplome: 3, repere: "EG1-B", libelle: "Français oral", bloc_enseignement: "Général" },
+    { id: 25, diplome: 3, repere: "EG1-C", libelle: "Histoire géographie et EMC", bloc_enseignement: "Général" },
+    { id: 26, diplome: 3, repere: "EG2", libelle: "Mathématiques et physique-chimie", bloc_enseignement: "Général" },
+    { id: 27, diplome: 3, repere: "EG4", libelle: "Prévention, santé, environnement (PSE)", bloc_enseignement: "Général" },
+    { id: 28, diplome: 3, repere: "EP1A", libelle: "Préparation d'une intervention de maintenance", bloc_enseignement: "Professionnel" },
+    { id: 29, diplome: 3, repere: "EP1B", libelle: "Chef d'œuvre", bloc_enseignement: "Professionnel" },
+    { id: 30, diplome: 3, repere: "EP2", libelle: "Réalisation d'interventions sur véhicule", bloc_enseignement: "Professionnel" },
+  ];
+  peuplerFiltres();
+  rendreTous();
+}
+
+/* ══ FILTRES ══ */
+function peuplerFiltres() {
+  const bar = document.getElementById("filtre-bar");
+  bar.innerHTML = '<button class="filtre-btn active" onclick="filtrerDiplome(\'tous\', this)">Tous les diplômes</button>';
+  diplomes.forEach(d => {
+    const btn = document.createElement("button");
+    btn.className = "filtre-btn";
+    btn.textContent = d.libelle || d.code;
+    btn.onclick = function() { filtrerDiplome(d.id, this); };
+    bar.appendChild(btn);
+  });
+}
+
+function filtrerDiplome(id, btn) {
+  filtreCourant = id;
+  document.querySelectorAll('.filtre-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  rendreTous();
+}
+
+/* ══ RENDU ══ */
+function rendreTous() {
+  const container = document.getElementById("contenu");
+  const statsBar = document.getElementById("stats-bar");
+
+  const dipAfficher = filtreCourant === 'tous'
+    ? diplomes
+    : diplomes.filter(d => d.id === filtreCourant);
+
+  const totalEpr = epreuves.filter(e =>
+    filtreCourant === 'tous' || e.diplome === filtreCourant
+  ).length;
+
+  statsBar.innerHTML = `<span><strong>${dipAfficher.length}</strong> diplôme${dipAfficher.length > 1 ? 's' : ''}</span><span><strong>${totalEpr}</strong> épreuve${totalEpr > 1 ? 's' : ''} au total</span>`;
+
+  if (!dipAfficher.length) {
+    container.innerHTML = '<div class="loading">Aucun diplôme trouvé.</div>';
+    return;
+  }
+
+  container.innerHTML = `<div class="diplomes-grid">${dipAfficher.map(d => rendreDiplome(d)).join('')}</div>`;
+}
+
+function rendreDiplome(diplome) {
+  const eprDiplome = epreuves.filter(e => e.diplome === diplome.id);
+  const general = eprDiplome.filter(e => e.bloc_enseignement === "Général");
+  const professionnel = eprDiplome.filter(e => e.bloc_enseignement === "Professionnel");
+
+  const code = (diplome.code || "").toLowerCase().replace(/[-\s]/g, '-');
+  const headerClass = code.includes('mva') && code.includes('bcp') ? 'bac-pro-mva'
+    : code.includes('aer') && code.includes('bcp') ? 'bac-pro-aero'
+    : code.includes('cap') ? 'cap-mva'
+    : 'default';
+
+  return `
+    <div class="diplome-bloc">
+      <div class="diplome-header ${headerClass}">${diplome.libelle || diplome.code}</div>
+      <div class="col-headers">
+        <div class="col-h" style="grid-column:1/2">Bloc</div>
+        <div class="col-h" style="grid-column:2/3">Repère</div>
+        <div class="col-h" style="grid-column:3/4">Épreuve</div>
+      </div>
+      ${general.length > 0 ? `
+      <div class="bloc-group">
+        <div class="group-label" style="color:#1a4480;background:#dce8f7">Général</div>
+        <div class="epreuves-list">
+          ${general.map(e => `
+            <div class="epreuve-row">
+              <div class="repere general">${e.repere}</div>
+              <div class="libelle general">${e.libelle}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+      ${professionnel.length > 0 ? `
+      <div class="bloc-group">
+        <div class="group-label" style="color:#2d6a1e;background:#c8e6a0">Professionnel</div>
+        <div class="epreuves-list">
+          ${professionnel.map(e => `
+            <div class="epreuve-row">
+              <div class="repere professionnel">${e.repere}</div>
+              <div class="libelle professionnel">${e.libelle}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+    </div>`;
+}
+
+document.addEventListener("DOMContentLoaded", initGrist);
+</script>
+</body>
+</html>
