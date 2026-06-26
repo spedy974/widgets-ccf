@@ -100,7 +100,23 @@
     text-align: center;
     position: relative;
     overflow: hidden;
+    text-decoration: none;
+    color: inherit;
   }
+
+  .profil-arrow {
+    margin-top: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .profil-card.rrupn .profil-arrow { color: var(--rrupn); }
+  .profil-card.enseignant .profil-arrow { color: var(--enseignant); }
+  .profil-card.direction .profil-arrow { color: var(--direction); }
+
+  .profil-card:hover .profil-arrow { opacity: 1; }
 
   .profil-card:hover {
     transform: translateY(-3px);
@@ -260,131 +276,30 @@
 
 <!-- SÉLECTION PROFIL -->
 <div class="profil-section">
-  <h2>Qui êtes-vous ?</h2>
+  <h2>Cliquez sur votre profil pour accéder à votre espace</h2>
   <div class="profils-grid">
 
-    <div class="profil-card rrupn" onclick="selectionnerProfil('rrupn')">
+    <div class="profil-card rrupn" onclick="allerVers('rrupn')">
       <div class="profil-check">✓</div>
       <div class="profil-icon">🛡️</div>
       <div class="profil-name">RRUPN</div>
-      <div class="profil-desc">Référent Ressource des Usages Pédagogiques Numériques — Accès complet</div>
+      <div class="profil-desc">Référent Ressource des Usages Pédagogiques Numériques — Accès complet</div><div class="profil-arrow">→ Accéder</div>
     </div>
 
-    <div class="profil-card enseignant" onclick="selectionnerProfil('enseignant')">
+    <div class="profil-card enseignant" onclick="allerVers('enseignant')">
       <div class="profil-check">✓</div>
       <div class="profil-icon">👨‍🏫</div>
       <div class="profil-name">Enseignant</div>
-      <div class="profil-desc">Saisie des notes, planning CCF, dépôt de documents, convocations</div>
+      <div class="profil-desc">Saisie des notes, planning CCF, dépôt de documents, convocations</div><div class="profil-arrow">→ Accéder</div>
     </div>
 
-    <div class="profil-card direction" onclick="selectionnerProfil('direction')">
+    <div class="profil-card direction" onclick="allerVers('direction')">
       <div class="profil-check">✓</div>
       <div class="profil-icon">🏫</div>
       <div class="profil-name">Direction</div>
-      <div class="profil-desc">Consultation de l'avancement, programmation et archivage</div>
+      <div class="profil-desc">Consultation de l'avancement, programmation et archivage</div><div class="profil-arrow">→ Accéder</div>
     </div>
 
-  </div>
-</div>
-
-<!-- MENU RRUPN -->
-<div class="menu-section" id="menu-rrupn">
-  <div class="menu-title">Accès RRUPN — Toutes les fonctionnalités</div>
-  <div class="menu-grid">
-    <a class="menu-item rrupn-item" href="LIEN_TABLEAU_BORD" target="_blank">
-      <span class="item-icon">📊</span>
-      <span class="item-label">Tableau de bord CCF</span>
-      <span class="item-desc">Avancement global de l'établissement</span>
-    </a>
-    <a class="menu-item rrupn-item" href="LIEN_PLANNING" target="_blank">
-      <span class="item-icon">📅</span>
-      <span class="item-label">Planning des CCF</span>
-      <span class="item-desc">Calendrier de programmation</span>
-    </a>
-    <a class="menu-item rrupn-item" href="LIEN_NOTES" target="_blank">
-      <span class="item-icon">📝</span>
-      <span class="item-label">Gestion des notes</span>
-      <span class="item-desc">Saisie et publication des notes CCF</span>
-    </a>
-    <a class="menu-item rrupn-item" href="LIEN_CONVOCATIONS" target="_blank">
-      <span class="item-icon">📋</span>
-      <span class="item-label">Convocations</span>
-      <span class="item-desc">Publipostage des convocations PDF</span>
-    </a>
-    <a class="menu-item rrupn-item" href="LIEN_AFFECTATIONS" target="_blank">
-      <span class="item-icon">👥</span>
-      <span class="item-label">Affectations</span>
-      <span class="item-desc">Classes par enseignant</span>
-    </a>
-    <a class="menu-item rrupn-item" href="LIEN_STOCKAGE" target="_blank">
-      <span class="item-icon">🗄️</span>
-      <span class="item-label">Stockage documents</span>
-      <span class="item-desc">Coffre-fort documentaire</span>
-    </a>
-    <a class="menu-item rrupn-item" href="LIEN_ADMINISTRATION" target="_blank">
-      <span class="item-icon">⚙️</span>
-      <span class="item-label">Administration</span>
-      <span class="item-desc">Référentiels, élèves, enseignants</span>
-    </a>
-  </div>
-</div>
-
-<!-- MENU ENSEIGNANT -->
-<div class="menu-section" id="menu-enseignant">
-  <div class="menu-title">Accès Enseignant — Vos fonctionnalités</div>
-  <div class="menu-grid">
-    <a class="menu-item ens-item" href="LIEN_MON_PLANNING" target="_blank">
-      <span class="item-icon">📅</span>
-      <span class="item-label">Mon planning CCF</span>
-      <span class="item-desc">Programmer mes épreuves dans l'année</span>
-    </a>
-    <a class="menu-item ens-item" href="LIEN_MES_NOTES" target="_blank">
-      <span class="item-icon">📝</span>
-      <span class="item-label">Mes notes</span>
-      <span class="item-desc">Saisir les notes de mes élèves</span>
-    </a>
-    <a class="menu-item ens-item" href="LIEN_MES_CONVOCATIONS" target="_blank">
-      <span class="item-icon">📋</span>
-      <span class="item-label">Mes convocations</span>
-      <span class="item-desc">Générer les convocations PDF</span>
-    </a>
-    <a class="menu-item ens-item" href="LIEN_MES_DOCS" target="_blank">
-      <span class="item-icon">🗄️</span>
-      <span class="item-label">Mes documents</span>
-      <span class="item-desc">Déclarer un dépôt au coffre</span>
-    </a>
-    <a class="menu-item ens-item" href="LIEN_TABLEAU_BORD" target="_blank">
-      <span class="item-icon">📊</span>
-      <span class="item-label">Tableau de bord</span>
-      <span class="item-desc">Avancement de mes classes</span>
-    </a>
-  </div>
-</div>
-
-<!-- MENU DIRECTION -->
-<div class="menu-section" id="menu-direction">
-  <div class="menu-title">Accès Direction — Consultation</div>
-  <div class="menu-grid">
-    <a class="menu-item dir-item" href="LIEN_TABLEAU_BORD" target="_blank">
-      <span class="item-icon">📊</span>
-      <span class="item-label">Tableau de bord CCF</span>
-      <span class="item-desc">Avancement global par classe et matière</span>
-    </a>
-    <a class="menu-item dir-item" href="LIEN_PLANNING" target="_blank">
-      <span class="item-icon">📅</span>
-      <span class="item-label">Programmation CCF</span>
-      <span class="item-desc">Calendrier de toutes les épreuves</span>
-    </a>
-    <a class="menu-item dir-item" href="LIEN_STOCKAGE" target="_blank">
-      <span class="item-icon">🗄️</span>
-      <span class="item-label">Archivage documents</span>
-      <span class="item-desc">État du coffre-fort documentaire</span>
-    </a>
-    <a class="menu-item dir-item" href="LIEN_CONVOCATIONS" target="_blank">
-      <span class="item-icon">📋</span>
-      <span class="item-label">Convocations</span>
-      <span class="item-desc">Consultation des convocations émises</span>
-    </a>
   </div>
 </div>
 
@@ -397,52 +312,38 @@
 
 <script>
   // ── URL de base Grist ──
-  // Remplace p/XX par le numéro de page correspondant dans ton document Grist
   const BASE = "https://grist.numerique.gouv.fr/o/docs/7RpAwffKC5ei/Gestion-des-CCF/p/";
 
-  const LIENS = {
-    LIEN_TABLEAU_BORD:     BASE + "19",
-    LIEN_PLANNING:         BASE + "8",
-    LIEN_NOTES:            BASE + "9",
-    LIEN_CONVOCATIONS:     BASE + "17",
-    LIEN_AFFECTATIONS:     BASE + "16",
-    LIEN_STOCKAGE:         BASE + "10",
-    LIEN_ADMINISTRATION:   BASE + "15",
-    LIEN_MON_PLANNING:     BASE + "12",
-    LIEN_MES_NOTES:        BASE + "13",
-    LIEN_MES_CONVOCATIONS: BASE + "18",
-    LIEN_MES_DOCS:         BASE + "14",
+  // ── Liens directs par profil ──
+  // Remplace les numéros par les vrais numéros de pages de ton document
+  const LIENS_PROFIL = {
+    rrupn:      BASE + "11",  // Page tableau de bord RRUPN (p/11 = Tableau de bord CCF)
+    enseignant: BASE + "19",  // Page widget enseignant (p/19 = Mon espace enseignant)
+    direction:  BASE + "20",  // Page widget direction (p/20 = Tableau de bord Direction)
   };
 
-  // Remplacer les placeholders dans les liens
-  document.querySelectorAll('.menu-item').forEach(item => {
-    const href = item.getAttribute('href');
-    if (LIENS[href]) item.setAttribute('href', LIENS[href]);
-  });
-
-  // ── Sélection de profil ──
-  function selectionnerProfil(profil) {
-    // Mettre à jour les cartes
+  // ── Navigation directe au clic ──
+  function allerVers(profil) {
+    // Animation sur la carte
     document.querySelectorAll('.profil-card').forEach(c => c.classList.remove('selected'));
     document.querySelector('.profil-card.' + profil).classList.add('selected');
 
-    // Afficher le bon menu
-    document.querySelectorAll('.menu-section').forEach(m => m.classList.remove('visible'));
-    document.getElementById('menu-' + profil).classList.add('visible');
-
-    // Mémoriser le choix dans localStorage
+    // Mémoriser
     try { localStorage.setItem('ccf_profil', profil); } catch(e) {}
 
-    // Scroll vers le menu
+    // Rediriger après 300ms (pour voir l'animation)
     setTimeout(() => {
-      document.getElementById('menu-' + profil).scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+      window.location.href = LIENS_PROFIL[profil];
+    }, 300);
   }
 
-  // Restaurer le dernier profil choisi
+  // Restaurer l'animation du dernier profil visité
   try {
     const last = localStorage.getItem('ccf_profil');
-    if (last) selectionnerProfil(last);
+    if (last) {
+      const card = document.querySelector('.profil-card.' + last);
+      if (card) card.classList.add('selected');
+    }
   } catch(e) {}
 </script>
 </body>
