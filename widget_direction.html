@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableau de bord Direction — CCF</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #4a6cf7; --green: #1D9E75; --orange: #f59e0b;
+    --red: #e24b4a; --purple: #7c3aed;
+    --bg: #f7f6f3; --card: #fff; --border: #e2e0d8;
+    --text: #2c2c2a; --muted: #888780;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--card); border-bottom: 2px solid var(--purple); padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 15px; font-weight: 700; flex: 1; }
+  .header .annee { font-size: 11px; color: var(--muted); background: #f3e8ff; color: var(--purple); border-radius: 20px; padding: 3px 10px; font-weight: 600; }
+
+  /* TABS */
+  .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab { padding: 10px 18px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+
+  /* CONTENT */
+  .tab-content { display: none; padding: 16px; }
+  .tab-content.active { display: block; }
+
+  /* KPI CARDS */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+  .kpi-card .kpi-val { font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+  .kpi-card .kpi-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi-blue .kpi-val { color: var(--blue); }
+  .kpi-green .kpi-val { color: var(--green); }
+  .kpi-orange .kpi-val { color: var(--orange); }
+  .kpi-red .kpi-val { color: var(--red); }
+
+  /* CARD */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+  .card-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+
+  /* PROGRESS BAR */
+  .progress-bar { background: #e8e6de; border-radius: 20px; height: 8px; overflow: hidden; margin-top: 4px; }
+  .progress-fill { height: 100%; border-radius: 20px; transition: width 0.5s ease; }
+  .fill-green { background: var(--green); }
+  .fill-orange { background: var(--orange); }
+  .fill-red { background: var(--red); }
+  .fill-blue { background: var(--blue); }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { background: var(--bg); padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #f1efe8; vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--bg); }
+
+  /* PILLS */
+  .pill { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 700; }
+  .pill-blue { background: #e8ecfe; color: #2d4ecc; }
+  .pill-green { background: #e0f5ee; color: #0d6e50; }
+  .pill-orange { background: #fef3c7; color: #92400e; }
+  .pill-red { background: #fee2e2; color: #991b1b; }
+  .pill-gray { background: #f1efe8; color: var(--muted); }
+  .pill-purple { background: #f3e8ff; color: #6d28d9; }
+
+  /* STATUT */
+  .statut-realise { color: var(--green); font-weight: 700; }
+  .statut-avenir { color: var(--blue); }
+  .statut-retard { color: var(--red); font-weight: 700; }
+
+  /* FILTRE */
+  .filtre-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filtre-row select { padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text); background: var(--card); outline: none; }
+  .filtre-row select:focus { border-color: var(--purple); }
+
+  /* EMPTY */
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 24px; }
+
+  /* NOTICE */
+  #notice { background: #faeeda; border: 1px solid #f5c47566; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #633806; margin: 8px; display: none; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+
+<div id="notice">⚠ Mode démonstration — Grist non connecté.</div>
+
+<div class="header">
+  <span style="font-size:22px">🏫</span>
+  <h1>Tableau de bord Direction — Gestion des CCF</h1>
+  <span class="annee">2026-2027</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('synthese', this)">📊 Synthèse</div>
+  <div class="tab" onclick="showTab('planning', this)">📅 Programmation</div>
+  <div class="tab" onclick="showTab('absences', this)">👥 Absences</div>
+  <div class="tab" onclick="showTab('archives', this)">🗄️ Archivage</div>
+</div>
+
+<!-- ═══ SYNTHÈSE ═══ -->
+<div class="tab-content active" id="tab-synthese">
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card kpi-blue"><div class="kpi-val" id="kpi-classes">—</div><div class="kpi-label">Classes</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-val" id="kpi-realises">—</div><div class="kpi-label">CCF réalisés</div></div>
+    <div class="kpi-card kpi-orange"><div class="kpi-val" id="kpi-avenir">—</div><div class="kpi-label">À venir</div></div>
+    <div class="kpi-card kpi-red"><div class="kpi-val" id="kpi-retard">—</div><div class="kpi-label">En retard</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Avancement par classe</div>
+    <div id="avancement-classes"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Avancement par enseignant</div>
+    <div id="avancement-enseignants"></div>
+  </div>
+</div>
+
+<!-- ═══ PROGRAMMATION ═══ -->
+<div class="tab-content" id="tab-planning">
+  <div class="filtre-row">
+    <select id="filtre-classe" onchange="rendreTablePlanning()">
+      <option value="">Toutes les classes</option>
+    </select>
+    <select id="filtre-statut" onchange="rendreTablePlanning()">
+      <option value="">Tous les statuts</option>
+      <option value="À venir">À venir</option>
+      <option value="Réalisé">Réalisé</option>
+      <option value="En retard">En retard</option>
+      <option value="Non planifié">Non planifié</option>
+    </select>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      Programmation des CCF
+      <span id="planning-count" style="font-size:11px;color:var(--muted);font-weight:400"></span>
+    </div>
+    <div id="table-planning"></div>
+  </div>
+</div>
+
+<!-- ═══ ABSENCES ═══ -->
+<div class="tab-content" id="tab-absences">
+  <div class="card">
+    <div class="card-title">Élèves absents lors des CCF (déclarés)</div>
+    <div id="table-absences"></div>
+  </div>
+</div>
+
+<!-- ═══ ARCHIVAGE ═══ -->
+<div class="tab-content" id="tab-archives">
+  <div class="card">
+    <div class="card-title">État de l'archivage documentaire</div>
+    <div id="table-archives"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Avancement archivage par classe</div>
+    <div id="avancement-archives"></div>
+  </div>
+</div>
+
+<script>
+/* ══ ÉTAT ══ */
+let gristConnecte = false;
+let classes = [], epreuves = [], enseignants = [], eleves = [];
+let plannings = [], stockageDocs = [];
+
+/* ══ TABS ══ */
+function showTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+/* ══ INIT GRIST ══ */
+function chargerDonnees() {
+  if (gristConnecte) return;
+  gristConnecte = true;
+  document.getElementById("notice").style.display = "none";
+
+  grist.docApi.listTables().then(tables => {
+    const nomStock = tables.find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
+    return Promise.all([
+      grist.docApi.fetchTable("Classes"),
+      grist.docApi.fetchTable("ConfigEpreuves"),
+      grist.docApi.fetchTable("Enseignants"),
+      grist.docApi.fetchTable("Eleves"),
+      grist.docApi.fetchTable("PlanningDesCCF"),
+      grist.docApi.fetchTable(nomStock)
+    ]);
+  }).then(([cls, epr, ens, elv, pl, stock]) => {
+    document.getElementById("notice").style.display = "none";
+    classes     = parseTable(cls);
+    epreuves    = parseTable(epr);
+    enseignants = parseTable(ens);
+    eleves      = parseTable(elv);
+    plannings   = parseTable(pl);
+    stockageDocs = parseTable(stock);
+    peuplerFiltres();
+    rendreSynthese();
+    rendreTablePlanning();
+    rendreAbsences();
+    rendreArchives();
+  }).catch(e => {
+    console.error(e);
+    gristConnecte = false;
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  });
+}
+
+function parseTable(data) {
+  if (!data || !data.id) return [];
+  const keys = Object.keys(data);
+  return data.id.map((id, i) => {
+    const obj = { id };
+    keys.forEach(k => { if (k !== 'id') obj[k] = data[k][i]; });
+    return obj;
+  });
+}
+
+function initGrist() {
+  if (typeof grist !== "undefined") {
+    grist.ready({ requiredAccess: "full" });
+    grist.onOptions(() => { if (!gristConnecte) chargerDonnees(); });
+    grist.onRecord(() => { if (!gristConnecte) chargerDonnees(); });
+    [1000, 2000, 3500].forEach(d => setTimeout(() => { if (!gristConnecte) chargerDonnees(); }, d));
+  } else {
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  }
+}
+
+function chargerDemoMode() {
+  classes = [
+    { id: 1, code_classe: "TBAER", diplome: 1 },
+    { id: 2, code_classe: "1BAER", diplome: 1 },
+    { id: 3, code_classe: "1BMVA1", diplome: 2 },
+    { id: 5, code_classe: "CAP1", diplome: 3 }
+  ];
+  epreuves = [
+    { id: 1, repere: "E1-A", libelle: "Mathématiques" },
+    { id: 2, repere: "E1-B", libelle: "Sciences physiques" },
+    { id: 3, repere: "EG2", libelle: "Maths et physique-chimie" }
+  ];
+  enseignants = [
+    { id: 1, nom_prenom: "ETHEVE Joseph Expédit", role: "RRUPN" },
+    { id: 2, nom_prenom: "BOULANGER Jean", role: "Enseignant" }
+  ];
+  eleves = [
+    { id: 1, nom_prenom: "DUPONT Lucas", classe: 1 },
+    { id: 2, nom_prenom: "MARTIN Emma", classe: 1 },
+    { id: 3, nom_prenom: "LEROY Maxime", classe: 2 }
+  ];
+  plannings = [
+    { id: 1, enseignant: 1, classe: 1, epreuve: 1, sequence: "Séquence 1", date_prevue: "2026-10-15", date_realisee: "2026-10-15", salle: "Salle 12", statut: "Réalisé" },
+    { id: 2, enseignant: 1, classe: 1, epreuve: 2, sequence: "Séquence 1", date_prevue: "2026-11-05", salle: "Salle 12", statut: "À venir" },
+    { id: 3, enseignant: 2, classe: 2, epreuve: 1, sequence: "Séquence 1", date_prevue: "2026-09-01", salle: "Salle 08", statut: "En retard" },
+    { id: 4, enseignant: 1, classe: 5, epreuve: 3, sequence: "Séquence 1", date_prevue: "2026-12-01", salle: "Salle 05", statut: "À venir" }
+  ];
+  stockageDocs = [
+    { id: 1, la_classe: 1, epreuve: 1, enseignant: 1, date_depot: "2026-10-16", archive: true },
+  ];
+  peuplerFiltres();
+  rendreSynthese();
+  rendreTablePlanning();
+  rendreAbsences();
+  rendreArchives();
+}
+
+/* ══ FILTRES ══ */
+function peuplerFiltres() {
+  const sel = document.getElementById("filtre-classe");
+  classes.forEach(c => {
+    const o = document.createElement("option");
+    o.value = c.id; o.textContent = c.code_classe;
+    sel.appendChild(o);
+  });
+}
+
+/* ══ SYNTHÈSE ══ */
+function rendreSynthese() {
+  const total = plannings.length;
+  const realises = plannings.filter(p => p.statut === "Réalisé").length;
+  const avenir = plannings.filter(p => p.statut === "À venir").length;
+  const retard = plannings.filter(p => p.statut === "En retard").length;
+
+  document.getElementById("kpi-classes").textContent = classes.length;
+  document.getElementById("kpi-realises").textContent = realises;
+  document.getElementById("kpi-avenir").textContent = avenir;
+  document.getElementById("kpi-retard").textContent = retard;
+
+  // Avancement par classe
+  const containerCls = document.getElementById("avancement-classes");
+  containerCls.innerHTML = classes.map(cls => {
+    const plCls = plannings.filter(p => p.classe === cls.id);
+    const realCls = plCls.filter(p => p.statut === "Réalisé").length;
+    const pct = plCls.length ? Math.round(100 * realCls / plCls.length) : 0;
+    const fillClass = pct === 100 ? "fill-green" : pct >= 50 ? "fill-orange" : "fill-red";
+    const retardCls = plCls.filter(p => p.statut === "En retard").length;
+    return `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+          <span><strong>${cls.code_classe}</strong> — ${realCls}/${plCls.length} épreuve${plCls.length > 1 ? 's' : ''} réalisée${plCls.length > 1 ? 's' : ''}</span>
+          <span style="display:flex;gap:6px;align-items:center">
+            ${retardCls > 0 ? `<span class="pill pill-red">${retardCls} en retard</span>` : ''}
+            <strong>${pct}%</strong>
+          </span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join("");
+
+  // Avancement par enseignant
+  const containerEns = document.getElementById("avancement-enseignants");
+  containerEns.innerHTML = enseignants.map(ens => {
+    const plEns = plannings.filter(p => p.enseignant === ens.id);
+    if (!plEns.length) return '';
+    const realEns = plEns.filter(p => p.statut === "Réalisé").length;
+    const pct = Math.round(100 * realEns / plEns.length);
+    const fillClass = pct === 100 ? "fill-green" : pct >= 50 ? "fill-orange" : "fill-red";
+    return `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+          <span><strong>${ens.nom_prenom}</strong> — ${realEns}/${plEns.length}</span>
+          <strong>${pct}%</strong>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join("") || '<div class="empty">Aucune donnée.</div>';
+}
+
+/* ══ PLANNING ══ */
+function rendreTablePlanning() {
+  const filtreClasse = parseInt(document.getElementById("filtre-classe").value) || null;
+  const filtreStatut = document.getElementById("filtre-statut").value;
+
+  let data = plannings;
+  if (filtreClasse) data = data.filter(p => p.classe === filtreClasse);
+  if (filtreStatut) data = data.filter(p => p.statut === filtreStatut);
+
+  document.getElementById("planning-count").textContent = `${data.length} épreuve${data.length > 1 ? 's' : ''}`;
+
+  const container = document.getElementById("table-planning");
+  if (!data.length) { container.innerHTML = '<div class="empty">Aucune épreuve selon ces critères.</div>'; return; }
+
+  container.innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>Classe</th><th>Épreuve</th><th>Enseignant</th>
+        <th>Séquence</th><th>Date prévue</th><th>Salle</th><th>Statut</th>
+      </tr></thead>
+      <tbody>${data.map(p => {
+        const cls = classes.find(c => c.id === p.classe);
+        const epr = epreuves.find(e => e.id === p.epreuve);
+        const ens = enseignants.find(e => e.id === p.enseignant);
+        const dateStr = p.date_prevue ? new Date(p.date_prevue).toLocaleDateString("fr-FR") : "—";
+        const statutClass = p.statut === "Réalisé" ? "statut-realise" : p.statut === "En retard" ? "statut-retard" : "statut-avenir";
+        return `<tr>
+          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
+          <td>${epr ? epr.repere + ' — ' + epr.libelle : '?'}</td>
+          <td>${ens ? ens.nom_prenom : '?'}</td>
+          <td>${p.sequence || '—'}</td>
+          <td>${dateStr}</td>
+          <td>${p.salle || '—'}</td>
+          <td class="${statutClass}">${p.statut || '—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+/* ══ ABSENCES ══ */
+function rendreAbsences() {
+  const container = document.getElementById("table-absences");
+  const docsAvecAbs = stockageDocs.filter(d => d.eleves_AB && Array.isArray(d.eleves_AB) && d.eleves_AB.length > 0);
+
+  if (!docsAvecAbs.length) {
+    container.innerHTML = '<div class="empty">Aucune absence déclarée.</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Classe</th><th>Épreuve</th><th>Date dépôt</th><th>Élèves absents</th></tr></thead>
+      <tbody>${docsAvecAbs.map(d => {
+        const cls = classes.find(c => c.id === (d.la_classe || d.classe));
+        const epr = epreuves.find(e => e.id === d.epreuve);
+        const dateStr = d.date_depot ? new Date(d.date_depot).toLocaleDateString("fr-FR") : "—";
+        const nomsAbs = Array.isArray(d.eleves_AB)
+          ? d.eleves_AB.map(id => { const elv = eleves.find(e => e.id === id); return elv ? elv.nom_prenom : '?'; }).join(", ")
+          : "—";
+        return `<tr>
+          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
+          <td>${epr ? epr.repere : '?'}</td>
+          <td>${dateStr}</td>
+          <td>${nomsAbs}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+/* ══ ARCHIVES ══ */
+function rendreArchives() {
+  const container = document.getElementById("table-archives");
+  if (!stockageDocs.length) { container.innerHTML = '<div class="empty">Aucun dépôt déclaré.</div>'; return; }
+
+  container.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Classe</th><th>Épreuve</th><th>Enseignant</th><th>Date dépôt</th><th>Statut</th></tr></thead>
+      <tbody>${stockageDocs.map(d => {
+        const cls = classes.find(c => c.id === (d.la_classe || d.classe));
+        const epr = epreuves.find(e => e.id === d.epreuve);
+        const ens = enseignants.find(e => e.id === d.enseignant);
+        const dateStr = d.date_depot ? new Date(d.date_depot).toLocaleDateString("fr-FR") : "—";
+        return `<tr>
+          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
+          <td>${epr ? epr.repere : '?'}</td>
+          <td>${ens ? ens.nom_prenom : '?'}</td>
+          <td>${dateStr}</td>
+          <td>${d.archive ? '<span class="pill pill-green">✓ Archivé</span>' : '<span class="pill pill-orange">⏳ En attente</span>'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+
+  // Avancement archivage par classe
+  const containerAv = document.getElementById("avancement-archives");
+  containerAv.innerHTML = classes.map(cls => {
+    const docsClasse = stockageDocs.filter(d => (d.la_classe || d.classe) === cls.id);
+    const archives = docsClasse.filter(d => d.archive).length;
+    const pct = docsClasse.length ? Math.round(100 * archives / docsClasse.length) : 0;
+    const fillClass = pct === 100 ? "fill-green" : pct > 0 ? "fill-orange" : "fill-red";
+    return `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+          <span><strong>${cls.code_classe}</strong> — ${archives}/${docsClasse.length} document${docsClasse.length > 1 ? 's' : ''} archivé${docsClasse.length > 1 ? 's' : ''}</span>
+          <strong>${pct}%</strong>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join("");
+}
+
+document.addEventListener("DOMContentLoaded", initGrist);
+</script>
+</body>
+</html>
