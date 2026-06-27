@@ -217,52 +217,56 @@ function chargerDemoMode() {
 
 /* ══ RENDU ══ */
 function rendreTout() {
-  // Construire le regroupement par épreuve (libellé)
-  // Pour chaque épreuve, trouver les enseignants affectés
+  // Construire le regroupement combiné :
+  // 1. Enseignants avec affectations → groupés par épreuve réelle
+  // 2. Enseignants SANS affectation → groupés par matiere_principale
   const groupesParEpreuve = {};
 
-  if (affectations.length > 0) {
-    // Regroupement via AffectationEnseignants
-    affectations.forEach(aff => {
-      const ens = enseignants.find(e => e.id === aff.enseignant);
-      const epr = epreuves.find(e => e.id === aff.epreuve);
-      if (!ens || !epr) return;
+  // Ensemble des IDs enseignants ayant au moins une affectation
+  const ensAvecAff = new Set(affectations.map(a => a.enseignant));
 
-      const key = epr.libelle || epr.repere;
-      if (!groupesParEpreuve[key]) {
-        groupesParEpreuve[key] = { epreuve: epr, enseignants: new Map() };
-      }
-      // Ajouter l'enseignant s'il n'est pas déjà dans ce groupe
-      if (!groupesParEpreuve[key].enseignants.has(ens.id)) {
-        groupesParEpreuve[key].enseignants.set(ens.id, {
-          enseignant: ens,
-          classes: []
-        });
-      }
-      // Ajouter la classe à cet enseignant dans ce groupe
-      const cls = classes.find(c => c.id === aff.classe);
-      if (cls) {
-        groupesParEpreuve[key].enseignants.get(ens.id).classes.push(cls.code_classe);
-      }
-    });
-  } else {
-    // Fallback : regroupement par matiere_principale
-    enseignants.forEach(ens => {
-      const key = ens.matiere_principale || "Non affecté";
-      if (!groupesParEpreuve[key]) {
-        groupesParEpreuve[key] = { epreuve: { libelle: key, repere: "" }, enseignants: new Map() };
-      }
+  // 1. Regroupement via AffectationEnseignants
+  affectations.forEach(aff => {
+    const ens = enseignants.find(e => e.id === aff.enseignant);
+    const epr = epreuves.find(e => e.id === aff.epreuve);
+    if (!ens || !epr) return;
+
+    const key = epr.libelle || epr.repere;
+    if (!groupesParEpreuve[key]) {
+      groupesParEpreuve[key] = { epreuve: epr, enseignants: new Map() };
+    }
+    if (!groupesParEpreuve[key].enseignants.has(ens.id)) {
       groupesParEpreuve[key].enseignants.set(ens.id, { enseignant: ens, classes: [] });
-    });
-  }
+    }
+    const cls = classes.find(c => c.id === aff.classe);
+    if (cls) {
+      groupesParEpreuve[key].enseignants.get(ens.id).classes.push(cls.code_classe);
+    }
+  });
+
+  // 2. Enseignants SANS affectation → groupés par matiere_principale
+  enseignants.forEach(ens => {
+    if (ensAvecAff.has(ens.id)) return; // déjà traité
+    const key = ens.matiere_principale || "Non affecté";
+    if (!groupesParEpreuve[key]) {
+      groupesParEpreuve[key] = {
+        epreuve: { libelle: key, repere: "", bloc_enseignement: "" },
+        enseignants: new Map()
+      };
+    }
+    groupesParEpreuve[key].enseignants.set(ens.id, { enseignant: ens, classes: [] });
+  });
 
   // Stats
   const nbMatieres = Object.keys(groupesParEpreuve).length;
   const nbEnsTotal = enseignants.length;
+  const nbAffecter = ensAvecAff.size;
+  const nbSansAff = nbEnsTotal - nbAffecter;
   document.getElementById("stats-row").innerHTML = `
     <div class="stat-pill"><strong>${nbEnsTotal}</strong> enseignant${nbEnsTotal > 1 ? 's' : ''}</div>
-    <div class="stat-pill"><strong>${nbMatieres}</strong> matière${nbMatieres > 1 ? 's' : ''} / épreuve${nbMatieres > 1 ? 's' : ''}</div>
-    <div class="stat-pill"><strong>${affectations.length}</strong> affectation${affectations.length > 1 ? 's' : ''}</div>
+    <div class="stat-pill"><strong>${nbMatieres}</strong> groupe${nbMatieres > 1 ? 's' : ''}</div>
+    <div class="stat-pill"><strong>${nbAffecter}</strong> affecté${nbAffecter > 1 ? 's' : ''}</div>
+    ${nbSansAff > 0 ? `<div class="stat-pill" style="background:#faeeda;border-color:#f5c47566;color:#633806"><strong>${nbSansAff}</strong> sans affectation</div>` : ''}
   `;
 
   // Filtres
