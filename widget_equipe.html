@@ -46,9 +46,10 @@
   /* LIGNE MATIÈRE */
   tr.matiere-row td {
     padding: 0;
-    border-top: 2px solid var(--border);
+    border-top: 8px solid var(--bg);
+    box-shadow: inset 0 3px 0 var(--border);
   }
-  tr.matiere-row:first-child td { border-top: none; }
+  tr.matiere-row:first-child td { border-top: none; box-shadow: none; }
 
   .matiere-header {
     display: flex; align-items: center; gap: 8px;
@@ -89,9 +90,8 @@
   .empty-state { text-align: center; color: var(--muted); padding: 32px; font-size: 13px; }
 
   /* Colonne largeurs */
-  .col-nom   { width: 42%; }
-  .col-role  { width: 18%; }
-  .col-cls   { width: 40%; }
+  .col-nom   { width: 55%; }
+  .col-cls   { width: 45%; }
 </style>
 </head>
 <body>
@@ -290,7 +290,7 @@ function rendreTout() {
 
     // Ligne en-tête matière (fusionnée sur 3 colonnes)
     rows += `<tr class="matiere-row">
-      <td colspan="3">
+      <td colspan="2">
         <div class="matiere-header" style="background:${c[1]}60">
           <div class="mat-bar" style="background:${c[0]}"></div>
           <span style="color:${c[2]}">${mat}</span>
@@ -319,7 +319,6 @@ function rendreTout() {
             </div>
           </div>
         </td>
-        <td class="col-role">${roleBadge(e.role)}</td>
         <td class="col-cls"><div class="classes-cell">${clsBadges}</div></td>
       </tr>`;
     });
@@ -328,13 +327,7 @@ function rendreTout() {
   document.getElementById("contenu").innerHTML = `
     <div class="table-wrapper">
       <table class="main-table">
-        <thead>
-          <tr>
-            <th class="col-nom">Nom et Prénom</th>
-            <th class="col-role">Rôle</th>
-            <th class="col-cls">Classes affectées</th>
-          </tr>
-        </thead>
+
         <tbody>${rows}</tbody>
       </table>
     </div>`;
