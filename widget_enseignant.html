@@ -382,16 +382,40 @@ function showTab(id) {
 /* ══════════════════════════════════════════
    INIT GRIST
 ══════════════════════════════════════════ */
-function chargerDonnees() {
+async function chargerDonnees() {
   if (gristConnecte) return;
   gristConnecte = true;
-  // Masquer immédiatement le bandeau dès que Grist lance le chargement
   document.getElementById("notice").style.display = "none";
 
-  grist.docApi.listTables().then(tables => {
-    const nomAff = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
-    const nomStock = tables.find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
-    return Promise.all([
+  try {
+    // ── 1. Identifier l'utilisateur via SessionUtilisateurs ──
+    // Technique : créer une ligne temporaire → Grist y injecte user.Email automatiquement
+    let emailConnecte = null;
+    try {
+      const newRowResult = await grist.docApi.applyUserActions([
+        ["AddRecord", "SessionUtilisateurs", null, {}]
+      ]);
+      const newRowId = newRowResult.retValues[0];
+      const sessions = await grist.docApi.fetchTable("SessionUtilisateurs");
+      const idx = sessions.id.indexOf(newRowId);
+      if (idx !== -1) {
+        emailConnecte = sessions.email_session ? sessions.email_session[idx] : null;
+        console.log("Email connecté détecté:", emailConnecte);
+      }
+      // Supprimer la ligne temporaire
+      await grist.docApi.applyUserActions([
+        ["RemoveRecord", "SessionUtilisateurs", newRowId]
+      ]);
+    } catch(e) {
+      console.warn("Détection email impossible:", e.message);
+    }
+
+    // ── 2. Charger toutes les tables ──
+    const tables = await grist.docApi.listTables();
+    const nomAff   = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
+    const nomStock = tables.find(t => t.toLowerCase().includes("stockage"))    || "StockageDocs";
+
+    const [ens, cls, epr, elv, pl, nt, conv, stock] = await Promise.all([
       grist.docApi.fetchTable("Enseignants"),
       grist.docApi.fetchTable("Classes"),
       grist.docApi.fetchTable("ConfigEpreuves"),
@@ -399,77 +423,68 @@ function chargerDonnees() {
       grist.docApi.fetchTable("PlanningDesCCF"),
       grist.docApi.fetchTable("Notes"),
       grist.docApi.fetchTable("Convocations"),
-      grist.docApi.fetchTable(nomStock)
+      grist.docApi.fetchTable(nomStock),
     ]);
-  }).then(([ens, cls, epr, elv, pl, nt, conv, stock]) => {
 
-    // Masquer le bandeau dès que les données arrivent
     document.getElementById("notice").style.display = "none";
 
     enseignants = parseTable(ens);
-    classes = parseTable(cls);
-    epreuves = parseTable(epr);
-    eleves = parseTable(elv);
+    classes     = parseTable(cls);
+    epreuves    = parseTable(epr);
+    eleves      = parseTable(elv);
 
-    // Stocker les données brutes pour les utiliser après identification
     window._pl_raw    = pl;
     window._nt_raw    = nt;
     window._conv_raw  = conv;
     window._stock_raw = stock;
 
-    // Tenter getUserProfile d'abord, sinon afficher l'écran de sélection
-    const tryGetProfile = typeof grist.getUserProfile === "function"
-      ? grist.getUserProfile()
-      : Promise.resolve(null);
-
-    tryGetProfile.then(profile => {
-      if (profile && profile.email) {
-        monEmail = profile.email;
-        const moi = enseignants.find(e =>
-          e.email_academique && e.email_academique.toLowerCase() === monEmail.toLowerCase()
-        );
-        if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
-      }
-
-      if (monId) {
-        // Profil détecté automatiquement
-        initialiserInterface();
+    // ── 3. Identifier l'enseignant depuis l'email connecté ──
+    if (emailConnecte) {
+      const moi = enseignants.find(e =>
+        e.email_academique &&
+        e.email_academique.toLowerCase().trim() === emailConnecte.toLowerCase().trim()
+      );
+      if (moi) {
+        monId  = moi.id;
+        monNom = moi.nom_prenom;
+        console.log("Enseignant identifié automatiquement:", monNom);
       } else {
-        // Pas de profil → vérifier localStorage puis afficher sélection
-        try {
-          const savedId = localStorage.getItem('ccf_enseignant_id');
-          const savedNom = localStorage.getItem('ccf_enseignant_nom');
-          if (savedId && savedNom) {
-            monId = parseInt(savedId);
-            monNom = savedNom;
-            initialiserInterface();
-            return;
-          }
-        } catch(e) {}
-        // Afficher l'écran de sélection
-        afficherEcranIdentification();
+        console.warn("Email", emailConnecte, "non trouvé dans Enseignants");
       }
-    }).catch(() => {
-      // getUserProfile non disponible
+    }
+
+    // ── 4. Ouvrir l'interface ──
+    if (monId) {
+      // Identifié → sauvegarder et ouvrir directement
       try {
-        const savedId = localStorage.getItem('ccf_enseignant_id');
+        localStorage.setItem('ccf_enseignant_id', monId);
+        localStorage.setItem('ccf_enseignant_nom', monNom);
+      } catch(e) {}
+      document.getElementById("ecran-identification").style.display = "none";
+      initialiserInterface();
+    } else {
+      // Non identifié → vérifier localStorage
+      try {
+        const savedId  = localStorage.getItem('ccf_enseignant_id');
         const savedNom = localStorage.getItem('ccf_enseignant_nom');
         if (savedId && savedNom) {
-          monId = parseInt(savedId);
+          monId  = parseInt(savedId);
           monNom = savedNom;
+          document.getElementById("ecran-identification").style.display = "none";
           initialiserInterface();
           return;
         }
       } catch(e) {}
+      // Dernier recours : écran de sélection manuelle
       afficherEcranIdentification();
-    });
+    }
 
-  }).catch(e => {
-    console.error(e);
+  } catch(e) {
+    console.error("Erreur chargement:", e);
     gristConnecte = false;
     document.getElementById("notice").style.display = "block";
     chargerDemoMode();
-  });
+  }
 }
 
 // Helper : transformer un objet fetchTable en tableau d'objets
