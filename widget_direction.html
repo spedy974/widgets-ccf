@@ -103,6 +103,7 @@
   <div class="tab" onclick="showTab('planning', this)">📅 Programmation</div>
   <div class="tab" onclick="showTab('absences', this)">👥 Absences</div>
   <div class="tab" onclick="showTab('archives', this)">🗄️ Archivage</div>
+  <div class="tab" onclick="showTab('affectations', this)">👥 Affectations</div>
 </div>
 
 <!-- ═══ SYNTHÈSE ═══ -->
@@ -156,6 +157,19 @@
   </div>
 </div>
 
+<!-- ═══ AFFECTATIONS ═══ -->
+<div class="tab-content" id="tab-affectations">
+  <div class="aff-layout">
+    <div class="aff-sidebar">
+      <div class="aff-sidebar-title">Enseignants</div>
+      <div id="aff-ens-list"></div>
+    </div>
+    <div class="aff-main">
+      <div id="aff-ens-detail" class="aff-no-select">← Sélectionne un enseignant pour gérer ses affectations.</div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ARCHIVAGE ═══ -->
 <div class="tab-content" id="tab-archives">
   <div class="card">
@@ -182,6 +196,133 @@ function showTab(id, el) {
   if (el) el.classList.add('active');
 }
 
+/* ══ AFFECTATIONS ══ */
+let selectedEnsAff = null;
+
+function affInitialiser() {
+  // Peupler la liste des enseignants
+  const container = document.getElementById("aff-ens-list");
+  container.innerHTML = enseignants.map(e => {
+    const nbAff = affectations.filter(a => a.enseignant === e.id).length;
+    return `<div class="aff-ens-item" onclick="affSelectionner(${e.id})" id="aff-ens-${e.id}">
+      <div class="aff-ens-nom">${e.nom_prenom}</div>
+      <div class="aff-ens-meta">${e.matiere || e.matiere_principale || '—'}</div>
+      ${nbAff > 0 ? `<span class="aff-ens-badge">${nbAff} affectation${nbAff>1?'s':''}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function affSelectionner(ensId) {
+  selectedEnsAff = ensId;
+  document.querySelectorAll('.aff-ens-item').forEach(el => el.classList.remove('active'));
+  const item = document.getElementById('aff-ens-' + ensId);
+  if (item) item.classList.add('active');
+  affRendreDetail();
+}
+
+function affRendreDetail() {
+  const ens = enseignants.find(e => e.id === selectedEnsAff);
+  if (!ens) return;
+
+  const affEns = affectations.filter(a => a.enseignant === selectedEnsAff);
+  const init = ens.nom_prenom.trim().split(/\s+/).filter(p => p.length > 1 && p === p.toUpperCase()).map(p=>p[0]).join('').slice(0,2) || ens.nom_prenom.slice(0,2).toUpperCase();
+
+  const lignes = affEns.length === 0
+    ? `<div class="aff-empty">Aucune affectation pour cet enseignant.<br>Utilisez le formulaire ci-dessous pour en ajouter.</div>`
+    : affEns.map(a => {
+        const cls = classes.find(c => c.id === a.classe);
+        const epr = epreuves.find(e => e.id === a.epreuve);
+        return `<div class="aff-item-row">
+          <span class="aff-cls-tag">${cls ? cls.code_classe : '?'}</span>
+          <span class="aff-epr-tag">${epr ? epr.repere + ' — ' + epr.libelle : '?'}</span>
+          <span class="aff-ann-tag">${a.annee_scolaire || '—'}</span>
+          <button class="aff-del-btn" onclick="affSupprimer(${a.id})" title="Supprimer">×</button>
+        </div>`;
+      }).join('');
+
+  const selClasses = classes.map(c => `<option value="${c.id}">${c.code_classe}</option>`).join('');
+  const selEpreuves = epreuves.map(e => `<option value="${e.id}">${e.repere} — ${e.libelle}</option>`).join('');
+
+  document.getElementById("aff-ens-detail").className = "aff-main";
+  document.getElementById("aff-ens-detail").innerHTML = `
+    <div class="aff-ens-card">
+      <div class="aff-avatar">${init}</div>
+      <div>
+        <div style="font-weight:700;font-size:14px">${ens.nom_prenom}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${ens.matiere || ens.matiere_principale || '—'} · ${ens.role || 'Enseignant'}</div>
+      </div>
+    </div>
+
+    <div class="aff-card">
+      <div class="aff-card-title">Affectations actuelles (${affEns.length})</div>
+      ${lignes}
+    </div>
+
+    <div class="aff-card">
+      <div class="aff-card-title">Ajouter une affectation</div>
+      <div class="aff-row">
+        <div class="aff-form-group">
+          <label>Classe</label>
+          <select id="aff-add-classe"><option value="">Choisir…</option>${selClasses}</select>
+        </div>
+        <div class="aff-form-group">
+          <label>Épreuve</label>
+          <select id="aff-add-epreuve"><option value="">Choisir…</option>${selEpreuves}</select>
+        </div>
+        <div class="aff-form-group">
+          <label>Année</label>
+          <input type="text" id="aff-add-annee" value="2026-2027">
+        </div>
+        <button class="aff-btn-add" onclick="affAjouter()">+ Affecter</button>
+      </div>
+    </div>`;
+}
+
+async function affAjouter() {
+  const classeId  = parseInt(document.getElementById("aff-add-classe").value);
+  const epreuveId = parseInt(document.getElementById("aff-add-epreuve").value);
+  const annee     = document.getElementById("aff-add-annee").value.trim();
+
+  if (!classeId || !epreuveId || !annee) {
+    alert("Remplis classe, épreuve et année.");
+    return;
+  }
+
+  // Vérifier doublon
+  const doublon = affectations.find(a =>
+    a.enseignant === selectedEnsAff && a.classe === classeId &&
+    a.epreuve === epreuveId && a.annee_scolaire === annee
+  );
+  if (doublon) { alert("Cette affectation existe déjà."); return; }
+
+  try {
+    let newId = Date.now();
+    if (gristConnecte) {
+      const nomAff = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
+      const r = await grist.docApi.applyUserActions([["AddRecord", nomAff, null, {
+        enseignant: selectedEnsAff, classe: classeId, epreuve: epreuveId, annee_scolaire: annee
+      }]]);
+      newId = r.retValues[0];
+    }
+    affectations.push({ id: newId, enseignant: selectedEnsAff, classe: classeId, epreuve: epreuveId, annee_scolaire: annee });
+    affInitialiser();
+    affRendreDetail();
+  } catch(e) { alert("Erreur d'enregistrement : " + e.message); }
+}
+
+async function affSupprimer(id) {
+  if (!confirm("Supprimer cette affectation ?")) return;
+  try {
+    if (gristConnecte) {
+      const nomAff = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
+      await grist.docApi.applyUserActions([["RemoveRecord", nomAff, id]]);
+    }
+    affectations = affectations.filter(a => a.id !== id);
+    affInitialiser();
+    affRendreDetail();
+  } catch(e) { alert("Erreur de suppression : " + e.message); }
+}
+
 /* ══ INIT GRIST ══ */
 function chargerDonnees() {
   if (gristConnecte) return;
@@ -190,15 +331,18 @@ function chargerDonnees() {
 
   grist.docApi.listTables().then(tables => {
     const nomStock = tables.find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
+    const nomAff = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
     return Promise.all([
       grist.docApi.fetchTable("Classes"),
       grist.docApi.fetchTable("ConfigEpreuves"),
       grist.docApi.fetchTable("Enseignants"),
       grist.docApi.fetchTable("Eleves"),
       grist.docApi.fetchTable("PlanningDesCCF"),
-      grist.docApi.fetchTable(nomStock)
+      grist.docApi.fetchTable(nomStock),
+      grist.docApi.fetchTable(nomAff),
     ]);
-  }).then(([cls, epr, ens, elv, pl, stock]) => {
+  }).then(([cls, epr, ens, elv, pl, stock, aff]) => {
+    affectations = parseTable(aff);
     document.getElementById("notice").style.display = "none";
     classes     = parseTable(cls);
     epreuves    = parseTable(epr);
@@ -211,6 +355,7 @@ function chargerDonnees() {
     rendreTablePlanning();
     rendreAbsences();
     rendreArchives();
+    affInitialiser();
   }).catch(e => {
     console.error(e);
     gristConnecte = false;
@@ -276,6 +421,7 @@ function chargerDemoMode() {
   rendreTablePlanning();
   rendreAbsences();
   rendreArchives();
+  affInitialiser();
 }
 
 /* ══ FILTRES ══ */
