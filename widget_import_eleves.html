@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Import élèves — CCF</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #4a6cf7; --green: #1D9E75; --red: #e24b4a; --orange: #f59e0b;
+    --bg: #f7f6f3; --card: #fff; --border: #e2e0d8; --text: #2c2c2a; --muted: #888780;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; background: var(--bg); color: var(--text); padding: 16px; }
+
+  #notice { background: #faeeda; border: 1px solid #f5c47566; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #633806; margin-bottom: 12px; display: none; }
+
+  .page-header { margin-bottom: 18px; }
+  .page-header h1 { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+  .page-header .sub { font-size: 12px; color: var(--muted); }
+
+  /* TABS modes */
+  .mode-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .mode-tab { padding: 7px 16px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--card); color: var(--muted); transition: all 0.15s; }
+  .mode-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+  /* CARTE */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+  .card-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+
+  /* FORM */
+  .form-group { margin-bottom: 12px; }
+  label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  select { width: 100%; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text); background: var(--card); outline: none; transition: border-color 0.15s; }
+  select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(74,108,247,0.1); }
+  select.error { border-color: var(--red); }
+
+  /* ZONES DE SAISIE */
+  #zone-copier { display: block; }
+  #zone-csv { display: none; }
+
+  textarea#coller-texte {
+    width: 100%; height: 160px; padding: 10px 12px;
+    border: 1.5px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: monospace; color: var(--text);
+    background: var(--card); outline: none; resize: vertical;
+    transition: border-color 0.15s;
+  }
+  textarea#coller-texte:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(74,108,247,0.1); }
+  textarea#coller-texte::placeholder { color: var(--muted); font-family: inherit; }
+
+  .upload-zone {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 32px; text-align: center; cursor: pointer;
+    transition: all 0.15s; color: var(--muted);
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--blue); background: #f0f3ff; color: var(--blue); }
+  .upload-zone .icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-zone .label { font-size: 13px; font-weight: 600; }
+  .upload-zone .sub { font-size: 11px; margin-top: 4px; }
+  #file-input { display: none; }
+
+  /* INFO FORMAT */
+  .format-info { background: #e8ecfe; border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #2d4ecc; margin-bottom: 12px; line-height: 1.6; }
+  .format-info code { background: #fff; border-radius: 3px; padding: 1px 4px; font-family: monospace; font-size: 11px; }
+
+  /* BOUTONS */
+  .btn-row { display: flex; gap: 8px; margin-top: 14px; }
+  .btn { border: none; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 16px; cursor: pointer; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-secondary { background: #f1efe8; color: var(--muted); border: 1.5px solid var(--border); }
+
+  /* PRÉVISUALISATION */
+  #zone-preview { display: none; }
+  .preview-stats { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .stat-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .stat-pill strong { color: var(--text); }
+  .stat-pill.ok { background: #e0f5ee; border-color: #9FE1CB; color: #0d6e50; }
+  .stat-pill.warn { background: #faeeda; border-color: #f5c475; color: #633806; }
+  .stat-pill.err { background: #fee2e2; border-color: #F7C1C1; color: #991b1b; }
+
+  /* TABLE PRÉVISUALISATION */
+  .preview-table-wrap { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
+  table.preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.preview-table th { background: var(--bg); padding: 6px 10px; text-align: left; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+  table.preview-table td { padding: 6px 10px; border-bottom: 1px solid #f1efe8; vertical-align: middle; }
+  table.preview-table tr:last-child td { border-bottom: none; }
+  table.preview-table tr.row-ok td { }
+  table.preview-table tr.row-warn td { background: #faeeda44; }
+  table.preview-table tr.row-err td { background: #fee2e244; }
+  table.preview-table tr:hover td { background: var(--bg); }
+
+  .row-status { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+  .row-status.ok { background: #e0f5ee; color: #0d6e50; }
+  .row-status.warn { background: #faeeda; color: #633806; }
+  .row-status.err { background: #fee2e2; color: #991b1b; }
+
+  /* RÉSULTAT */
+  #zone-resultat { display: none; }
+  .result-card { border-radius: 8px; padding: 20px; text-align: center; }
+  .result-card.success { background: #e0f5ee; border: 1px solid #9FE1CB; }
+  .result-card.partial { background: #faeeda; border: 1px solid #f5c475; }
+  .result-icon { font-size: 36px; margin-bottom: 8px; }
+  .result-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .result-sub { font-size: 13px; color: var(--muted); }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; opacity: 0; transition: transform 0.25s, opacity 0.25s; pointer-events: none; z-index: 100; }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.ok { background: var(--green); color: #fff; }
+  #toast.err { background: var(--red); color: #fff; }
+</style>
+</head>
+<body>
+
+<div id="notice">⚠ Mode démonstration — Grist non connecté.</div>
+
+<div class="page-header">
+  <h1>📥 Import d'élèves</h1>
+  <div class="sub">Lycée Polyvalent Gérard Ethève — Importer une liste depuis Pronote, Excel ou un fichier CSV</div>
+</div>
+
+<!-- ÉTAPE 1 : Sélectionner la classe -->
+<div class="card">
+  <div class="card-title">Étape 1 — Sélectionner la classe</div>
+  <div class="form-group">
+    <label for="sel-classe">Classe de destination</label>
+    <select id="sel-classe" onchange="onClasseChange()">
+      <option value="">Choisir une classe…</option>
+    </select>
+  </div>
+  <div id="classe-info" style="font-size:12px;color:var(--muted);display:none"></div>
+</div>
+
+<!-- ÉTAPE 2 : Choisir le mode -->
+<div class="card">
+  <div class="card-title">Étape 2 — Source des données</div>
+  <div class="mode-tabs">
+    <div class="mode-tab active" onclick="switchMode('coller', this)">📋 Copier-coller (Pronote / Excel)</div>
+    <div class="mode-tab" onclick="switchMode('csv', this)">📄 Fichier CSV</div>
+  </div>
+
+  <!-- MODE COPIER-COLLER -->
+  <div id="zone-copier">
+    <div class="format-info">
+      Copie ta liste depuis <strong>Pronote</strong> ou <strong>Excel</strong> et colle-la ici.<br>
+      Format attendu : <code>Nom Prénom</code> (un élève par ligne) ou colonnes séparées par tabulations.<br>
+      Exemple : <code>DUPONT Lucas</code> ou <code>DUPONT	Lucas</code>
+    </div>
+    <div class="form-group">
+      <label for="coller-texte">Coller le texte ici</label>
+      <textarea id="coller-texte" placeholder="DUPONT Lucas&#10;MARTIN Emma&#10;BERNARD Noah&#10;..."></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="document.getElementById('coller-texte').value=''">Effacer</button>
+      <button class="btn btn-primary" onclick="analyserTexte()">🔍 Analyser</button>
+    </div>
+  </div>
+
+  <!-- MODE CSV -->
+  <div id="zone-csv">
+    <div class="format-info">
+      Importe un fichier <strong>CSV</strong> avec au moins une colonne <code>nom_prenom</code>.<br>
+      Colonnes reconnues : <code>nom_prenom</code>, <code>nom</code> + <code>prenom</code>, <code>numero_ordre</code><br>
+      Le séparateur peut être <code>;</code> ou <code>,</code> — détecté automatiquement.
+    </div>
+    <div class="upload-zone" id="upload-zone"
+      onclick="document.getElementById('file-input').click()"
+      ondragover="event.preventDefault();this.classList.add('dragover')"
+      ondragleave="this.classList.remove('dragover')"
+      ondrop="onDrop(event)">
+      <div class="icon">📄</div>
+      <div class="label">Cliquer pour choisir un fichier CSV</div>
+      <div class="sub">ou glisser-déposer ici</div>
+    </div>
+    <input type="file" id="file-input" accept=".csv,.txt" onchange="onFileSelect(event)">
+  </div>
+</div>
+
+<!-- ÉTAPE 3 : Prévisualisation -->
+<div class="card" id="zone-preview">
+  <div class="card-title">Étape 3 — Vérification avant import</div>
+  <div class="preview-stats" id="preview-stats"></div>
+  <div class="preview-table-wrap">
+    <table class="preview-table">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Nom et prénom</th>
+          <th>Numéro d'ordre</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody id="preview-body"></tbody>
+    </table>
+  </div>
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn btn-secondary" onclick="annulerPreview()">← Modifier</button>
+    <button class="btn btn-green" id="btn-importer" onclick="importerEleves()">✓ Importer dans Grist</button>
+  </div>
+</div>
+
+<!-- RÉSULTAT -->
+<div id="zone-resultat">
+  <div class="result-card" id="result-card">
+    <div class="result-icon" id="result-icon"></div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="btn-row" style="justify-content:center;margin-top:16px">
+      <button class="btn btn-secondary" onclick="recommencer()">Nouvel import</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ══ ÉTAT ══ */
+let gristConnecte = false;
+let classes = [], elevesExistants = [];
+let elevesParsed = []; // données analysées avant import
+let modeCourant = 'coller';
+const ANNEE = "2026-2027";
+
+/* ══ GRIST ══ */
+function chargerDonnees() {
+  if (gristConnecte) return;
+  gristConnecte = true;
+  document.getElementById("notice").style.display = "none";
+
+  Promise.all([
+    grist.docApi.fetchTable("Classes"),
+    grist.docApi.fetchTable("Eleves"),
+  ]).then(([cls, elv]) => {
+    classes = parseTable(cls);
+    elevesExistants = parseTable(elv);
+    peuplerClasses();
+  }).catch(e => {
+    console.error(e);
+    gristConnecte = false;
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  });
+}
+
+function parseTable(data) {
+  if (!data || !data.id) return [];
+  const keys = Object.keys(data);
+  return data.id.map((id, i) => {
+    const obj = { id };
+    keys.forEach(k => { if (k !== 'id') obj[k] = data[k][i]; });
+    return obj;
+  });
+}
+
+function initGrist() {
+  if (typeof grist !== "undefined") {
+    grist.ready({ requiredAccess: "full" });
+    grist.onOptions(() => { if (!gristConnecte) chargerDonnees(); });
+    grist.onRecord(() => { if (!gristConnecte) chargerDonnees(); });
+    [1000, 2000, 3500].forEach(d => setTimeout(() => { if (!gristConnecte) chargerDonnees(); }, d));
+  } else {
+    document.getElementById("notice").style.display = "block";
+    chargerDemoMode();
+  }
+}
+
+function chargerDemoMode() {
+  classes = [
+    { id: 1, code_classe: "TBAER" }, { id: 2, code_classe: "1BAER" },
+    { id: 3, code_classe: "1BMVA1" }, { id: 4, code_classe: "CAP1" }
+  ];
+  elevesExistants = [
+    { id: 1, nom_prenom: "DUPONT Lucas", classe: 1, numero_ordre: 1 },
+    { id: 2, nom_prenom: "MARTIN Emma", classe: 1, numero_ordre: 2 },
+  ];
+  peuplerClasses();
+}
+
+/* ══ CLASSES ══ */
+function peuplerClasses() {
+  const sel = document.getElementById("sel-classe");
+  sel.innerHTML = '<option value="">Choisir une classe…</option>';
+  classes.forEach(c => {
+    const o = document.createElement("option");
+    o.value = c.id; o.textContent = c.code_classe;
+    sel.appendChild(o);
+  });
+}
+
+function onClasseChange() {
+  const classeId = parseInt(document.getElementById("sel-classe").value);
+  const info = document.getElementById("classe-info");
+  if (!classeId) { info.style.display = "none"; return; }
+  const nb = elevesExistants.filter(e => e.classe === classeId).length;
+  info.style.display = "block";
+  info.innerHTML = `${nb > 0 ? `⚠ ${nb} élève${nb>1?'s':''} déjà présent${nb>1?'s':''} dans cette classe.` : '✅ Aucun élève enregistré pour l\'instant dans cette classe.'}`;
+  info.style.color = nb > 0 ? '#633806' : '#0d6e50';
+  annulerPreview();
+}
+
+/* ══ MODES ══ */
+function switchMode(mode, btn) {
+  modeCourant = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('zone-copier').style.display = mode === 'coller' ? 'block' : 'none';
+  document.getElementById('zone-csv').style.display = mode === 'csv' ? 'block' : 'none';
+  annulerPreview();
+}
+
+/* ══ PARSING TEXTE (Copier-coller) ══ */
+function analyserTexte() {
+  const texte = document.getElementById("coller-texte").value.trim();
+  if (!texte) { toast("Colle d'abord du texte à analyser", "err"); return; }
+
+  const lignes = texte.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const parsed = [];
+
+  lignes.forEach((ligne, idx) => {
+    // Détecter le séparateur : tabulation, point-virgule, virgule, ou espace
+    let nom = "";
+    if (ligne.includes('\t')) {
+      // Colonnes tabulées (export Pronote)
+      const cols = ligne.split('\t').map(c => c.trim()).filter(c => c);
+      nom = cols.join(' ');
+    } else if (ligne.includes(';')) {
+      const cols = ligne.split(';').map(c => c.trim()).filter(c => c);
+      nom = cols.join(' ');
+    } else {
+      // Juste le nom sur une ligne
+      nom = ligne.trim();
+    }
+
+    // Nettoyer : supprimer numéros en début de ligne (ex: "1. DUPONT")
+    nom = nom.replace(/^\d+[\.\)]\s*/, '').trim();
+    // Supprimer les guillemets
+    nom = nom.replace(/[""'']/g, '').trim();
+
+    if (nom.length < 2) return;
+
+    parsed.push({
+      idx: idx + 1,
+      nom_prenom: nom.toUpperCase() === nom ? nom : nom, // garder la casse originale
+      numero_ordre: parsed.length + 1,
+      statut: 'ok',
+      message: ''
+    });
+  });
+
+  afficherPreview(parsed);
+}
+
+/* ══ PARSING CSV ══ */
+function onFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) lireCSV(file);
+}
+
+function onDrop(event) {
+  event.preventDefault();
+  document.getElementById("upload-zone").classList.remove('dragover');
+  const file = event.dataTransfer.files[0];
+  if (file) lireCSV(file);
+}
+
+function lireCSV(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const texte = e.target.result;
+    const parsed = parseCSV(texte);
+    afficherPreview(parsed);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(texte) {
+  const lignes = texte.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  if (lignes.length === 0) return [];
+
+  // Détecter le séparateur
+  const sep = lignes[0].includes(';') ? ';' : ',';
+
+  // Analyser l'en-tête
+  const headers = lignes[0].split(sep).map(h => h.trim().toLowerCase().replace(/[""'']/g, ''));
+  const iNom    = headers.findIndex(h => h.includes('nom_prenom') || h === 'nom prenom' || h === 'eleve');
+  const iNom2   = headers.findIndex(h => h === 'nom' || h === 'name');
+  const iPrenom = headers.findIndex(h => h === 'prenom' || h === 'prénom' || h === 'firstname');
+  const iNum    = headers.findIndex(h => h.includes('numero') || h.includes('numéro') || h === 'n°' || h === 'num');
+
+  const hasHeader = iNom >= 0 || iNom2 >= 0;
+  const dataStart = hasHeader ? 1 : 0;
+
+  const parsed = [];
+  for (let i = dataStart; i < lignes.length; i++) {
+    const cols = lignes[i].split(sep).map(c => c.trim().replace(/[""'']/g, ''));
+    let nom = '';
+
+    if (iNom >= 0 && cols[iNom]) {
+      nom = cols[iNom];
+    } else if (iNom2 >= 0 && iPrenom >= 0) {
+      nom = (cols[iNom2] || '') + ' ' + (cols[iPrenom] || '');
+    } else if (!hasHeader) {
+      nom = cols[0] || '';
+    } else {
+      nom = cols[0] || '';
+    }
+
+    nom = nom.trim();
+    if (nom.length < 2) continue;
+
+    const num = iNum >= 0 && cols[iNum] ? parseInt(cols[iNum]) : parsed.length + 1;
+
+    parsed.push({
+      idx: i,
+      nom_prenom: nom,
+      numero_ordre: isNaN(num) ? parsed.length + 1 : num,
+      statut: 'ok',
+      message: ''
+    });
+  }
+  return parsed;
+}
+
+/* ══ PRÉVISUALISATION ══ */
+function afficherPreview(parsed) {
+  if (parsed.length === 0) {
+    toast("Aucun élève détecté — vérifie le format", "err");
+    return;
+  }
+
+  const classeId = parseInt(document.getElementById("sel-classe").value);
+
+  // Valider chaque élève
+  const elevesClasse = elevesExistants.filter(e => e.classe === classeId);
+  const normaliser = s => s.toLowerCase().trim()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // supprimer accents
+    .replace(/\s+/g, " "); // normaliser espaces
+
+  const nomsExistants = elevesClasse.map(e => normaliser(e.nom_prenom));
+  // Aussi vérifier les doublons dans le lot en cours d'import
+  const nomsLot = [];
+
+  parsed.forEach(e => {
+    const nomNorm = normaliser(e.nom_prenom);
+    if (!classeId) {
+      e.statut = 'warn'; e.message = 'Aucune classe sélectionnée';
+    } else if (nomsExistants.includes(nomNorm)) {
+      e.statut = 'warn'; e.message = '⚠ Déjà dans Grist — ignoré';
+    } else if (nomsLot.includes(nomNorm)) {
+      e.statut = 'warn'; e.message = '⚠ Doublon dans le lot — ignoré';
+    } else if (e.nom_prenom.trim().length < 3) {
+      e.statut = 'err'; e.message = '✗ Nom trop court — ignoré';
+    } else {
+      e.statut = 'ok'; e.message = '✓ À importer';
+      nomsLot.push(nomNorm);
+    }
+  });
+
+  elevesParsed = parsed;
+
+  const nbOk   = parsed.filter(e => e.statut === 'ok').length;
+  const nbWarn = parsed.filter(e => e.statut === 'warn').length;
+  const nbErr  = parsed.filter(e => e.statut === 'err').length;
+
+  // Stats
+  document.getElementById("preview-stats").innerHTML = `
+    <div class="stat-pill ok"><strong>${nbOk}</strong> à importer</div>
+    ${nbWarn > 0 ? `<div class="stat-pill warn"><strong>${nbWarn}</strong> doublon${nbWarn>1?'s':''}</div>` : ''}
+    ${nbErr > 0 ? `<div class="stat-pill err"><strong>${nbErr}</strong> erreur${nbErr>1?'s':''}</div>` : ''}
+    <div class="stat-pill"><strong>${parsed.length}</strong> total détecté${parsed.length>1?'s':''}</div>
+  `;
+
+  // Tableau
+  document.getElementById("preview-body").innerHTML = parsed.map(e => `
+    <tr class="row-${e.statut}">
+      <td style="color:var(--muted)">${e.idx}</td>
+      <td style="font-weight:600">${e.nom_prenom}</td>
+      <td>${e.numero_ordre}</td>
+      <td><span class="row-status ${e.statut}">${e.message || e.statut}</span></td>
+    </tr>
+  `).join('');
+
+  document.getElementById("zone-preview").style.display = "block";
+  document.getElementById("zone-resultat").style.display = "none";
+  const btnImporter = document.getElementById("btn-importer");
+  btnImporter.disabled = nbOk === 0;
+  btnImporter.textContent = nbOk > 0
+    ? `✓ Importer ${nbOk} élève${nbOk>1?'s':''} (doublons exclus)`
+    : "Aucun élève à importer";
+
+  // Scroll vers la prévisualisation
+  document.getElementById("zone-preview").scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function annulerPreview() {
+  elevesParsed = [];
+  document.getElementById("zone-preview").style.display = "none";
+  document.getElementById("zone-resultat").style.display = "none";
+}
+
+/* ══ IMPORT ══ */
+async function importerEleves() {
+  const classeId = parseInt(document.getElementById("sel-classe").value);
+  if (!classeId) { toast("Sélectionne une classe", "err"); return; }
+
+  const aImporter = elevesParsed.filter(e => e.statut === 'ok'); // warn et err sont exclus automatiquement
+  if (aImporter.length === 0) { toast("Aucun élève à importer", "err"); return; }
+
+  const btn = document.getElementById("btn-importer");
+  btn.disabled = true;
+  btn.textContent = "Importation en cours…";
+
+  let nbOk = 0, nbErr = 0;
+
+  try {
+    if (gristConnecte) {
+      // Importer par lots de 10
+      const BATCH = 10;
+      for (let i = 0; i < aImporter.length; i += BATCH) {
+        const lot = aImporter.slice(i, i + BATCH);
+        const actions = lot.map(e => [
+          "AddRecord", "Eleves", null, {
+            nom_prenom:   e.nom_prenom,
+            classe:       classeId,
+            numero_ordre: e.numero_ordre,
+            absent_session: false
+          }
+        ]);
+        try {
+          await grist.docApi.applyUserActions(actions);
+          nbOk += lot.length;
+        } catch(e) {
+          nbErr += lot.length;
+          console.error("Erreur lot:", e);
+        }
+      }
+    } else {
+      // Mode démo
+      nbOk = aImporter.length;
+      await new Promise(r => setTimeout(r, 800));
+    }
+
+    // Afficher résultat
+    const cls = classes.find(c => c.id === classeId);
+    afficherResultat(nbOk, nbErr, cls ? cls.code_classe : '');
+
+  } catch(e) {
+    toast("Erreur lors de l'import : " + e.message, "err");
+    btn.disabled = false;
+    btn.textContent = "✓ Importer dans Grist";
+  }
+}
+
+function afficherResultat(nbOk, nbErr, classe) {
+  document.getElementById("zone-preview").style.display = "none";
+  document.getElementById("zone-resultat").style.display = "block";
+
+  const card = document.getElementById("result-card");
+  card.className = "result-card " + (nbErr === 0 ? "success" : "partial");
+  document.getElementById("result-icon").textContent = nbErr === 0 ? "✅" : "⚠️";
+  document.getElementById("result-title").textContent = nbErr === 0
+    ? `${nbOk} élève${nbOk>1?'s':''} importé${nbOk>1?'s':''} avec succès`
+    : `${nbOk} importé${nbOk>1?'s':''}, ${nbErr} erreur${nbErr>1?'s':''}`;
+  const nbIgnores = elevesParsed.filter(e => e.statut !== 'ok').length;
+  document.getElementById("result-sub").textContent = `Classe ${classe} — ${nbOk} élève${nbOk>1?'s':''} ajouté${nbOk>1?'s':''} dans Grist.${nbIgnores > 0 ? ` ${nbIgnores} doublon${nbIgnores>1?'s':''}/erreur${nbIgnores>1?'s':''} ignoré${nbIgnores>1?'s':''}.` : ''}`;
+
+  document.getElementById("zone-resultat").scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function recommencer() {
+  document.getElementById("sel-classe").value = "";
+  document.getElementById("coller-texte").value = "";
+  document.getElementById("file-input").value = "";
+  document.getElementById("zone-resultat").style.display = "none";
+  document.getElementById("zone-preview").style.display = "none";
+  document.getElementById("classe-info").style.display = "none";
+  elevesParsed = [];
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ══ TOAST ══ */
+function toast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "show " + type;
+  setTimeout(() => { t.className = ""; }, 2800);
+}
+
+document.addEventListener("DOMContentLoaded", initGrist);
+</script>
+</body>
+</html>
