@@ -86,6 +86,62 @@
 
   /* RESPONSIVE */
   @media (max-width: 600px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ── Onglet Affectations ── */
+  .aff-layout { display: grid; grid-template-columns: 260px 1fr; gap: 14px; min-height: 500px; }
+
+  /* Sidebar enseignants */
+  .aff-sidebar { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+  .aff-sidebar-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
+  .aff-search { padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .aff-search input { width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 12px; outline: none; background: var(--bg); }
+  .aff-search input:focus { border-color: var(--purple); }
+  .aff-ens-scroll { overflow-y: auto; flex: 1; }
+  .aff-ens-item { padding: 8px 14px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.1s; }
+  .aff-ens-item:hover { background: var(--bg); }
+  .aff-ens-item.active { background: #f3e8ff; border-left-color: var(--purple); }
+  .aff-ens-nom { font-size: 13px; font-weight: 600; color: var(--text); }
+  .aff-ens-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .aff-ens-badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+  .aff-ens-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+
+  /* Panneau principal */
+  .aff-main { display: flex; flex-direction: column; gap: 12px; }
+  .aff-no-select { background: var(--card); border: 1px dashed var(--border); border-radius: 8px; text-align: center; padding: 60px 20px; color: var(--muted); font-size: 13px; }
+
+  /* Carte enseignant sélectionné */
+  .aff-ens-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .aff-avatar { width: 44px; height: 44px; border-radius: 50%; background: #f3e8ff; color: var(--purple); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; flex-shrink: 0; border: 2px solid #e9d5ff; }
+  .aff-ens-card-info .nom { font-weight: 700; font-size: 15px; }
+  .aff-ens-card-info .detail { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  /* Affectations existantes */
+  .aff-section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .aff-section-header { padding: 10px 14px; background: var(--bg); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: space-between; }
+  .aff-list { }
+  .aff-item { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #f1efe8; transition: background 0.1s; }
+  .aff-item:last-child { border-bottom: none; }
+  .aff-item:hover { background: var(--bg); }
+  .aff-cls-pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 4px; background: #f3e8ff; color: var(--purple); min-width: 64px; text-align: center; flex-shrink: 0; }
+  .aff-epr-txt { font-size: 12px; color: var(--text); flex: 1; }
+  .aff-ann-txt { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .aff-del { background: none; border: none; cursor: pointer; color: var(--border); font-size: 18px; padding: 2px 5px; border-radius: 4px; transition: all 0.1s; line-height: 1; }
+  .aff-del:hover { color: #e24b4a; background: #fee2e2; }
+  .aff-empty-list { padding: 18px 14px; text-align: center; color: var(--muted); font-size: 12px; font-style: italic; }
+
+  /* Formulaire ajout */
+  .aff-form-section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .aff-form-section .aff-section-header { margin: -14px -16px 12px; padding: 10px 14px; background: var(--bg); border-bottom: 1px solid var(--border); border-radius: 8px 8px 0 0; }
+  .aff-form-grid { display: grid; grid-template-columns: 1fr 1fr 110px; gap: 10px; align-items: end; }
+  .aff-fg label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .aff-fg select, .aff-fg input { width: 100%; padding: 7px 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text); background: var(--card); outline: none; transition: border-color 0.15s; }
+  .aff-fg select:focus, .aff-fg input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+  .aff-btn-add { width: 100%; padding: 8px 12px; background: var(--purple); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .aff-btn-add:hover { opacity: 0.88; }
+  .aff-toast { font-size: 12px; margin-top: 8px; padding: 6px 10px; border-radius: 5px; display: none; }
+  .aff-toast.ok { background: #e0f5ee; color: #0d6e50; display: block; }
+  .aff-toast.err { background: #fee2e2; color: #991b1b; display: block; }
+
 </style>
 </head>
 <body>
@@ -160,13 +216,31 @@
 <!-- ═══ AFFECTATIONS ═══ -->
 <div class="tab-content" id="tab-affectations">
   <div class="aff-layout">
+
+    <!-- Sidebar enseignants -->
     <div class="aff-sidebar">
-      <div class="aff-sidebar-title">Enseignants</div>
-      <div id="aff-ens-list"></div>
+      <div class="aff-sidebar-title">
+        Enseignants
+        <span id="aff-count" style="font-weight:400;font-size:10px"></span>
+      </div>
+      <div class="aff-search">
+        <input type="text" id="aff-search-input" placeholder="🔍 Rechercher…" oninput="affFiltrerListe()">
+      </div>
+      <div class="aff-ens-scroll" id="aff-ens-list"></div>
     </div>
-    <div class="aff-main">
-      <div id="aff-ens-detail" class="aff-no-select">← Sélectionne un enseignant pour gérer ses affectations.</div>
+
+    <!-- Panneau principal -->
+    <div class="aff-main" id="aff-main">
+      <div class="aff-no-select" id="aff-no-select">
+        <div style="font-size:32px;margin-bottom:12px">👈</div>
+        <div style="font-weight:600;margin-bottom:6px">Sélectionne un enseignant</div>
+        <div style="font-size:12px">pour voir et gérer ses affectations de classes</div>
+      </div>
+      <div id="aff-ens-detail" style="display:none">
+        <!-- Contenu injecté par JS -->
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -198,25 +272,55 @@ function showTab(id, el) {
 
 /* ══ AFFECTATIONS ══ */
 let selectedEnsAff = null;
+let nomAffCache = null;
+
+async function getNomAff() {
+  if (nomAffCache) return nomAffCache;
+  const tables = await grist.docApi.listTables();
+  nomAffCache = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
+  return nomAffCache;
+}
 
 function affInitialiser() {
-  // Peupler la liste des enseignants
+  const ens = [...enseignants].sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+  const countEl = document.getElementById("aff-count");
+  if (countEl) countEl.textContent = `(${ens.length})`;
+  affRendreListe(ens);
+}
+
+function affRendreListe(liste) {
   const container = document.getElementById("aff-ens-list");
-  container.innerHTML = enseignants.map(e => {
+  container.innerHTML = liste.map(e => {
     const nbAff = affectations.filter(a => a.enseignant === e.id).length;
-    return `<div class="aff-ens-item" onclick="affSelectionner(${e.id})" id="aff-ens-${e.id}">
-      <div class="aff-ens-nom">${e.nom_prenom}</div>
-      <div class="aff-ens-meta">${e.matiere || e.matiere_principale || '—'}</div>
-      ${nbAff > 0 ? `<span class="aff-ens-badge">${nbAff} affectation${nbAff>1?'s':''}</span>` : ''}
-    </div>`;
+    const mat = e.matiere || e.matiere_principale || '';
+    const isActive = selectedEnsAff === e.id;
+    return `
+      <div class="aff-ens-item ${isActive ? 'active' : ''}"
+           onclick="affSelectionner(${e.id})" id="aff-ens-item-${e.id}">
+        <div class="aff-ens-nom">${e.nom_prenom}</div>
+        ${mat ? `<div class="aff-ens-meta">${mat}</div>` : ''}
+        <div class="aff-ens-badges">
+          ${nbAff > 0
+            ? `<span class="aff-ens-badge" style="background:#f3e8ff;color:#7c3aed">${nbAff} classe${nbAff>1?'s':''}</span>`
+            : `<span class="aff-ens-badge" style="background:#f1efe8;color:#b4b2a9">Non affecté</span>`}
+        </div>
+      </div>`;
   }).join('');
+}
+
+function affFiltrerListe() {
+  const q = document.getElementById("aff-search-input").value.toLowerCase();
+  const filtre = enseignants.filter(e => e.nom_prenom.toLowerCase().includes(q) || (e.matiere||'').toLowerCase().includes(q));
+  affRendreListe(filtre);
 }
 
 function affSelectionner(ensId) {
   selectedEnsAff = ensId;
   document.querySelectorAll('.aff-ens-item').forEach(el => el.classList.remove('active'));
-  const item = document.getElementById('aff-ens-' + ensId);
+  const item = document.getElementById('aff-ens-item-' + ensId);
   if (item) item.classList.add('active');
+  document.getElementById("aff-no-select").style.display = "none";
+  document.getElementById("aff-ens-detail").style.display = "block";
   affRendreDetail();
 }
 
@@ -225,56 +329,69 @@ function affRendreDetail() {
   if (!ens) return;
 
   const affEns = affectations.filter(a => a.enseignant === selectedEnsAff);
-  const init = ens.nom_prenom.trim().split(/\s+/).filter(p => p.length > 1 && p === p.toUpperCase()).map(p=>p[0]).join('').slice(0,2) || ens.nom_prenom.slice(0,2).toUpperCase();
+  const parts = ens.nom_prenom.trim().split(/\s+/);
+  const maj = parts.filter(p => p.length > 1 && p === p.toUpperCase());
+  const min = parts.find(p => p !== p.toUpperCase());
+  const init = (maj.length && min ? min[0] + maj[0][0] : parts.slice(0,2).map(p=>p[0]).join('')).toUpperCase().slice(0,2);
 
-  const lignes = affEns.length === 0
-    ? `<div class="aff-empty">Aucune affectation pour cet enseignant.<br>Utilisez le formulaire ci-dessous pour en ajouter.</div>`
+  const lignesAff = affEns.length === 0
+    ? `<div class="aff-empty-list">Aucune affectation — utilisez le formulaire ci-dessous.</div>`
     : affEns.map(a => {
         const cls = classes.find(c => c.id === a.classe);
         const epr = epreuves.find(e => e.id === a.epreuve);
-        return `<div class="aff-item-row">
-          <span class="aff-cls-tag">${cls ? cls.code_classe : '?'}</span>
-          <span class="aff-epr-tag">${epr ? epr.repere + ' — ' + epr.libelle : '?'}</span>
-          <span class="aff-ann-tag">${a.annee_scolaire || '—'}</span>
-          <button class="aff-del-btn" onclick="affSupprimer(${a.id})" title="Supprimer">×</button>
-        </div>`;
+        return `
+          <div class="aff-item">
+            <span class="aff-cls-pill">${cls ? cls.code_classe : '?'}</span>
+            <span class="aff-epr-txt">${epr ? epr.repere + ' — ' + epr.libelle : '?'}</span>
+            <span class="aff-ann-txt">${a.annee_scolaire || '2026-2027'}</span>
+            <button class="aff-del" onclick="affSupprimer(${a.id})" title="Supprimer cette affectation">×</button>
+          </div>`;
       }).join('');
 
-  const selClasses = classes.map(c => `<option value="${c.id}">${c.code_classe}</option>`).join('');
-  const selEpreuves = epreuves.map(e => `<option value="${e.id}">${e.repere} — ${e.libelle}</option>`).join('');
+  const selCls = classes.map(c => `<option value="${c.id}">${c.code_classe}</option>`).join('');
+  const selEpr = epreuves.map(e => `<option value="${e.id}">${e.repere} — ${e.libelle}</option>`).join('');
 
-  document.getElementById("aff-ens-detail").className = "aff-main";
   document.getElementById("aff-ens-detail").innerHTML = `
+
+    <!-- Carte enseignant -->
     <div class="aff-ens-card">
       <div class="aff-avatar">${init}</div>
-      <div>
-        <div style="font-weight:700;font-size:14px">${ens.nom_prenom}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">${ens.matiere || ens.matiere_principale || '—'} · ${ens.role || 'Enseignant'}</div>
+      <div class="aff-ens-card-info">
+        <div class="nom">${ens.nom_prenom}</div>
+        <div class="detail">${ens.matiere || ens.matiere_principale || '—'} · ${ens.role || 'Enseignant'} · ${affEns.length} affectation${affEns.length>1?'s':''}</div>
       </div>
     </div>
 
-    <div class="aff-card">
-      <div class="aff-card-title">Affectations actuelles (${affEns.length})</div>
-      ${lignes}
+    <!-- Liste affectations -->
+    <div class="aff-section">
+      <div class="aff-section-header">
+        <span>Classes affectées</span>
+        <span style="font-weight:400;font-size:10px">${affEns.length} affectation${affEns.length>1?'s':''}</span>
+      </div>
+      <div class="aff-list">${lignesAff}</div>
     </div>
 
-    <div class="aff-card">
-      <div class="aff-card-title">Ajouter une affectation</div>
-      <div class="aff-row">
-        <div class="aff-form-group">
+    <!-- Formulaire ajout -->
+    <div class="aff-form-section">
+      <div class="aff-section-header">Ajouter une affectation</div>
+      <div class="aff-form-grid">
+        <div class="aff-fg">
           <label>Classe</label>
-          <select id="aff-add-classe"><option value="">Choisir…</option>${selClasses}</select>
+          <select id="aff-add-classe"><option value="">Choisir…</option>${selCls}</select>
         </div>
-        <div class="aff-form-group">
+        <div class="aff-fg">
           <label>Épreuve</label>
-          <select id="aff-add-epreuve"><option value="">Choisir…</option>${selEpreuves}</select>
+          <select id="aff-add-epreuve"><option value="">Choisir…</option>${selEpr}</select>
         </div>
-        <div class="aff-form-group">
+        <div class="aff-fg">
           <label>Année</label>
           <input type="text" id="aff-add-annee" value="2026-2027">
         </div>
-        <button class="aff-btn-add" onclick="affAjouter()">+ Affecter</button>
       </div>
+      <div style="margin-top:10px">
+        <button class="aff-btn-add" onclick="affAjouter()">+ Ajouter l'affectation</button>
+      </div>
+      <div id="aff-toast" class="aff-toast"></div>
     </div>`;
 }
 
@@ -282,45 +399,61 @@ async function affAjouter() {
   const classeId  = parseInt(document.getElementById("aff-add-classe").value);
   const epreuveId = parseInt(document.getElementById("aff-add-epreuve").value);
   const annee     = document.getElementById("aff-add-annee").value.trim();
+  const toastEl   = document.getElementById("aff-toast");
+
+  toastEl.className = "aff-toast";
 
   if (!classeId || !epreuveId || !annee) {
-    alert("Remplis classe, épreuve et année.");
+    toastEl.textContent = "⚠ Remplis classe, épreuve et année scolaire.";
+    toastEl.className = "aff-toast err";
     return;
   }
 
-  // Vérifier doublon
   const doublon = affectations.find(a =>
     a.enseignant === selectedEnsAff && a.classe === classeId &&
     a.epreuve === epreuveId && a.annee_scolaire === annee
   );
-  if (doublon) { alert("Cette affectation existe déjà."); return; }
+  if (doublon) {
+    toastEl.textContent = "⚠ Cette affectation existe déjà.";
+    toastEl.className = "aff-toast err";
+    return;
+  }
 
   try {
     let newId = Date.now();
     if (gristConnecte) {
-      const nomAff = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
+      const nomAff = await getNomAff();
       const r = await grist.docApi.applyUserActions([["AddRecord", nomAff, null, {
-        enseignant: selectedEnsAff, classe: classeId, epreuve: epreuveId, annee_scolaire: annee
+        enseignant: selectedEnsAff, classe: classeId,
+        epreuve: epreuveId, annee_scolaire: annee
       }]]);
       newId = r.retValues[0];
     }
     affectations.push({ id: newId, enseignant: selectedEnsAff, classe: classeId, epreuve: epreuveId, annee_scolaire: annee });
     affInitialiser();
     affRendreDetail();
-  } catch(e) { alert("Erreur d'enregistrement : " + e.message); }
+    toastEl.textContent = "✓ Affectation ajoutée avec succès";
+    toastEl.className = "aff-toast ok";
+    setTimeout(() => { toastEl.className = "aff-toast"; }, 3000);
+  } catch(e) {
+    toastEl.textContent = "✗ Erreur : " + e.message;
+    toastEl.className = "aff-toast err";
+  }
 }
 
 async function affSupprimer(id) {
   if (!confirm("Supprimer cette affectation ?")) return;
   try {
     if (gristConnecte) {
-      const nomAff = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
+      const nomAff = await getNomAff();
       await grist.docApi.applyUserActions([["RemoveRecord", nomAff, id]]);
     }
     affectations = affectations.filter(a => a.id !== id);
     affInitialiser();
     affRendreDetail();
-  } catch(e) { alert("Erreur de suppression : " + e.message); }
+  } catch(e) {
+    alert("Erreur de suppression : " + e.message);
+  }
 }
 
 /* ══ INIT GRIST ══ */
