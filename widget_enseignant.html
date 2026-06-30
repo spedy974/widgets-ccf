@@ -1116,11 +1116,31 @@ function ouvrirGrillePourSession(sessionId) {
     return `
       <tr data-eleve-id="${elv.id}" data-note-id="${noteExistante ? noteExistante.id : ''}" style="background:${rowBg}">
         <td>${elv.nom_prenom}</td>
-        <td><input type="number" class="sg-input-note" min="0" max="${s.bareme}" step="0.5" value="${valeur}"
-              style="width:90px;padding:6px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:13px"></td>
+        <td>
+          <input type="number" class="sg-input-note" min="0" max="${s.bareme}" step="0.5" value="${valeur}"
+                oninput="validerNoteSaisie(this, ${s.bareme})"
+                style="width:90px;padding:6px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:13px">
+          <div class="sg-input-error" style="display:none;color:#a32d2d;font-size:10px;margin-top:2px"></div>
+        </td>
         <td>${noteExistante ? '<span class="pill pill-green">Saisie</span>' : '<span class="pill pill-gray">—</span>'}</td>
       </tr>`;
   }).join('');
+}
+
+function validerNoteSaisie(inputEl, bareme) {
+  const val = parseFloat(inputEl.value);
+  const errEl = inputEl.parentElement.querySelector('.sg-input-error');
+
+  if (!isNaN(val) && (val > bareme || val < 0)) {
+    inputEl.style.borderColor = '#e24b4a';
+    inputEl.style.background = '#fee2e2';
+    errEl.textContent = val > bareme ? `Max ${bareme}` : 'Min 0';
+    errEl.style.display = 'block';
+  } else {
+    inputEl.style.borderColor = '';
+    inputEl.style.background = '';
+    errEl.style.display = 'none';
+  }
 }
 
 function fermerGrilleSaisie() {
@@ -1134,6 +1154,22 @@ async function enregistrerGrilleSaisie() {
   if (!sessionCourante) return;
   const s = sessionCourante;
   const lignes = document.querySelectorAll("#sg-tbody tr[data-eleve-id]");
+
+  // ── Contrôle préalable : aucune note ne doit dépasser le barème ──
+  let hasInvalid = false;
+  lignes.forEach(tr => {
+    const inputEl = tr.querySelector('.sg-input-note');
+    const val = parseFloat(inputEl.value);
+    if (!isNaN(val) && (val > s.bareme || val < 0)) {
+      hasInvalid = true;
+      validerNoteSaisie(inputEl, s.bareme); // réaffiche le message d'erreur au cas où
+    }
+  });
+  if (hasInvalid) {
+    toast(`⚠ Certaines notes dépassent le barème (sur ${s.bareme}) — corrige-les avant d'enregistrer`, "err");
+    return;
+  }
+
   let nbOk = 0, nbErr = 0;
 
   for (const tr of lignes) {
