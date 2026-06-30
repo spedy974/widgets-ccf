@@ -375,6 +375,20 @@
   </div>
 </div>
 
+<!-- ═══ POPUP CONFIRMATION ENREGISTREMENT NOTES ═══ -->
+<div id="popup-confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,26,24,0.45);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:380px;box-shadow:0 16px 48px rgba(0,0,0,0.25);overflow:hidden;text-align:center">
+    <div style="padding:28px 24px 20px">
+      <div id="popup-confirm-icon" style="font-size:42px;margin-bottom:10px">✅</div>
+      <div id="popup-confirm-titre" style="font-weight:800;font-size:16px;margin-bottom:6px"></div>
+      <div id="popup-confirm-sub" style="font-size:13px;color:var(--muted);line-height:1.5"></div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid var(--border)">
+      <button class="btn btn-primary" style="width:100%" onclick="fermerPopupConfirm()">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ONGLET RELEVÉS DE NOTES ET COULEURS ═══ -->
 <div class="tab-content" id="tab-notes">
 
@@ -1151,9 +1165,18 @@ function fermerGrilleSaisie() {
 }
 
 async function enregistrerGrilleSaisie() {
-  if (!sessionCourante) return;
+  if (!sessionCourante) {
+    toast("⚠ Aucune évaluation sélectionnée — réouvre l'évaluation puis réessaie", "err");
+    console.error("enregistrerGrilleSaisie appelé sans sessionCourante");
+    return;
+  }
   const s = sessionCourante;
   const lignes = document.querySelectorAll("#sg-tbody tr[data-eleve-id]");
+
+  if (lignes.length === 0) {
+    toast("⚠ Aucun élève dans cette grille — vérifie la classe sélectionnée", "err");
+    return;
+  }
 
   // ── Contrôle préalable : aucune note ne doit dépasser le barème ──
   let hasInvalid = false;
@@ -1179,6 +1202,13 @@ async function enregistrerGrilleSaisie() {
     const val = parseFloat(inputEl.value);
 
     if (isNaN(val)) continue; // ligne vide, on n'écrase rien
+
+    // Garde-fou : ne jamais écrire une ligne sans élève ou épreuve valides
+    if (isNaN(eleveId) || !s.epreuveId) {
+      console.error("Ligne ignorée — eleveId ou epreuveId invalide", { eleveId, epreuveId: s.epreuveId });
+      nbErr++;
+      continue;
+    }
 
     // Note ramenée sur 20 pour la couleur (cohérence avec le reste de l'appli)
     const sur20 = (val / s.bareme) * 20;
@@ -1223,7 +1253,7 @@ async function enregistrerGrilleSaisie() {
       nbOk++;
     } catch(e) {
       nbErr++;
-      console.error("Erreur ligne élève", eleveId, e);
+      console.error("Erreur ligne élève", eleveId, "—", e.message || e);
     }
   }
 
@@ -1231,11 +1261,33 @@ async function enregistrerGrilleSaisie() {
   rendreListeNotes();
   ouvrirGrillePourSession(s.id);
 
+  ouvrirPopupConfirm(nbOk, nbErr, s);
+}
+
+function ouvrirPopupConfirm(nbOk, nbErr, session) {
+  const iconEl = document.getElementById("popup-confirm-icon");
+  const titreEl = document.getElementById("popup-confirm-titre");
+  const subEl = document.getElementById("popup-confirm-sub");
+
   if (nbErr === 0) {
-    toast(`✓ ${nbOk} note${nbOk>1?'s':''} enregistrée${nbOk>1?'s':''}`, "ok");
+    iconEl.textContent = "✅";
+    titreEl.textContent = nbOk > 0
+      ? `${nbOk} note${nbOk>1?'s':''} enregistrée${nbOk>1?'s':''}`
+      : "Aucune note à enregistrer";
+    subEl.textContent = nbOk > 0
+      ? `Toutes les notes de « ${session.intitule} » ont bien été sauvegardées dans Grist.`
+      : `Aucune cellule n'a été remplie pour cette évaluation.`;
   } else {
-    toast(`${nbOk} ok, ${nbErr} erreur${nbErr>1?'s':''}`, "err");
+    iconEl.textContent = "⚠️";
+    titreEl.textContent = `${nbOk} enregistrée${nbOk>1?'s':''}, ${nbErr} erreur${nbErr>1?'s':''}`;
+    subEl.textContent = `Certaines notes n'ont pas pu être sauvegardées. Vérifie ta connexion et réessaie.`;
   }
+
+  document.getElementById("popup-confirm-overlay").style.display = "flex";
+}
+
+function fermerPopupConfirm() {
+  document.getElementById("popup-confirm-overlay").style.display = "none";
 }
 
 function filtrerEpreuvesPlanning() {
