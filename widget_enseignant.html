@@ -309,35 +309,27 @@
 <!-- ═══ ONGLET SAISIE DE NOTES (GRILLE) ═══ -->
 <div class="tab-content" id="tab-saisie">
 
-  <div class="card">
-    <div class="card-title">Choisir la classe et l'épreuve</div>
-    <div class="row2">
-      <div class="form-group">
-        <label>Classe</label>
-        <select id="sg-classe" onchange="filtrerEpreuvesSaisieGrille()"><option value="">Choisir une classe…</option></select>
-      </div>
-      <div class="form-group">
-        <label>Épreuve</label>
-        <select id="sg-epreuve" onchange="chargerGrilleSaisie()" disabled><option value="">Choisir une classe d'abord…</option></select>
-      </div>
+  <div class="card" id="sg-intro-card">
+    <div class="card-title">Évaluations en cours</div>
+    <div id="sg-sessions-list"><div class="empty">Aucune évaluation créée pour l'instant.</div></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="ouvrirPopupSession()">＋ Créer une évaluation</button>
     </div>
   </div>
 
   <div class="card" id="sg-grille-card" style="display:none">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
-      <span>Saisie des notes — élève par élève</span>
-      <span id="sg-count" style="font-weight:400;color:var(--muted);font-size:11px;text-transform:none;letter-spacing:0"></span>
+      <span id="sg-grille-titre">Saisie des notes</span>
+      <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="fermerGrilleSaisie()">← Retour</button>
     </div>
+    <div id="sg-entete-epreuve" style="border-radius:8px;padding:12px 16px;margin-bottom:14px"></div>
     <div style="overflow-x:auto">
-      <table class="data-table" id="sg-table">
+      <table class="data-table" id="sg-table" style="border-collapse:separate;border-spacing:0">
         <thead>
           <tr>
-            <th style="min-width:160px">Élève</th>
-            <th style="width:110px">Note séq. 1<br><span style="font-weight:400;color:var(--muted)">/20</span></th>
-            <th style="width:110px">Note séq. 2<br><span style="font-weight:400;color:var(--muted)">/20</span></th>
-            <th style="width:90px">Finale</th>
-            <th style="width:90px">Couleur</th>
-            <th style="width:60px"></th>
+            <th style="min-width:170px">Élève</th>
+            <th style="width:130px" id="sg-th-note">Note <span style="font-weight:400;color:var(--muted)" id="sg-th-bareme">/20</span></th>
+            <th style="width:70px"></th>
           </tr>
         </thead>
         <tbody id="sg-tbody"></tbody>
@@ -348,8 +340,38 @@
     </div>
   </div>
 
-  <div class="card" id="sg-empty-card">
-    <div class="empty">Sélectionne une classe puis une épreuve pour afficher la liste des élèves à noter.</div>
+</div>
+
+<!-- ═══ POPUP CRÉATION D'ÉVALUATION (façon Pronote) ═══ -->
+<div id="popup-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,26,24,0.45);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div id="popup-session" style="background:#fff;border-radius:12px;width:100%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.25);overflow:hidden">
+    <div style="background:var(--blue);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">📝</span>
+      <span style="font-weight:700;font-size:15px">Nouvelle évaluation</span>
+    </div>
+    <div style="padding:20px">
+      <div class="form-group">
+        <label>Classe</label>
+        <select id="pop-classe" onchange="popOnClasseChange()"><option value="">Choisir une classe…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Intitulé</label>
+        <input type="text" id="pop-intitule" placeholder="ex. Devoir surveillé n°2">
+      </div>
+      <div class="form-group">
+        <label>Épreuve</label>
+        <select id="pop-epreuve" disabled><option value="">Choisir une classe d'abord…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Notation sur</label>
+        <input type="number" id="pop-bareme" value="20" min="1" max="1000" step="1">
+      </div>
+      <div id="pop-error" style="font-size:12px;color:#a32d2d;margin-top:4px;display:none"></div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-secondary" onclick="fermerPopupSession()">Annuler</button>
+      <button class="btn btn-primary" onclick="creerSessionEvaluation()">Créer</button>
+    </div>
   </div>
 </div>
 
@@ -363,7 +385,19 @@
     </div>
     <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
       <label>Filtrer par épreuve</label>
-      <select id="releve-filtre-epreuve" onchange="rendreListeNotes()"><option value="">Toutes mes épreuves</option></select>
+      <select id="releve-filtre-epreuve" onchange="onChangeFiltreEpreuveReleve()"><option value="">Toutes mes épreuves</option></select>
+    </div>
+  </div>
+
+  <div class="card" id="releve-mode-card" style="display:none;padding:10px 16px">
+    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Calcul de la 2ᵉ note</span>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <input type="radio" name="releve-mode-calc" value="moyenne" checked onchange="onChangeModeCalc()"> Moyenne
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <input type="radio" name="releve-mode-calc" value="addition" onchange="onChangeModeCalc()"> Addition
+      </label>
     </div>
   </div>
 
@@ -724,12 +758,15 @@ function initialiserInterface() {
   stockageDocs= parseTable(window._stock_raw).filter(s => !monId || s.enseignant === monId);
   affectations= parseTable(window._aff_raw).filter(a => !monId || a.enseignant === monId);
 
+  chargerSessionsLocal();
+
   peuplerSelects();
   rendreListePlanning();
   rendreListeNotes();
   rendreListeDocs();
   peuplerConvocations();
   rendreMesAffectations();
+  rendreListeSessions();
   updateBadges();
 }
 
@@ -843,12 +880,14 @@ function chargerDemoMode() {
     { id: 2, enseignant: 1, classe: 1, epreuve: 2, annee_scolaire: ANNEE },
     { id: 3, enseignant: 1, classe: 2, epreuve: 1, annee_scolaire: ANNEE },
   ];
+  chargerSessionsLocal();
   peuplerSelects();
   rendreListePlanning();
   rendreListeNotes();
   rendreListeDocs();
   peuplerConvocations();
   rendreMesAffectations();
+  rendreListeSessions();
   updateBadges();
 }
 
@@ -886,7 +925,7 @@ function peuplerSelects() {
   const mesCls = mesClasses();
 
   // Classes — limitées à mes affectations
-  ['pl-classe', 'doc-classe', 'sg-classe', 'releve-filtre-classe', 'imp-classe'].forEach(id => {
+  ['pl-classe', 'doc-classe', 'releve-filtre-classe', 'imp-classe'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const isFiltre = id === 'releve-filtre-classe';
@@ -915,12 +954,82 @@ function peuplerSelects() {
   }
 }
 
-function filtrerEpreuvesSaisieGrille() {
-  const classeId = parseInt(document.getElementById("sg-classe").value);
-  const selEpr = document.getElementById("sg-epreuve");
-  document.getElementById("sg-grille-card").style.display = "none";
-  document.getElementById("sg-empty-card").style.display = "block";
+/* ══════════════════════════════════════════
+   SAISIE DE NOTES — SESSIONS D'ÉVALUATION
+══════════════════════════════════════════ */
 
+// Une "session" = { id, classeId, epreuveId, intitule, bareme }
+// Stockée en localStorage (clé par enseignant) car la table Notes n'a pas ces métadonnées.
+let sessionsEval = [];
+let sessionCourante = null;
+
+function clefStorageSessions() {
+  return 'ccf_sessions_eval_' + (monId || 'demo');
+}
+
+function chargerSessionsLocal() {
+  try {
+    const raw = localStorage.getItem(clefStorageSessions());
+    sessionsEval = raw ? JSON.parse(raw) : [];
+  } catch(e) { sessionsEval = []; }
+}
+
+function sauverSessionsLocal() {
+  try { localStorage.setItem(clefStorageSessions(), JSON.stringify(sessionsEval)); } catch(e) {}
+}
+
+function rendreListeSessions() {
+  const container = document.getElementById("sg-sessions-list");
+  if (!container) return;
+  if (sessionsEval.length === 0) {
+    container.innerHTML = '<div class="empty">Aucune évaluation créée pour l\'instant.</div>';
+    return;
+  }
+  const PASTELS = ['#EAF1FE','#EAF7F1','#FCEFEA','#F6EFFC','#FEF6E8'];
+  container.innerHTML = sessionsEval.slice().reverse().map((s, idx) => {
+    const cls = classes.find(c => c.id === s.classeId);
+    const epr = epreuves.find(e => e.id === s.epreuveId);
+    const nbNotes = notes.filter(n => n.epreuve === s.epreuveId &&
+      eleves.some(el => el.id === n.eleve && el.classe === s.classeId) &&
+      n.sessionId === s.id
+    ).length;
+    const bg = PASTELS[idx % PASTELS.length];
+    return `
+      <div onclick="ouvrirGrillePourSession(${s.id})"
+           style="cursor:pointer;background:${bg};border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">${s.intitule}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            ${cls ? cls.code_classe : '?'} · ${epr ? epr.repere + ' — ' + epr.libelle : '?'} · sur ${s.bareme} pts
+          </div>
+        </div>
+        <span class="pill pill-blue">${nbNotes} note${nbNotes>1?'s':''}</span>
+        <button class="aff-del" title="Supprimer cette évaluation" onclick="event.stopPropagation();supprimerSession(${s.id})">×</button>
+      </div>`;
+  }).join('');
+}
+
+/* ── Popup création ── */
+function ouvrirPopupSession() {
+  const selCls = document.getElementById("pop-classe");
+  const mesCls = mesClasses();
+  selCls.innerHTML = '<option value="">Choisir une classe…</option>' +
+    mesCls.map(c => `<option value="${c.id}">${c.code_classe}</option>`).join('');
+  document.getElementById("pop-intitule").value = "";
+  document.getElementById("pop-bareme").value = 20;
+  document.getElementById("pop-epreuve").innerHTML = '<option value="">Choisir une classe d\'abord…</option>';
+  document.getElementById("pop-epreuve").disabled = true;
+  document.getElementById("pop-error").style.display = "none";
+  document.getElementById("popup-overlay").style.display = "flex";
+}
+
+function fermerPopupSession() {
+  document.getElementById("popup-overlay").style.display = "none";
+}
+
+function popOnClasseChange() {
+  const classeId = parseInt(document.getElementById("pop-classe").value);
+  const selEpr = document.getElementById("pop-epreuve");
   if (!classeId) {
     selEpr.innerHTML = '<option value="">Choisir une classe d\'abord…</option>';
     selEpr.disabled = true;
@@ -936,6 +1045,161 @@ function filtrerEpreuvesSaisieGrille() {
     o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
     selEpr.appendChild(o);
   });
+}
+
+function creerSessionEvaluation() {
+  const classeId = parseInt(document.getElementById("pop-classe").value);
+  const intitule = document.getElementById("pop-intitule").value.trim();
+  const epreuveId = parseInt(document.getElementById("pop-epreuve").value);
+  const bareme = parseFloat(document.getElementById("pop-bareme").value);
+  const errEl = document.getElementById("pop-error");
+
+  if (!classeId || !intitule || !epreuveId || !bareme || bareme <= 0) {
+    errEl.textContent = "Remplis tous les champs (classe, intitulé, épreuve, barème > 0).";
+    errEl.style.display = "block";
+    return;
+  }
+
+  const newSession = {
+    id: Date.now(),
+    classeId, epreuveId, intitule, bareme,
+    creeLe: new Date().toISOString()
+  };
+  sessionsEval.push(newSession);
+  sauverSessionsLocal();
+  rendreListeSessions();
+  fermerPopupSession();
+  ouvrirGrillePourSession(newSession.id);
+}
+
+function supprimerSession(sessionId) {
+  if (!confirm("Supprimer cette évaluation ? Les notes déjà saisies resteront dans le relevé mais ne seront plus rattachées à cette session.")) return;
+  sessionsEval = sessionsEval.filter(s => s.id !== sessionId);
+  sauverSessionsLocal();
+  rendreListeSessions();
+}
+
+/* ── Grille de saisie pour une session ── */
+function ouvrirGrillePourSession(sessionId) {
+  const s = sessionsEval.find(x => x.id === sessionId);
+  if (!s) return;
+  sessionCourante = s;
+
+  const cls = classes.find(c => c.id === s.classeId);
+  const epr = epreuves.find(e => e.id === s.epreuveId);
+
+  document.getElementById("sg-intro-card").style.display = "none";
+  document.getElementById("sg-grille-card").style.display = "block";
+  document.getElementById("sg-grille-titre").textContent = s.intitule;
+
+  document.getElementById("sg-entete-epreuve").style.background = "#EAF1FE";
+  document.getElementById("sg-entete-epreuve").innerHTML = `
+    <div style="font-size:14px;font-weight:800;color:#2d4ecc">${epr ? epr.repere + ' — ' + epr.libelle : '?'}</div>
+    <div style="font-size:12px;color:#2d4ecc;margin-top:2px">${s.intitule} · Classe ${cls ? cls.code_classe : '?'} · Notation sur ${s.bareme} points</div>
+  `;
+
+  document.getElementById("sg-th-bareme").textContent = "/" + s.bareme;
+
+  const elevesCls = eleves.filter(e => e.classe === s.classeId).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+  const PASTELS_ROWS = ['#FFFFFF', '#F7F9FE'];
+
+  const tbody = document.getElementById("sg-tbody");
+  if (elevesCls.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3"><div class="empty">Aucun élève dans cette classe.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = elevesCls.map((elv, idx) => {
+    const noteExistante = notes.find(n => n.eleve === elv.id && n.epreuve === s.epreuveId && n.sessionId === s.id);
+    const valeur = noteExistante && noteExistante.note_seq1 !== undefined ? noteExistante.note_seq1 : '';
+    const rowBg = PASTELS_ROWS[idx % 2];
+    return `
+      <tr data-eleve-id="${elv.id}" data-note-id="${noteExistante ? noteExistante.id : ''}" style="background:${rowBg}">
+        <td>${elv.nom_prenom}</td>
+        <td><input type="number" class="sg-input-note" min="0" max="${s.bareme}" step="0.5" value="${valeur}"
+              style="width:90px;padding:6px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:13px"></td>
+        <td>${noteExistante ? '<span class="pill pill-green">Saisie</span>' : '<span class="pill pill-gray">—</span>'}</td>
+      </tr>`;
+  }).join('');
+}
+
+function fermerGrilleSaisie() {
+  sessionCourante = null;
+  document.getElementById("sg-grille-card").style.display = "none";
+  document.getElementById("sg-intro-card").style.display = "block";
+  rendreListeSessions();
+}
+
+async function enregistrerGrilleSaisie() {
+  if (!sessionCourante) return;
+  const s = sessionCourante;
+  const lignes = document.querySelectorAll("#sg-tbody tr[data-eleve-id]");
+  let nbOk = 0, nbErr = 0;
+
+  for (const tr of lignes) {
+    const eleveId = parseInt(tr.dataset.eleveId);
+    const noteId = tr.dataset.noteId ? parseInt(tr.dataset.noteId) : null;
+    const inputEl = tr.querySelector('.sg-input-note');
+    const val = parseFloat(inputEl.value);
+
+    if (isNaN(val)) continue; // ligne vide, on n'écrase rien
+
+    // Note ramenée sur 20 pour la couleur (cohérence avec le reste de l'appli)
+    const sur20 = (val / s.bareme) * 20;
+    const couleur = sur20 >= 12 ? "vert" : sur20 >= 8 ? "orange" : "rouge";
+
+    try {
+      if (gristConnecte) {
+        if (noteId) {
+          await grist.docApi.applyUserActions([["UpdateRecord", "Notes", noteId, {
+            note_seq1: val, note_finale: val
+          }]]);
+        } else {
+          const r = await grist.docApi.applyUserActions([["AddRecord", "Notes", null, {
+            enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
+            note_seq1: val, note_finale: val, publier: false
+          }]]);
+          const newId = r.retValues[0];
+          notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
+            note_seq1: val, note_finale: val, couleur, publier: false, sessionId: s.id, bareme: s.bareme, intitule: s.intitule });
+          tr.dataset.noteId = newId;
+        }
+      } else {
+        if (noteId) {
+          const n = notes.find(n => n.id === noteId);
+          if (n) { n.note_seq1 = val; n.note_finale = val; n.couleur = couleur; }
+        } else {
+          const newId = Date.now() + eleveId;
+          notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
+            note_seq1: val, note_finale: val, couleur, publier: false, sessionId: s.id, bareme: s.bareme, intitule: s.intitule });
+          tr.dataset.noteId = newId;
+        }
+      }
+
+      if (noteId) {
+        const n = notes.find(n => n.id === noteId);
+        if (n) {
+          n.note_seq1 = val; n.note_finale = val; n.couleur = couleur;
+          n.sessionId = s.id; n.bareme = s.bareme; n.intitule = s.intitule;
+        }
+      }
+
+      nbOk++;
+    } catch(e) {
+      nbErr++;
+      console.error("Erreur ligne élève", eleveId, e);
+    }
+  }
+
+  updateBadges();
+  rendreListeNotes();
+  ouvrirGrillePourSession(s.id);
+
+  if (nbErr === 0) {
+    toast(`✓ ${nbOk} note${nbOk>1?'s':''} enregistrée${nbOk>1?'s':''}`, "ok");
+  } else {
+    toast(`${nbOk} ok, ${nbErr} erreur${nbErr>1?'s':''}`, "err");
+  }
 }
 
 function filtrerEpreuvesPlanning() {
@@ -954,139 +1218,6 @@ function filtrerEpreuvesPlanning() {
     o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
     sel.appendChild(o);
   });
-}
-
-/* ══════════════════════════════════════════
-   SAISIE DE NOTES — GRILLE
-══════════════════════════════════════════ */
-function chargerGrilleSaisie() {
-  const classeId = parseInt(document.getElementById("sg-classe").value);
-  const epreuveId = parseInt(document.getElementById("sg-epreuve").value);
-
-  if (!classeId || !epreuveId) {
-    document.getElementById("sg-grille-card").style.display = "none";
-    document.getElementById("sg-empty-card").style.display = "block";
-    return;
-  }
-
-  const elevesCls = eleves.filter(e => e.classe === classeId).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
-
-  if (elevesCls.length === 0) {
-    document.getElementById("sg-grille-card").style.display = "none";
-    document.getElementById("sg-empty-card").style.display = "block";
-    document.getElementById("sg-empty-card").innerHTML = '<div class="empty">Aucun élève dans cette classe.</div>';
-    return;
-  }
-
-  document.getElementById("sg-empty-card").style.display = "none";
-  document.getElementById("sg-grille-card").style.display = "block";
-  document.getElementById("sg-count").textContent = elevesCls.length + " élève" + (elevesCls.length>1?'s':'');
-
-  const tbody = document.getElementById("sg-tbody");
-  tbody.innerHTML = elevesCls.map(elv => {
-    const noteExistante = notes.find(n => n.eleve === elv.id && n.epreuve === epreuveId);
-    const seq1 = noteExistante ? noteExistante.note_seq1 : '';
-    const seq2 = noteExistante ? noteExistante.note_seq2 : '';
-    return `
-      <tr data-eleve-id="${elv.id}" data-note-id="${noteExistante ? noteExistante.id : ''}">
-        <td>${elv.nom_prenom}</td>
-        <td><input type="number" class="sg-input-seq1" min="0" max="20" step="0.5" value="${seq1}" oninput="recalculerLigneGrille(this)" style="width:80px;padding:5px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:13px"></td>
-        <td><input type="number" class="sg-input-seq2" min="0" max="20" step="0.5" value="${seq2}" oninput="recalculerLigneGrille(this)" style="width:80px;padding:5px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:13px"></td>
-        <td class="sg-finale" style="font-weight:700">${noteExistante ? noteExistante.note_finale : '—'}</td>
-        <td class="sg-couleur">${renderPastilleCouleur(noteExistante ? noteExistante.couleur : null)}</td>
-        <td>${noteExistante ? '<span class="pill pill-green">Saisie</span>' : '<span class="pill pill-gray">—</span>'}</td>
-      </tr>`;
-  }).join('');
-}
-
-function renderPastilleCouleur(couleur) {
-  if (!couleur) return '<span style="color:var(--muted);font-size:12px">—</span>';
-  const map = { vert: 'note-vert', orange: 'note-orange', rouge: 'note-rouge' };
-  const label = { vert: 'Vert', orange: 'Orange', rouge: 'Rouge' };
-  return `<span class="${map[couleur]}">${label[couleur]}</span>`;
-}
-
-function recalculerLigneGrille(inputEl) {
-  const tr = inputEl.closest('tr');
-  const seq1 = parseFloat(tr.querySelector('.sg-input-seq1').value) || 0;
-  const seq2 = parseFloat(tr.querySelector('.sg-input-seq2').value) || 0;
-  const finale = seq1 + seq2;
-  const couleur = finale >= 6 ? "vert" : finale >= 4 ? "orange" : "rouge";
-  tr.querySelector('.sg-finale').textContent = (seq1 || seq2) ? finale : '—';
-  tr.querySelector('.sg-couleur').innerHTML = (seq1 || seq2) ? renderPastilleCouleur(couleur) : renderPastilleCouleur(null);
-}
-
-async function enregistrerGrilleSaisie() {
-  const epreuveId = parseInt(document.getElementById("sg-epreuve").value);
-  const classeId = parseInt(document.getElementById("sg-classe").value);
-  if (!epreuveId) { toast("Sélectionne une épreuve", "err"); return; }
-
-  const lignes = document.querySelectorAll("#sg-tbody tr");
-  let nbOk = 0, nbErr = 0;
-
-  for (const tr of lignes) {
-    const eleveId = parseInt(tr.dataset.eleveId);
-    const noteId = tr.dataset.noteId ? parseInt(tr.dataset.noteId) : null;
-    const seq1 = parseFloat(tr.querySelector('.sg-input-seq1').value);
-    const seq2 = parseFloat(tr.querySelector('.sg-input-seq2').value);
-
-    // Ignorer les lignes totalement vides (élève non encore noté, on ne force rien)
-    if (isNaN(seq1) && isNaN(seq2)) continue;
-
-    const s1 = isNaN(seq1) ? 0 : seq1;
-    const s2 = isNaN(seq2) ? 0 : seq2;
-    const finale = s1 + s2;
-    const couleur = finale >= 6 ? "vert" : finale >= 4 ? "orange" : "rouge";
-
-    try {
-      if (gristConnecte) {
-        if (noteId) {
-          await grist.docApi.applyUserActions([["UpdateRecord", "Notes", noteId, {
-            note_seq1: s1, note_seq2: s2
-          }]]);
-        } else {
-          const r = await grist.docApi.applyUserActions([["AddRecord", "Notes", null, {
-            enseignant: monId, eleve: eleveId, epreuve: epreuveId,
-            note_seq1: s1, note_seq2: s2, publier: false
-          }]]);
-          const newId = r.retValues[0];
-          notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: epreuveId, note_seq1: s1, note_seq2: s2, note_finale: finale, couleur, publier: false });
-          tr.dataset.noteId = newId;
-        }
-      } else {
-        // Mode démo
-        if (noteId) {
-          const n = notes.find(n => n.id === noteId);
-          if (n) { n.note_seq1 = s1; n.note_seq2 = s2; n.note_finale = finale; n.couleur = couleur; }
-        } else {
-          const newId = Date.now() + eleveId;
-          notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: epreuveId, note_seq1: s1, note_seq2: s2, note_finale: finale, couleur, publier: false });
-          tr.dataset.noteId = newId;
-        }
-      }
-
-      // Mettre à jour la note existante dans le tableau local si UpdateRecord
-      if (noteId) {
-        const n = notes.find(n => n.id === noteId);
-        if (n) { n.note_seq1 = s1; n.note_seq2 = s2; n.note_finale = finale; n.couleur = couleur; }
-      }
-
-      nbOk++;
-    } catch(e) {
-      nbErr++;
-      console.error("Erreur ligne élève", eleveId, e);
-    }
-  }
-
-  updateBadges();
-  rendreListeNotes();
-  chargerGrilleSaisie(); // rafraîchir l'affichage "Saisie" / badges
-
-  if (nbErr === 0) {
-    toast(`✓ ${nbOk} note${nbOk>1?'s':''} enregistrée${nbOk>1?'s':''}`, "ok");
-  } else {
-    toast(`${nbOk} ok, ${nbErr} erreur${nbErr>1?'s':''}`, "err");
-  }
 }
 
 /* ══════════════════════════════════════════
@@ -1163,6 +1294,43 @@ function rendreListePlanning() {
    NOTES (relevé en lecture seule)
 ══════════════════════════════════════════ */
 
+function clefModeCalc(epreuveId) {
+  return 'ccf_mode_calc_epr_' + epreuveId;
+}
+
+function getModeCalc(epreuveId) {
+  try { return localStorage.getItem(clefModeCalc(epreuveId)) || 'moyenne'; }
+  catch(e) { return 'moyenne'; }
+}
+
+function setModeCalc(epreuveId, mode) {
+  try { localStorage.setItem(clefModeCalc(epreuveId), mode); } catch(e) {}
+}
+
+function onChangeFiltreEpreuveReleve() {
+  const filtreEpreuveEl = document.getElementById("releve-filtre-epreuve");
+  const epreuveId = filtreEpreuveEl ? parseInt(filtreEpreuveEl.value) : null;
+  const modeCard = document.getElementById("releve-mode-card");
+
+  if (epreuveId) {
+    const mode = getModeCalc(epreuveId);
+    document.querySelectorAll('input[name="releve-mode-calc"]').forEach(r => r.checked = (r.value === mode));
+    modeCard.style.display = "block";
+  } else {
+    modeCard.style.display = "none";
+  }
+  rendreListeNotes();
+}
+
+function onChangeModeCalc() {
+  const filtreEpreuveEl = document.getElementById("releve-filtre-epreuve");
+  const epreuveId = filtreEpreuveEl ? parseInt(filtreEpreuveEl.value) : null;
+  if (!epreuveId) return;
+  const mode = document.querySelector('input[name="releve-mode-calc"]:checked').value;
+  setModeCalc(epreuveId, mode);
+  rendreListeNotes();
+}
+
 function rendreListeNotes() {
   const container = document.getElementById("notes-list");
   const filtreClasseEl = document.getElementById("releve-filtre-classe");
@@ -1182,9 +1350,64 @@ function rendreListeNotes() {
   }
 
   if (!notesAffichees.length) { container.innerHTML = '<div class="empty">Aucune note saisie.</div>'; return; }
+
+  // ── Cas particulier : une épreuve précise est filtrée → regrouper par élève
+  // pour pouvoir combiner plusieurs sessions (moyenne ou addition)
+  if (filtreEpreuve) {
+    const mode = getModeCalc(filtreEpreuve);
+    const parEleve = {};
+    notesAffichees.forEach(n => {
+      if (!parEleve[n.eleve]) parEleve[n.eleve] = [];
+      parEleve[n.eleve].push(n);
+    });
+
+    const lignesHtml = Object.keys(parEleve).map(eleveId => {
+      const notesElv = parEleve[eleveId].sort((a,b) => (a.id||0) - (b.id||0));
+      const elv = eleves.find(e => e.id === parseInt(eleveId));
+      const cls = elv ? classes.find(c => c.id === elv.classe) : null;
+
+      // Convertir chaque note sur 20 pour pouvoir combiner même si barèmes différents
+      const notesConverties = notesElv.map(n => {
+        const bareme = n.bareme || 20;
+        return (n.note_seq1 / bareme) * 20;
+      });
+
+      let resultat;
+      if (notesConverties.length === 1) {
+        resultat = notesConverties[0];
+      } else if (mode === 'addition') {
+        resultat = notesConverties.reduce((a,b) => a+b, 0);
+      } else {
+        resultat = notesConverties.reduce((a,b) => a+b, 0) / notesConverties.length;
+      }
+      resultat = Math.round(resultat * 100) / 100;
+
+      const couleur = resultat >= 12 ? "vert" : resultat >= 8 ? "orange" : "rouge";
+      const noteClass = couleur === "vert" ? "note-vert" : couleur === "orange" ? "note-orange" : "note-rouge";
+
+      const detailNotes = notesElv.map(n => `${n.intitule || 'Note'} : ${n.note_seq1}/${n.bareme || 20}`).join(' · ');
+
+      return `<tr>
+          <td>${elv ? elv.nom_prenom : '?'}</td>
+          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
+          <td style="font-size:11px;color:var(--muted)">${detailNotes}${notesElv.length>1?` <span style="font-weight:600">(${mode === 'addition' ? 'somme' : 'moyenne'})</span>`:''}</td>
+          <td style="font-weight:700">${resultat}<span style="font-weight:400;color:var(--muted)">/20</span></td>
+          <td><span class="${noteClass}">${couleur.charAt(0).toUpperCase()+couleur.slice(1)}</span></td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>Élève</th><th>Classe</th><th>Détail des notes</th><th>Résultat</th><th>Couleur</th></tr></thead>
+        <tbody>${lignesHtml}</tbody>
+      </table>`;
+    return;
+  }
+
+  // ── Cas général : pas de filtre épreuve → une ligne par note brute
   container.innerHTML = `
     <table class="data-table">
-      <thead><tr><th>Élève</th><th>Classe</th><th>Épreuve</th><th>Séq.1</th><th>Séq.2</th><th>Finale</th><th>Couleur</th><th>Statut</th></tr></thead>
+      <thead><tr><th>Élève</th><th>Classe</th><th>Épreuve</th><th>Intitulé</th><th>Note</th><th>Couleur</th><th>Statut</th></tr></thead>
       <tbody>${notesAffichees.map(n => {
         const elv = eleves.find(e => e.id === n.eleve);
         const cls = elv ? classes.find(c => c.id === elv.classe) : null;
@@ -1194,9 +1417,8 @@ function rendreListeNotes() {
           <td>${elv ? elv.nom_prenom : '?'}</td>
           <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
           <td>${epr ? epr.repere : '?'}</td>
-          <td>${n.note_seq1 ?? '—'}</td>
-          <td>${n.note_seq2 ?? '—'}</td>
-          <td style="font-weight:700">${n.note_finale !== undefined ? n.note_finale : '—'}</td>
+          <td style="font-size:12px;color:var(--muted)">${n.intitule || '—'}</td>
+          <td style="font-weight:700">${n.note_seq1 ?? n.note_finale ?? '—'}${n.bareme ? '<span style="font-weight:400;color:var(--muted)">/'+n.bareme+'</span>' : ''}</td>
           <td><span class="${noteClass}">${n.couleur ? (n.couleur.charAt(0).toUpperCase()+n.couleur.slice(1)) : '—'}</span></td>
           <td>${n.publier ? '<span class="pill pill-green">Publiée</span>' : '<span class="pill pill-gray">Confidentielle</span>'}</td>
         </tr>`;
@@ -1570,19 +1792,12 @@ async function impImporter() {
 
 /* ══════════════════════════════════════════
    TOAST
-══════════════════════════════════════════ */
+════════════════════════════════════════════════════════════════════════════════════ */
 function toast(msg, type) {
   const t = document.getElementById("toast");
   t.textContent = msg; t.className = "show " + type;
   setTimeout(() => { t.className = ""; }, 2800);
 }
-
-/* ══════════════════════════════════════════
-   IMPRESSION
-══════════════════════════════════════════ */
-const style = document.createElement("style");
-style.textContent = `@media print { body > *:not(#zone-impression) { display: none !important; } #zone-impression { display: block !important; } }`;
-document.head.appendChild(style);
 
 document.addEventListener("DOMContentLoaded", initGrist);
 </script>
