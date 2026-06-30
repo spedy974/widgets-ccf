@@ -22,12 +22,34 @@
   .app-header .user-role { font-size: 11px; color: var(--muted); }
   .app-header .logo { font-size: 22px; }
 
-  /* TABS */
-  .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); overflow-x: auto; }
-  .tab { padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
-  .tab:hover { color: var(--text); background: var(--bg); }
-  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
-  .tab .badge { background: var(--blue); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; }
+  /* TABS GROUPÉS — MENUS DÉROULANTS */
+  .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); position: relative; z-index: 50; }
+  .tab-group { position: relative; }
+  .tab-group-btn {
+    padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted);
+    border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px; background: none; border-left: none; border-right: none; border-top: none;
+  }
+  .tab-group-btn:hover { color: var(--text); background: var(--bg); }
+  .tab-group-btn.active-group { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-group-btn .chevron { font-size: 9px; transition: transform 0.15s; opacity: 0.6; }
+  .tab-group.open .chevron { transform: rotate(180deg); }
+  .tab-group-btn .badge { background: var(--blue); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; }
+
+  .tab-dropdown {
+    position: absolute; top: 100%; left: 0; min-width: 220px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 0 0 8px 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    display: none; flex-direction: column; padding: 6px;
+  }
+  .tab-group.open .tab-dropdown { display: flex; }
+  .tab-dropdown-item {
+    padding: 9px 12px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text);
+    border-radius: 6px; display: flex; align-items: center; gap: 8px; transition: background 0.1s;
+  }
+  .tab-dropdown-item:hover { background: var(--bg); }
+  .tab-dropdown-item.active { background: #e8ecfe; color: var(--blue); font-weight: 700; }
+  .tab-dropdown-item .badge { margin-left: auto; background: var(--blue); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; }
 
   /* CONTENT */
   .tab-content { display: none; padding: 16px; }
@@ -195,14 +217,44 @@
   </div>
 </div>
 
-<!-- TABS -->
-<div class="tabs">
-  <div class="tab active" onclick="showTab('affectations')">👥 Mes affectations</div>
-  <div class="tab" onclick="showTab('planning')">📅 Mon planning <span class="badge" id="badge-planning">0</span></div>
-  <div class="tab" onclick="showTab('convocations')">📋 Mes convocations</div>
-  <div class="tab" onclick="showTab('saisie')">✏️ Saisie de notes</div>
-  <div class="tab" onclick="showTab('notes')">📊 Relevés de notes et couleurs <span class="badge" id="badge-notes">0</span></div>
-  <div class="tab" onclick="showTab('documents')">🗄️ Mes documents</div>
+<!-- TABS GROUPÉS -->
+<div class="tabs" id="tabs-bar">
+
+  <div class="tab-group" id="group-travail">
+    <button class="tab-group-btn active-group" onclick="toggleGroup('travail')">
+      📋 Travail <span class="chevron">▾</span>
+    </button>
+    <div class="tab-dropdown">
+      <div class="tab-dropdown-item active" onclick="showTab('affectations', 'travail')">👥 Mes affectations</div>
+      <div class="tab-dropdown-item" onclick="showTab('planning', 'travail')">
+        📅 Mon planning <span class="badge" id="badge-planning">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-group" id="group-evaluation">
+    <button class="tab-group-btn" onclick="toggleGroup('evaluation')">
+      📝 Évaluation <span class="chevron">▾</span>
+    </button>
+    <div class="tab-dropdown">
+      <div class="tab-dropdown-item" onclick="showTab('saisie', 'evaluation')">✏️ Saisie de notes</div>
+      <div class="tab-dropdown-item" onclick="showTab('notes', 'evaluation')">
+        📊 Relevés et couleurs <span class="badge" id="badge-notes">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-group" id="group-administratif">
+    <button class="tab-group-btn" onclick="toggleGroup('administratif')">
+      🗄️ Administratif <span class="chevron">▾</span>
+    </button>
+    <div class="tab-dropdown">
+      <div class="tab-dropdown-item" onclick="showTab('convocations', 'administratif')">📋 Mes convocations</div>
+      <div class="tab-dropdown-item" onclick="showTab('documents', 'administratif')">🗄️ Mes documents</div>
+      <div class="tab-dropdown-item" onclick="showTab('import', 'administratif')">📥 Import élèves</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══ ONGLET PLANNING ═══ -->
@@ -398,6 +450,50 @@
   </div>
 </div>
 
+<!-- ═══ ONGLET IMPORT ÉLÈVES ═══ -->
+<div class="tab-content" id="tab-import">
+
+  <div class="card">
+    <div class="card-title">Étape 1 — Classe de destination</div>
+    <div class="form-group">
+      <label>Classe</label>
+      <select id="imp-classe" onchange="impOnClasseChange()"><option value="">Choisir une classe…</option></select>
+    </div>
+    <div id="imp-classe-info" style="font-size:12px;color:var(--muted);display:none;margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Étape 2 — Coller la liste (Pronote / Excel)</div>
+    <div style="background:#e8ecfe;border-radius:6px;padding:10px 12px;font-size:12px;color:#2d4ecc;margin-bottom:12px;line-height:1.6">
+      Un élève par ligne, format <code>Nom Prénom</code>. Les numéros de ligne et doublons sont gérés automatiquement.
+    </div>
+    <div class="form-group">
+      <label>Texte à analyser</label>
+      <textarea id="imp-texte" rows="7" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:monospace;resize:vertical" placeholder="DUPONT Lucas&#10;MARTIN Emma&#10;BERNARD Noah…"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="document.getElementById('imp-texte').value=''">Effacer</button>
+      <button class="btn btn-primary" onclick="impAnalyser()">🔍 Analyser</button>
+    </div>
+  </div>
+
+  <div class="card" id="imp-preview-card" style="display:none">
+    <div class="card-title">Étape 3 — Vérification avant import</div>
+    <div id="imp-stats" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"></div>
+    <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
+      <table class="data-table">
+        <thead><tr><th>N°</th><th>Nom et prénom</th><th>Statut</th></tr></thead>
+        <tbody id="imp-preview-body"></tbody>
+      </table>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="document.getElementById('imp-preview-card').style.display='none'">← Modifier</button>
+      <button class="btn btn-green" id="imp-btn-import" onclick="impImporter()">✓ Importer dans Grist</button>
+    </div>
+  </div>
+
+</div>
+
 <!-- Zone impression -->
 <div id="zone-impression" style="display:none"></div>
 <div id="toast"></div>
@@ -415,18 +511,44 @@ let enseignants = [], classes = [], epreuves = [], eleves = [];
 let plannings = [], notes = [], convocations = [], stockageDocs = [];
 let affectations = [];
 let docElevesClasse = [], docSelectedEleves = [];
+let impParsed = [];
 
 const ANNEE = "2026-2027";
 
 /* ══════════════════════════════════════════
-   NAVIGATION ONGLETS
+   NAVIGATION ONGLETS GROUPÉS
 ══════════════════════════════════════════ */
-function showTab(id) {
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  event.currentTarget.classList.add('active');
+function toggleGroup(groupId) {
+  const group = document.getElementById('group-' + groupId);
+  const isOpen = group.classList.contains('open');
+  document.querySelectorAll('.tab-group').forEach(g => g.classList.remove('open'));
+  if (!isOpen) group.classList.add('open');
 }
+
+function showTab(id, groupId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+
+  document.querySelectorAll('.tab-dropdown-item').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-group-btn').forEach(b => b.classList.remove('active-group'));
+
+  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+
+  if (groupId) {
+    const btn = document.querySelector('#group-' + groupId + ' .tab-group-btn');
+    if (btn) btn.classList.add('active-group');
+  }
+
+  // Fermer le menu déroulant après sélection
+  document.querySelectorAll('.tab-group').forEach(g => g.classList.remove('open'));
+}
+
+// Fermer les menus déroulants si clic en dehors
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.tab-group')) {
+    document.querySelectorAll('.tab-group').forEach(g => g.classList.remove('open'));
+  }
+});
 
 /* ══════════════════════════════════════════
    INIT GRIST
@@ -764,7 +886,7 @@ function peuplerSelects() {
   const mesCls = mesClasses();
 
   // Classes — limitées à mes affectations
-  ['pl-classe', 'doc-classe', 'sg-classe', 'releve-filtre-classe'].forEach(id => {
+  ['pl-classe', 'doc-classe', 'sg-classe', 'releve-filtre-classe', 'imp-classe'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const isFiltre = id === 'releve-filtre-classe';
@@ -1333,6 +1455,117 @@ function rendreListeDocs() {
         </tr>`;
       }).join('')}</tbody>
     </table>`;
+}
+
+/* ══════════════════════════════════════════
+   IMPORT ÉLÈVES (intégré)
+══════════════════════════════════════════ */
+function impOnClasseChange() {
+  const classeId = parseInt(document.getElementById("imp-classe").value);
+  const info = document.getElementById("imp-classe-info");
+  document.getElementById("imp-preview-card").style.display = "none";
+  if (!classeId) { info.style.display = "none"; return; }
+  const nb = eleves.filter(e => e.classe === classeId).length;
+  info.style.display = "block";
+  info.textContent = nb > 0
+    ? `⚠ ${nb} élève${nb>1?'s':''} déjà présent${nb>1?'s':''} dans cette classe.`
+    : `✅ Aucun élève enregistré pour l'instant dans cette classe.`;
+  info.style.color = nb > 0 ? '#633806' : '#0d6e50';
+}
+
+function impAnalyser() {
+  const classeId = parseInt(document.getElementById("imp-classe").value);
+  if (!classeId) { toast("Choisis d'abord une classe", "err"); return; }
+
+  const texte = document.getElementById("imp-texte").value.trim();
+  if (!texte) { toast("Colle d'abord une liste à analyser", "err"); return; }
+
+  const lignes = texte.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const elevesClasse = eleves.filter(e => e.classe === classeId);
+  const normaliser = s => s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+  const nomsExistants = elevesClasse.map(e => normaliser(e.nom_prenom));
+  const nomsLot = [];
+
+  impParsed = [];
+  lignes.forEach((ligne, idx) => {
+    let nom = ligne.includes('\t') ? ligne.split('\t').map(c=>c.trim()).filter(Boolean).join(' ')
+             : ligne.includes(';')  ? ligne.split(';').map(c=>c.trim()).filter(Boolean).join(' ')
+             : ligne;
+    nom = nom.replace(/^\d+[\.\)]\s*/, '').replace(/[""'']/g, '').trim();
+    if (nom.length < 2) return;
+
+    const nomNorm = normaliser(nom);
+    let statut = 'ok', message = '✓ À importer';
+    if (nomsExistants.includes(nomNorm)) { statut = 'warn'; message = '⚠ Déjà dans Grist'; }
+    else if (nomsLot.includes(nomNorm)) { statut = 'warn'; message = '⚠ Doublon dans le lot'; }
+    else if (nom.length < 3) { statut = 'err'; message = '✗ Nom trop court'; }
+    else { nomsLot.push(nomNorm); }
+
+    impParsed.push({ idx: idx + 1, nom_prenom: nom, statut, message });
+  });
+
+  if (impParsed.length === 0) { toast("Aucun élève détecté", "err"); return; }
+
+  const nbOk = impParsed.filter(e => e.statut === 'ok').length;
+  const nbWarn = impParsed.filter(e => e.statut === 'warn').length;
+  const nbErr = impParsed.filter(e => e.statut === 'err').length;
+
+  document.getElementById("imp-stats").innerHTML = `
+    <span class="pill pill-green">${nbOk} à importer</span>
+    ${nbWarn > 0 ? `<span class="pill" style="background:#faeeda;color:#633806">${nbWarn} doublon${nbWarn>1?'s':''}</span>` : ''}
+    ${nbErr > 0 ? `<span class="pill pill-red">${nbErr} erreur${nbErr>1?'s':''}</span>` : ''}
+  `;
+
+  document.getElementById("imp-preview-body").innerHTML = impParsed.map(e => `
+    <tr>
+      <td style="color:var(--muted)">${e.idx}</td>
+      <td style="font-weight:600">${e.nom_prenom}</td>
+      <td><span class="pill ${e.statut==='ok'?'pill-green':e.statut==='warn'?'':'pill-red'}" style="${e.statut==='warn'?'background:#faeeda;color:#633806':''}">${e.message}</span></td>
+    </tr>`).join('');
+
+  document.getElementById("imp-preview-card").style.display = "block";
+  document.getElementById("imp-btn-import").disabled = nbOk === 0;
+  document.getElementById("imp-preview-card").scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function impImporter() {
+  const classeId = parseInt(document.getElementById("imp-classe").value);
+  const aImporter = impParsed.filter(e => e.statut === 'ok');
+  if (aImporter.length === 0) { toast("Aucun élève à importer", "err"); return; }
+
+  const btn = document.getElementById("imp-btn-import");
+  btn.disabled = true;
+  btn.textContent = "Importation en cours…";
+
+  let nbOk = 0;
+  const maxExistant = Math.max(0, ...eleves.filter(e => e.classe === classeId).map(e => e.numero_ordre || 0));
+
+  try {
+    for (let i = 0; i < aImporter.length; i++) {
+      const e = aImporter[i];
+      const numero = maxExistant + i + 1;
+      if (gristConnecte) {
+        const r = await grist.docApi.applyUserActions([["AddRecord", "Eleves", null, {
+          nom_prenom: e.nom_prenom, classe: classeId, numero_ordre: numero, absent_session: false
+        }]]);
+        eleves.push({ id: r.retValues[0], nom_prenom: e.nom_prenom, classe: classeId, numero_ordre: numero });
+      } else {
+        eleves.push({ id: Date.now() + i, nom_prenom: e.nom_prenom, classe: classeId, numero_ordre: numero });
+      }
+      nbOk++;
+    }
+
+    toast(`✓ ${nbOk} élève${nbOk>1?'s':''} importé${nbOk>1?'s':''}`, "ok");
+    document.getElementById("imp-texte").value = "";
+    document.getElementById("imp-preview-card").style.display = "none";
+    impOnClasseChange();
+    peuplerSelects();
+  } catch(e) {
+    toast("Erreur lors de l'import : " + e.message, "err");
+  }
+
+  btn.disabled = false;
+  btn.textContent = "✓ Importer dans Grist";
 }
 
 /* ══════════════════════════════════════════
