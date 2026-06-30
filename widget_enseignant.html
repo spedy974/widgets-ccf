@@ -197,15 +197,16 @@
 
 <!-- TABS -->
 <div class="tabs">
-  <div class="tab active" onclick="showTab('planning')">📅 Mon planning <span class="badge" id="badge-planning">0</span></div>
-  <div class="tab" onclick="showTab('notes')">📝 Mes notes <span class="badge" id="badge-notes">0</span></div>
+  <div class="tab active" onclick="showTab('affectations')">👥 Mes affectations</div>
+  <div class="tab" onclick="showTab('planning')">📅 Mon planning <span class="badge" id="badge-planning">0</span></div>
   <div class="tab" onclick="showTab('convocations')">📋 Mes convocations</div>
+  <div class="tab" onclick="showTab('saisie')">✏️ Saisie de notes</div>
+  <div class="tab" onclick="showTab('notes')">📊 Relevés de notes et couleurs <span class="badge" id="badge-notes">0</span></div>
   <div class="tab" onclick="showTab('documents')">🗄️ Mes documents</div>
-  <div class="tab" onclick="showTab('affectations')">👥 Mes affectations</div>
 </div>
 
 <!-- ═══ ONGLET PLANNING ═══ -->
-<div class="tab-content active" id="tab-planning">
+<div class="tab-content" id="tab-planning">
 
   <!-- Formulaire ajout -->
   <div class="card">
@@ -253,47 +254,64 @@
   </div>
 </div>
 
-<!-- ═══ ONGLET NOTES ═══ -->
-<div class="tab-content" id="tab-notes">
+<!-- ═══ ONGLET SAISIE DE NOTES (GRILLE) ═══ -->
+<div class="tab-content" id="tab-saisie">
 
   <div class="card">
-    <div class="card-title">Saisir une note CCF</div>
+    <div class="card-title">Choisir la classe et l'épreuve</div>
     <div class="row2">
       <div class="form-group">
-        <label>Élève</label>
-        <select id="nt-classe" onchange="filtrerElevesNotes()"><option value="">Classe d'abord…</option></select>
+        <label>Classe</label>
+        <select id="sg-classe" onchange="filtrerEpreuvesSaisieGrille()"><option value="">Choisir une classe…</option></select>
       </div>
       <div class="form-group">
-        <label>Élève</label>
-        <select id="nt-eleve"><option value="">Choisir un élève…</option></select>
+        <label>Épreuve</label>
+        <select id="sg-epreuve" onchange="chargerGrilleSaisie()" disabled><option value="">Choisir une classe d'abord…</option></select>
       </div>
     </div>
-    <div class="form-group">
-      <label>Épreuve</label>
-      <select id="nt-epreuve"><option value="">Choisir une épreuve…</option></select>
+  </div>
+
+  <div class="card" id="sg-grille-card" style="display:none">
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Saisie des notes — élève par élève</span>
+      <span id="sg-count" style="font-weight:400;color:var(--muted);font-size:11px;text-transform:none;letter-spacing:0"></span>
     </div>
-    <div class="row2">
-      <div class="form-group">
-        <label>Note séquence 1 (/20)</label>
-        <input type="number" id="nt-seq1" min="0" max="20" step="0.5" placeholder="0 — 20">
-      </div>
-      <div class="form-group">
-        <label>Date séquence 1</label>
-        <input type="date" id="nt-date1">
-      </div>
-    </div>
-    <div class="row2">
-      <div class="form-group">
-        <label>Note séquence 2 (/20)</label>
-        <input type="number" id="nt-seq2" min="0" max="20" step="0.5" placeholder="0 — 20 (optionnel)">
-      </div>
-      <div class="form-group">
-        <label>Date séquence 2</label>
-        <input type="date" id="nt-date2">
-      </div>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="sg-table">
+        <thead>
+          <tr>
+            <th style="min-width:160px">Élève</th>
+            <th style="width:110px">Note séq. 1<br><span style="font-weight:400;color:var(--muted)">/20</span></th>
+            <th style="width:110px">Note séq. 2<br><span style="font-weight:400;color:var(--muted)">/20</span></th>
+            <th style="width:90px">Finale</th>
+            <th style="width:90px">Couleur</th>
+            <th style="width:60px"></th>
+          </tr>
+        </thead>
+        <tbody id="sg-tbody"></tbody>
+      </table>
     </div>
     <div class="btn-row">
-      <button class="btn btn-green" onclick="saisirNote()">✓ Enregistrer la note</button>
+      <button class="btn btn-green" onclick="enregistrerGrilleSaisie()">✓ Enregistrer toutes les notes</button>
+    </div>
+  </div>
+
+  <div class="card" id="sg-empty-card">
+    <div class="empty">Sélectionne une classe puis une épreuve pour afficher la liste des élèves à noter.</div>
+  </div>
+</div>
+
+<!-- ═══ ONGLET RELEVÉS DE NOTES ET COULEURS ═══ -->
+<div class="tab-content" id="tab-notes">
+
+  <div class="filtre-row" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
+      <label>Filtrer par classe</label>
+      <select id="releve-filtre-classe" onchange="rendreListeNotes()"><option value="">Toutes mes classes</option></select>
+    </div>
+    <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
+      <label>Filtrer par épreuve</label>
+      <select id="releve-filtre-epreuve" onchange="rendreListeNotes()"><option value="">Toutes mes épreuves</option></select>
     </div>
   </div>
 
@@ -372,7 +390,7 @@
 </div>
 
 <!-- ═══ ONGLET MES AFFECTATIONS ═══ -->
-<div class="tab-content" id="tab-affectations">
+<div class="tab-content active" id="tab-affectations">
   <div class="myaff-stats" id="myaff-stats"></div>
   <div class="card">
     <div class="card-title">Mes classes et épreuves affectées</div>
@@ -746,13 +764,15 @@ function peuplerSelects() {
   const mesCls = mesClasses();
 
   // Classes — limitées à mes affectations
-  ['pl-classe', 'nt-classe', 'doc-classe'].forEach(id => {
+  ['pl-classe', 'doc-classe', 'sg-classe', 'releve-filtre-classe'].forEach(id => {
     const sel = document.getElementById(id);
+    if (!sel) return;
+    const isFiltre = id === 'releve-filtre-classe';
     if (mesCls.length === 0) {
-      sel.innerHTML = '<option value="">Aucune classe affectée</option>';
+      sel.innerHTML = isFiltre ? '<option value="">Aucune classe affectée</option>' : '<option value="">Aucune classe affectée</option>';
       return;
     }
-    sel.innerHTML = '<option value="">Choisir une classe…</option>';
+    sel.innerHTML = isFiltre ? '<option value="">Toutes mes classes</option>' : '<option value="">Choisir une classe…</option>';
     mesCls.forEach(c => {
       const o = document.createElement("option");
       o.value = c.id; o.textContent = c.code_classe;
@@ -760,16 +780,39 @@ function peuplerSelects() {
     });
   });
 
-  // Notes - épreuves : toutes mes épreuves affectées (avant choix de classe)
-  const selNtEpr = document.getElementById("nt-epreuve");
-  const mesEpr = mesToutesEpreuves();
-  selNtEpr.innerHTML = mesEpr.length === 0
-    ? '<option value="">Aucune épreuve affectée</option>'
+  // Filtre épreuves du relevé : toutes mes épreuves affectées
+  const selReleveEpr = document.getElementById("releve-filtre-epreuve");
+  if (selReleveEpr) {
+    const mesEpr = mesToutesEpreuves();
+    selReleveEpr.innerHTML = '<option value="">Toutes mes épreuves</option>';
+    mesEpr.forEach(e => {
+      const o = document.createElement("option");
+      o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
+      selReleveEpr.appendChild(o);
+    });
+  }
+}
+
+function filtrerEpreuvesSaisieGrille() {
+  const classeId = parseInt(document.getElementById("sg-classe").value);
+  const selEpr = document.getElementById("sg-epreuve");
+  document.getElementById("sg-grille-card").style.display = "none";
+  document.getElementById("sg-empty-card").style.display = "block";
+
+  if (!classeId) {
+    selEpr.innerHTML = '<option value="">Choisir une classe d\'abord…</option>';
+    selEpr.disabled = true;
+    return;
+  }
+  const eprCls = mesEpreuvesPourClasse(classeId);
+  selEpr.disabled = false;
+  selEpr.innerHTML = eprCls.length === 0
+    ? '<option value="">Aucune épreuve affectée pour cette classe</option>'
     : '<option value="">Choisir une épreuve…</option>';
-  mesEpr.forEach(e => {
+  eprCls.forEach(e => {
     const o = document.createElement("option");
     o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
-    selNtEpr.appendChild(o);
+    selEpr.appendChild(o);
   });
 }
 
@@ -791,15 +834,137 @@ function filtrerEpreuvesPlanning() {
   });
 }
 
-function filtrerElevesNotes() {
-  const classeId = parseInt(document.getElementById("nt-classe").value);
-  const sel = document.getElementById("nt-eleve");
-  sel.innerHTML = '<option value="">Choisir un élève…</option>';
-  eleves.filter(e => e.classe === classeId).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom)).forEach(e => {
-    const o = document.createElement("option");
-    o.value = e.id; o.textContent = e.nom_prenom;
-    sel.appendChild(o);
-  });
+/* ══════════════════════════════════════════
+   SAISIE DE NOTES — GRILLE
+══════════════════════════════════════════ */
+function chargerGrilleSaisie() {
+  const classeId = parseInt(document.getElementById("sg-classe").value);
+  const epreuveId = parseInt(document.getElementById("sg-epreuve").value);
+
+  if (!classeId || !epreuveId) {
+    document.getElementById("sg-grille-card").style.display = "none";
+    document.getElementById("sg-empty-card").style.display = "block";
+    return;
+  }
+
+  const elevesCls = eleves.filter(e => e.classe === classeId).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+
+  if (elevesCls.length === 0) {
+    document.getElementById("sg-grille-card").style.display = "none";
+    document.getElementById("sg-empty-card").style.display = "block";
+    document.getElementById("sg-empty-card").innerHTML = '<div class="empty">Aucun élève dans cette classe.</div>';
+    return;
+  }
+
+  document.getElementById("sg-empty-card").style.display = "none";
+  document.getElementById("sg-grille-card").style.display = "block";
+  document.getElementById("sg-count").textContent = elevesCls.length + " élève" + (elevesCls.length>1?'s':'');
+
+  const tbody = document.getElementById("sg-tbody");
+  tbody.innerHTML = elevesCls.map(elv => {
+    const noteExistante = notes.find(n => n.eleve === elv.id && n.epreuve === epreuveId);
+    const seq1 = noteExistante ? noteExistante.note_seq1 : '';
+    const seq2 = noteExistante ? noteExistante.note_seq2 : '';
+    return `
+      <tr data-eleve-id="${elv.id}" data-note-id="${noteExistante ? noteExistante.id : ''}">
+        <td>${elv.nom_prenom}</td>
+        <td><input type="number" class="sg-input-seq1" min="0" max="20" step="0.5" value="${seq1}" oninput="recalculerLigneGrille(this)" style="width:80px;padding:5px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:13px"></td>
+        <td><input type="number" class="sg-input-seq2" min="0" max="20" step="0.5" value="${seq2}" oninput="recalculerLigneGrille(this)" style="width:80px;padding:5px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:13px"></td>
+        <td class="sg-finale" style="font-weight:700">${noteExistante ? noteExistante.note_finale : '—'}</td>
+        <td class="sg-couleur">${renderPastilleCouleur(noteExistante ? noteExistante.couleur : null)}</td>
+        <td>${noteExistante ? '<span class="pill pill-green">Saisie</span>' : '<span class="pill pill-gray">—</span>'}</td>
+      </tr>`;
+  }).join('');
+}
+
+function renderPastilleCouleur(couleur) {
+  if (!couleur) return '<span style="color:var(--muted);font-size:12px">—</span>';
+  const map = { vert: 'note-vert', orange: 'note-orange', rouge: 'note-rouge' };
+  const label = { vert: 'Vert', orange: 'Orange', rouge: 'Rouge' };
+  return `<span class="${map[couleur]}">${label[couleur]}</span>`;
+}
+
+function recalculerLigneGrille(inputEl) {
+  const tr = inputEl.closest('tr');
+  const seq1 = parseFloat(tr.querySelector('.sg-input-seq1').value) || 0;
+  const seq2 = parseFloat(tr.querySelector('.sg-input-seq2').value) || 0;
+  const finale = seq1 + seq2;
+  const couleur = finale >= 6 ? "vert" : finale >= 4 ? "orange" : "rouge";
+  tr.querySelector('.sg-finale').textContent = (seq1 || seq2) ? finale : '—';
+  tr.querySelector('.sg-couleur').innerHTML = (seq1 || seq2) ? renderPastilleCouleur(couleur) : renderPastilleCouleur(null);
+}
+
+async function enregistrerGrilleSaisie() {
+  const epreuveId = parseInt(document.getElementById("sg-epreuve").value);
+  const classeId = parseInt(document.getElementById("sg-classe").value);
+  if (!epreuveId) { toast("Sélectionne une épreuve", "err"); return; }
+
+  const lignes = document.querySelectorAll("#sg-tbody tr");
+  let nbOk = 0, nbErr = 0;
+
+  for (const tr of lignes) {
+    const eleveId = parseInt(tr.dataset.eleveId);
+    const noteId = tr.dataset.noteId ? parseInt(tr.dataset.noteId) : null;
+    const seq1 = parseFloat(tr.querySelector('.sg-input-seq1').value);
+    const seq2 = parseFloat(tr.querySelector('.sg-input-seq2').value);
+
+    // Ignorer les lignes totalement vides (élève non encore noté, on ne force rien)
+    if (isNaN(seq1) && isNaN(seq2)) continue;
+
+    const s1 = isNaN(seq1) ? 0 : seq1;
+    const s2 = isNaN(seq2) ? 0 : seq2;
+    const finale = s1 + s2;
+    const couleur = finale >= 6 ? "vert" : finale >= 4 ? "orange" : "rouge";
+
+    try {
+      if (gristConnecte) {
+        if (noteId) {
+          await grist.docApi.applyUserActions([["UpdateRecord", "Notes", noteId, {
+            note_seq1: s1, note_seq2: s2
+          }]]);
+        } else {
+          const r = await grist.docApi.applyUserActions([["AddRecord", "Notes", null, {
+            enseignant: monId, eleve: eleveId, epreuve: epreuveId,
+            note_seq1: s1, note_seq2: s2, publier: false
+          }]]);
+          const newId = r.retValues[0];
+          notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: epreuveId, note_seq1: s1, note_seq2: s2, note_finale: finale, couleur, publier: false });
+          tr.dataset.noteId = newId;
+        }
+      } else {
+        // Mode démo
+        if (noteId) {
+          const n = notes.find(n => n.id === noteId);
+          if (n) { n.note_seq1 = s1; n.note_seq2 = s2; n.note_finale = finale; n.couleur = couleur; }
+        } else {
+          const newId = Date.now() + eleveId;
+          notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: epreuveId, note_seq1: s1, note_seq2: s2, note_finale: finale, couleur, publier: false });
+          tr.dataset.noteId = newId;
+        }
+      }
+
+      // Mettre à jour la note existante dans le tableau local si UpdateRecord
+      if (noteId) {
+        const n = notes.find(n => n.id === noteId);
+        if (n) { n.note_seq1 = s1; n.note_seq2 = s2; n.note_finale = finale; n.couleur = couleur; }
+      }
+
+      nbOk++;
+    } catch(e) {
+      nbErr++;
+      console.error("Erreur ligne élève", eleveId, e);
+    }
+  }
+
+  updateBadges();
+  rendreListeNotes();
+  chargerGrilleSaisie(); // rafraîchir l'affichage "Saisie" / badges
+
+  if (nbErr === 0) {
+    toast(`✓ ${nbOk} note${nbOk>1?'s':''} enregistrée${nbOk>1?'s':''}`, "ok");
+  } else {
+    toast(`${nbOk} ok, ${nbErr} erreur${nbErr>1?'s':''}`, "err");
+  }
 }
 
 /* ══════════════════════════════════════════
@@ -873,59 +1038,44 @@ function rendreListePlanning() {
 }
 
 /* ══════════════════════════════════════════
-   NOTES
+   NOTES (relevé en lecture seule)
 ══════════════════════════════════════════ */
-async function saisirNote() {
-  const classeId = parseInt(document.getElementById("nt-classe").value);
-  const eleveId = parseInt(document.getElementById("nt-eleve").value);
-  const epreuveId = parseInt(document.getElementById("nt-epreuve").value);
-  const seq1 = parseFloat(document.getElementById("nt-seq1").value) || 0;
-  const seq2 = parseFloat(document.getElementById("nt-seq2").value) || 0;
-  const date1 = document.getElementById("nt-date1").value;
-  const date2 = document.getElementById("nt-date2").value;
-
-  if (!eleveId || !epreuveId) { toast("Sélectionne un élève et une épreuve", "err"); return; }
-
-  const finale = seq1 + seq2;
-  const couleur = finale >= 6 ? "vert" : finale >= 4 ? "orange" : "rouge";
-
-  try {
-    let newId = Date.now();
-    if (gristConnecte) {
-      const r = await grist.docApi.applyUserActions([["AddRecord", "Notes", null, {
-        enseignant: monId, eleve: eleveId, epreuve: epreuveId,
-        note_seq1: seq1, note_seq2: seq2, date_seq1: date1, date_seq2: date2, publier: false
-      }]]);
-      newId = r.retValues[0];
-    }
-    notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: epreuveId, note_seq1: seq1, note_seq2: seq2, note_finale: finale, couleur, publier: false });
-    rendreListeNotes();
-    updateBadges();
-    document.getElementById("nt-eleve").value = "";
-    document.getElementById("nt-seq1").value = "";
-    document.getElementById("nt-seq2").value = "";
-    document.getElementById("nt-date1").value = "";
-    document.getElementById("nt-date2").value = "";
-    toast("✓ Note enregistrée", "ok");
-  } catch(e) { toast("Erreur d'enregistrement", "err"); }
-}
 
 function rendreListeNotes() {
   const container = document.getElementById("notes-list");
-  if (!notes.length) { container.innerHTML = '<div class="empty">Aucune note saisie.</div>'; return; }
+  const filtreClasseEl = document.getElementById("releve-filtre-classe");
+  const filtreEpreuveEl = document.getElementById("releve-filtre-epreuve");
+  const filtreClasse = filtreClasseEl ? parseInt(filtreClasseEl.value) : null;
+  const filtreEpreuve = filtreEpreuveEl ? parseInt(filtreEpreuveEl.value) : null;
+
+  let notesAffichees = notes;
+  if (filtreClasse) {
+    notesAffichees = notesAffichees.filter(n => {
+      const elv = eleves.find(e => e.id === n.eleve);
+      return elv && elv.classe === filtreClasse;
+    });
+  }
+  if (filtreEpreuve) {
+    notesAffichees = notesAffichees.filter(n => n.epreuve === filtreEpreuve);
+  }
+
+  if (!notesAffichees.length) { container.innerHTML = '<div class="empty">Aucune note saisie.</div>'; return; }
   container.innerHTML = `
     <table class="data-table">
-      <thead><tr><th>Élève</th><th>Épreuve</th><th>Séq.1</th><th>Séq.2</th><th>Finale</th><th>Statut</th></tr></thead>
-      <tbody>${notes.map(n => {
+      <thead><tr><th>Élève</th><th>Classe</th><th>Épreuve</th><th>Séq.1</th><th>Séq.2</th><th>Finale</th><th>Couleur</th><th>Statut</th></tr></thead>
+      <tbody>${notesAffichees.map(n => {
         const elv = eleves.find(e => e.id === n.eleve);
+        const cls = elv ? classes.find(c => c.id === elv.classe) : null;
         const epr = epreuves.find(e => e.id === n.epreuve);
         const noteClass = n.couleur === "vert" ? "note-vert" : n.couleur === "orange" ? "note-orange" : "note-rouge";
         return `<tr>
           <td>${elv ? elv.nom_prenom : '?'}</td>
+          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
           <td>${epr ? epr.repere : '?'}</td>
-          <td>${n.note_seq1 || '—'}</td>
-          <td>${n.note_seq2 || '—'}</td>
-          <td><span class="${noteClass}">${n.note_finale !== undefined ? n.note_finale : '—'}</span></td>
+          <td>${n.note_seq1 ?? '—'}</td>
+          <td>${n.note_seq2 ?? '—'}</td>
+          <td style="font-weight:700">${n.note_finale !== undefined ? n.note_finale : '—'}</td>
+          <td><span class="${noteClass}">${n.couleur ? (n.couleur.charAt(0).toUpperCase()+n.couleur.slice(1)) : '—'}</span></td>
           <td>${n.publier ? '<span class="pill pill-green">Publiée</span>' : '<span class="pill pill-gray">Confidentielle</span>'}</td>
         </tr>`;
       }).join('')}</tbody>
