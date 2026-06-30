@@ -299,7 +299,9 @@ function affInitialiser() {
 function affRendreListe(liste) {
   const container = document.getElementById("aff-ens-list");
   container.innerHTML = liste.map(e => {
-    const nbAff = affectations.filter(a => a.enseignant === e.id).length;
+    const affEns = affectations.filter(a => a.enseignant === e.id);
+    const nbClasses = new Set(affEns.map(a => a.classe)).size;
+    const nbEpreuves = affEns.length;
     const mat = e.matiere || e.matiere_principale || '';
     const isActive = selectedEnsAff === e.id;
     return `
@@ -308,8 +310,8 @@ function affRendreListe(liste) {
         <div class="aff-ens-nom">${e.nom_prenom}</div>
         ${mat ? `<div class="aff-ens-meta">${mat}</div>` : ''}
         <div class="aff-ens-badges">
-          ${nbAff > 0
-            ? `<span class="aff-ens-badge" style="background:#f3e8ff;color:#7c3aed">${nbAff} classe${nbAff>1?'s':''}</span>`
+          ${nbClasses > 0
+            ? `<span class="aff-ens-badge" style="background:#f3e8ff;color:#7c3aed">${nbClasses} classe${nbClasses>1?'s':''} · ${nbEpreuves} épreuve${nbEpreuves>1?'s':''}</span>`
             : `<span class="aff-ens-badge" style="background:#f1efe8;color:#b4b2a9">Non affecté</span>`}
         </div>
       </div>`;
@@ -399,7 +401,7 @@ function affRendreDetail() {
       <div class="aff-avatar">${init}</div>
       <div class="aff-ens-card-info">
         <div class="nom">${ens.nom_prenom}</div>
-        <div class="detail">${ens.matiere || ens.matiere_principale || '—'} · ${ens.role || 'Enseignant'} · ${affEns.length} affectation${affEns.length>1?'s':''}</div>
+        <div class="detail">${ens.matiere || ens.matiere_principale || '—'} · ${ens.role || 'Enseignant'} · ${new Set(affEns.map(a=>a.classe)).size} classe${new Set(affEns.map(a=>a.classe)).size>1?'s':''} · ${affEns.length} épreuve${affEns.length>1?'s':''}</div>
       </div>
     </div>
 
