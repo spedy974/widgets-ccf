@@ -119,12 +119,20 @@
   .aff-section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .aff-section-header { padding: 10px 14px; background: var(--bg); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: space-between; }
   .aff-list { }
-  .aff-item { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid #f1efe8; transition: background 0.1s; }
-  .aff-item:last-child { border-bottom: none; }
-  .aff-item:hover { background: var(--bg); }
   .aff-cls-pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 4px; background: #f3e8ff; color: var(--purple); min-width: 64px; text-align: center; flex-shrink: 0; }
-  .aff-epr-txt { font-size: 12px; color: var(--text); flex: 1; }
   .aff-ann-txt { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
+  /* Hiérarchie classe → épreuves */
+  .aff-classe-bloc { border-bottom: 1px solid var(--border); }
+  .aff-classe-bloc:last-child { border-bottom: none; }
+  .aff-classe-header { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: #faf8ff; border-bottom: 1px solid #ede9ff; }
+  .aff-classe-nb { font-size: 11px; color: var(--purple); font-weight: 600; }
+  .aff-epr-list { }
+  .aff-epr-item { display: flex; align-items: center; gap: 8px; padding: 7px 14px 7px 30px; border-bottom: 1px solid #f5f3ff; transition: background 0.1s; }
+  .aff-epr-item:last-child { border-bottom: none; }
+  .aff-epr-item:hover { background: var(--bg); }
+  .aff-epr-repere { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; background: #ede9ff; color: #6d28d9; min-width: 52px; text-align: center; flex-shrink: 0; }
+  .aff-epr-libelle { font-size: 12px; color: var(--text); flex: 1; }
   .aff-del { background: none; border: none; cursor: pointer; color: var(--border); font-size: 18px; padding: 2px 5px; border-radius: 4px; transition: all 0.1s; line-height: 1; }
   .aff-del:hover { color: #e24b4a; background: #fee2e2; }
   .aff-empty-list { padding: 18px 14px; text-align: center; color: var(--muted); font-size: 12px; font-style: italic; }
@@ -334,19 +342,52 @@ function affRendreDetail() {
   const min = parts.find(p => p !== p.toUpperCase());
   const init = (maj.length && min ? min[0] + maj[0][0] : parts.slice(0,2).map(p=>p[0]).join('')).toUpperCase().slice(0,2);
 
-  const lignesAff = affEns.length === 0
-    ? `<div class="aff-empty-list">Aucune affectation — utilisez le formulaire ci-dessous.</div>`
-    : affEns.map(a => {
-        const cls = classes.find(c => c.id === a.classe);
+  // Grouper les affectations par classe
+  let lignesAff = '';
+  if (affEns.length === 0) {
+    lignesAff = `<div class="aff-empty-list">Aucune affectation — utilisez le formulaire ci-dessous.</div>`;
+  } else {
+    // Construire map classeId → liste d'affectations
+    const parClasse = {};
+    affEns.forEach(a => {
+      const clsId = a.classe;
+      if (!parClasse[clsId]) parClasse[clsId] = [];
+      parClasse[clsId].push(a);
+    });
+
+    // Trier les classes par code
+    const classesIds = Object.keys(parClasse).sort((a, b) => {
+      const ca = classes.find(c => c.id === parseInt(a));
+      const cb = classes.find(c => c.id === parseInt(b));
+      return (ca ? ca.code_classe : '').localeCompare(cb ? cb.code_classe : '');
+    });
+
+    lignesAff = classesIds.map(clsId => {
+      const cls = classes.find(c => c.id === parseInt(clsId));
+      const affsCls = parClasse[clsId];
+      const nbEpr = affsCls.length;
+
+      const eprLignes = affsCls.map(a => {
         const epr = epreuves.find(e => e.id === a.epreuve);
         return `
-          <div class="aff-item">
-            <span class="aff-cls-pill">${cls ? cls.code_classe : '?'}</span>
-            <span class="aff-epr-txt">${epr ? epr.repere + ' — ' + epr.libelle : '?'}</span>
+          <div class="aff-epr-item">
+            <span class="aff-epr-repere">${epr ? epr.repere : '?'}</span>
+            <span class="aff-epr-libelle">${epr ? epr.libelle : '?'}</span>
             <span class="aff-ann-txt">${a.annee_scolaire || '2026-2027'}</span>
-            <button class="aff-del" onclick="affSupprimer(${a.id})" title="Supprimer cette affectation">×</button>
+            <button class="aff-del" onclick="affSupprimer(${a.id})" title="Supprimer">×</button>
           </div>`;
       }).join('');
+
+      return `
+        <div class="aff-classe-bloc">
+          <div class="aff-classe-header">
+            <span class="aff-cls-pill">${cls ? cls.code_classe : '?'}</span>
+            <span class="aff-classe-nb">${nbEpr} épreuve${nbEpr>1?'s':''}</span>
+          </div>
+          <div class="aff-epr-list">${eprLignes}</div>
+        </div>`;
+    }).join('');
+  }
 
   const selCls = classes.map(c => `<option value="${c.id}">${c.code_classe}</option>`).join('');
   const selEpr = epreuves.map(e => `<option value="${e.id}">${e.repere} — ${e.libelle}</option>`).join('');
@@ -377,11 +418,15 @@ function affRendreDetail() {
       <div class="aff-form-grid">
         <div class="aff-fg">
           <label>Classe</label>
-          <select id="aff-add-classe"><option value="">Choisir…</option>${selCls}</select>
+          <select id="aff-add-classe" onchange="affFiltrerEpreuves()">
+            <option value="">Choisir…</option>${selCls}
+          </select>
         </div>
         <div class="aff-fg">
           <label>Épreuve</label>
-          <select id="aff-add-epreuve"><option value="">Choisir…</option>${selEpr}</select>
+          <select id="aff-add-epreuve">
+            <option value="">Choisir d'abord une classe…</option>
+          </select>
         </div>
         <div class="aff-fg">
           <label>Année</label>
@@ -393,6 +438,30 @@ function affRendreDetail() {
       </div>
       <div id="aff-toast" class="aff-toast"></div>
     </div>`;
+}
+
+function affFiltrerEpreuves() {
+  const classeId = parseInt(document.getElementById("aff-add-classe").value);
+  const selEpr = document.getElementById("aff-add-epreuve");
+
+  if (!classeId) {
+    selEpr.innerHTML = '<option value="">Choisir d'abord une classe…</option>';
+    return;
+  }
+
+  // Trouver les épreuves déjà affectées pour cet enseignant et cette classe
+  const eprDejaAff = affectations
+    .filter(a => a.enseignant === selectedEnsAff && a.classe === classeId)
+    .map(a => a.epreuve);
+
+  // Afficher toutes les épreuves, marquer celles déjà affectées
+  selEpr.innerHTML = '<option value="">Choisir une épreuve…</option>' +
+    epreuves.map(e => {
+      const dejaAff = eprDejaAff.includes(e.id);
+      return `<option value="${e.id}" ${dejaAff ? 'disabled style="color:#b4b2a9"' : ''}>
+        ${e.repere} — ${e.libelle}${dejaAff ? ' (déjà affecté)' : ''}
+      </option>`;
+    }).join('');
 }
 
 async function affAjouter() {
