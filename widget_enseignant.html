@@ -715,22 +715,58 @@ function chargerDemoMode() {
 /* ══════════════════════════════════════════
    PEUPLER LES SELECTS
 ══════════════════════════════════════════ */
+/* ── Helpers : restreindre aux seules affectations de l'enseignant ── */
+function mesClasses() {
+  // Classes distinctes où l'enseignant a au moins une affectation
+  const idsClasses = [...new Set(affectations.map(a => a.classe))];
+  return classes
+    .filter(c => idsClasses.includes(c.id))
+    .sort((a, b) => a.code_classe.localeCompare(b.code_classe));
+}
+
+function mesEpreuvesPourClasse(classeId) {
+  // Épreuves affectées à l'enseignant pour cette classe précise
+  const idsEpr = affectations
+    .filter(a => a.classe === classeId)
+    .map(a => a.epreuve);
+  return epreuves
+    .filter(e => idsEpr.includes(e.id))
+    .sort((a, b) => (a.repere || '').localeCompare(b.repere || ''));
+}
+
+function mesToutesEpreuves() {
+  // Toutes les épreuves affectées, toutes classes confondues (pour le select "Notes")
+  const idsEpr = [...new Set(affectations.map(a => a.epreuve))];
+  return epreuves
+    .filter(e => idsEpr.includes(e.id))
+    .sort((a, b) => (a.repere || '').localeCompare(b.repere || ''));
+}
+
 function peuplerSelects() {
-  // Classes
+  const mesCls = mesClasses();
+
+  // Classes — limitées à mes affectations
   ['pl-classe', 'nt-classe', 'doc-classe'].forEach(id => {
     const sel = document.getElementById(id);
+    if (mesCls.length === 0) {
+      sel.innerHTML = '<option value="">Aucune classe affectée</option>';
+      return;
+    }
     sel.innerHTML = '<option value="">Choisir une classe…</option>';
-    classes.forEach(c => {
+    mesCls.forEach(c => {
       const o = document.createElement("option");
       o.value = c.id; o.textContent = c.code_classe;
       sel.appendChild(o);
     });
   });
 
-  // Notes - épreuves
+  // Notes - épreuves : toutes mes épreuves affectées (avant choix de classe)
   const selNtEpr = document.getElementById("nt-epreuve");
-  selNtEpr.innerHTML = '<option value="">Choisir une épreuve…</option>';
-  epreuves.forEach(e => {
+  const mesEpr = mesToutesEpreuves();
+  selNtEpr.innerHTML = mesEpr.length === 0
+    ? '<option value="">Aucune épreuve affectée</option>'
+    : '<option value="">Choisir une épreuve…</option>';
+  mesEpr.forEach(e => {
     const o = document.createElement("option");
     o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
     selNtEpr.appendChild(o);
@@ -740,8 +776,15 @@ function peuplerSelects() {
 function filtrerEpreuvesPlanning() {
   const classeId = parseInt(document.getElementById("pl-classe").value);
   const sel = document.getElementById("pl-epreuve");
-  sel.innerHTML = '<option value="">Choisir une épreuve…</option>';
-  epreuves.forEach(e => {
+  if (!classeId) {
+    sel.innerHTML = '<option value="">Choisir une classe d\'abord…</option>';
+    return;
+  }
+  const eprCls = mesEpreuvesPourClasse(classeId);
+  sel.innerHTML = eprCls.length === 0
+    ? '<option value="">Aucune épreuve affectée pour cette classe</option>'
+    : '<option value="">Choisir une épreuve…</option>';
+  eprCls.forEach(e => {
     const o = document.createElement("option");
     o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
     sel.appendChild(o);
@@ -1037,10 +1080,13 @@ function filtrerElevesDoc() {
   sel.value = "";
   renderDocEleves(docElevesClasse);
 
-  // Épreuves
+  // Épreuves — limitées à mes affectations pour cette classe
   const selEpr = document.getElementById("doc-epreuve");
-  selEpr.innerHTML = '<option value="">Choisir une épreuve…</option>';
-  epreuves.forEach(e => {
+  const eprAffectees = mesEpreuvesPourClasse(classeId);
+  selEpr.innerHTML = eprAffectees.length === 0
+    ? '<option value="">Aucune épreuve affectée pour cette classe</option>'
+    : '<option value="">Choisir une épreuve…</option>';
+  eprAffectees.forEach(e => {
     const o = document.createElement("option");
     o.value = e.id; o.textContent = e.repere + " — " + e.libelle;
     selEpr.appendChild(o);
