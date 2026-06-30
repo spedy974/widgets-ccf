@@ -141,6 +141,26 @@
   #ecran-identification .btn-connexion:hover { opacity: 0.88; }
   #ecran-identification .btn-connexion:disabled { background: var(--muted); cursor: not-allowed; }
   #ecran-identification .id-footer { font-size: 11px; color: var(--muted); margin-top: 16px; line-height: 1.6; }
+
+  /* ── Onglet Mes affectations ── */
+  .myaff-stats { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .myaff-stat { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .myaff-stat strong { color: var(--text); font-size: 14px; }
+
+  .myaff-classe-bloc { border-bottom: 1px solid var(--border); }
+  .myaff-classe-bloc:last-child { border-bottom: none; }
+  .myaff-classe-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: #f0f3ff; border-bottom: 1px solid #dbe4fe; }
+  .myaff-cls-pill { font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 6px; background: var(--blue); color: #fff; }
+  .myaff-classe-nb { font-size: 11px; color: var(--blue); font-weight: 600; margin-left: auto; }
+  .myaff-epr-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 32px; border-bottom: 1px solid #f1efe8; }
+  .myaff-epr-item:last-child { border-bottom: none; }
+  .myaff-epr-item:hover { background: var(--bg); }
+  .myaff-epr-repere { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: #e8ecfe; color: #2d4ecc; min-width: 56px; text-align: center; flex-shrink: 0; }
+  .myaff-epr-libelle { font-size: 13px; color: var(--text); flex: 1; }
+  .myaff-epr-annee { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .myaff-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 40px 20px; }
+  .myaff-empty .icon { font-size: 32px; margin-bottom: 10px; }
+
 </style>
 </head>
 <body>
@@ -181,6 +201,7 @@
   <div class="tab" onclick="showTab('notes')">📝 Mes notes <span class="badge" id="badge-notes">0</span></div>
   <div class="tab" onclick="showTab('convocations')">📋 Mes convocations</div>
   <div class="tab" onclick="showTab('documents')">🗄️ Mes documents</div>
+  <div class="tab" onclick="showTab('affectations')">👥 Mes affectations</div>
 </div>
 
 <!-- ═══ ONGLET PLANNING ═══ -->
@@ -350,6 +371,15 @@
   </div>
 </div>
 
+<!-- ═══ ONGLET MES AFFECTATIONS ═══ -->
+<div class="tab-content" id="tab-affectations">
+  <div class="myaff-stats" id="myaff-stats"></div>
+  <div class="card">
+    <div class="card-title">Mes classes et épreuves affectées</div>
+    <div id="myaff-content"></div>
+  </div>
+</div>
+
 <!-- Zone impression -->
 <div id="zone-impression" style="display:none"></div>
 <div id="toast"></div>
@@ -365,6 +395,7 @@ let monNom = "";
 
 let enseignants = [], classes = [], epreuves = [], eleves = [];
 let plannings = [], notes = [], convocations = [], stockageDocs = [];
+let affectations = [];
 let docElevesClasse = [], docSelectedEleves = [];
 
 const ANNEE = "2026-2027";
@@ -415,7 +446,7 @@ async function chargerDonnees() {
     const nomAff   = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
     const nomStock = tables.find(t => t.toLowerCase().includes("stockage"))    || "StockageDocs";
 
-    const [ens, cls, epr, elv, pl, nt, conv, stock] = await Promise.all([
+    const [ens, cls, epr, elv, pl, nt, conv, stock, aff] = await Promise.all([
       grist.docApi.fetchTable("Enseignants"),
       grist.docApi.fetchTable("Classes"),
       grist.docApi.fetchTable("ConfigEpreuves"),
@@ -424,6 +455,7 @@ async function chargerDonnees() {
       grist.docApi.fetchTable("Notes"),
       grist.docApi.fetchTable("Convocations"),
       grist.docApi.fetchTable(nomStock),
+      grist.docApi.fetchTable(nomAff),
     ]);
 
     document.getElementById("notice").style.display = "none";
@@ -437,6 +469,7 @@ async function chargerDonnees() {
     window._nt_raw    = nt;
     window._conv_raw  = conv;
     window._stock_raw = stock;
+    window._aff_raw   = aff;
 
     // ── 3. Identifier l'enseignant depuis l'email connecté ──
     if (emailConnecte) {
@@ -549,13 +582,81 @@ function initialiserInterface() {
   notes       = parseTable(window._nt_raw).filter(n => !monId || n.enseignant === monId);
   convocations= parseTable(window._conv_raw).filter(c => !monId || c.enseignant === monId);
   stockageDocs= parseTable(window._stock_raw).filter(s => !monId || s.enseignant === monId);
+  affectations= parseTable(window._aff_raw).filter(a => !monId || a.enseignant === monId);
 
   peuplerSelects();
   rendreListePlanning();
   rendreListeNotes();
   rendreListeDocs();
   peuplerConvocations();
+  rendreMesAffectations();
   updateBadges();
+}
+
+/* ══════════════════════════════════════════
+   MES AFFECTATIONS (lecture seule)
+══════════════════════════════════════════ */
+function rendreMesAffectations() {
+  const statsEl = document.getElementById("myaff-stats");
+  const contentEl = document.getElementById("myaff-content");
+  if (!statsEl || !contentEl) return;
+
+  if (affectations.length === 0) {
+    statsEl.innerHTML = '';
+    contentEl.innerHTML = `
+      <div class="myaff-empty">
+        <div class="icon">📭</div>
+        <div>Aucune affectation enregistrée pour le moment.</div>
+        <div style="font-size:12px;margin-top:4px">Contacte le RRUPN ou la Direction pour faire ajouter tes classes.</div>
+      </div>`;
+    return;
+  }
+
+  // Regrouper par classe
+  const parClasse = {};
+  affectations.forEach(a => {
+    if (!parClasse[a.classe]) parClasse[a.classe] = [];
+    parClasse[a.classe].push(a);
+  });
+
+  const nbClasses = Object.keys(parClasse).length;
+  const nbEpreuves = affectations.length;
+
+  statsEl.innerHTML = `
+    <div class="myaff-stat"><strong>${nbClasses}</strong> classe${nbClasses>1?'s':''}</div>
+    <div class="myaff-stat"><strong>${nbEpreuves}</strong> épreuve${nbEpreuves>1?'s':''} affectée${nbEpreuves>1?'s':''}</div>
+  `;
+
+  // Trier les classes par code
+  const classesIds = Object.keys(parClasse).sort((a, b) => {
+    const ca = classes.find(c => c.id === parseInt(a));
+    const cb = classes.find(c => c.id === parseInt(b));
+    return (ca ? ca.code_classe : '').localeCompare(cb ? cb.code_classe : '');
+  });
+
+  contentEl.innerHTML = classesIds.map(clsId => {
+    const cls = classes.find(c => c.id === parseInt(clsId));
+    const affsCls = parClasse[clsId];
+
+    const eprLignes = affsCls.map(a => {
+      const epr = epreuves.find(e => e.id === a.epreuve);
+      return `
+        <div class="myaff-epr-item">
+          <span class="myaff-epr-repere">${epr ? epr.repere : '?'}</span>
+          <span class="myaff-epr-libelle">${epr ? epr.libelle : '?'}</span>
+          <span class="myaff-epr-annee">${a.annee_scolaire || ANNEE}</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="myaff-classe-bloc">
+        <div class="myaff-classe-header">
+          <span class="myaff-cls-pill">${cls ? cls.code_classe : '?'}</span>
+          <span class="myaff-classe-nb">${affsCls.length} épreuve${affsCls.length>1?'s':''}</span>
+        </div>
+        ${eprLignes}
+      </div>`;
+  }).join('');
 }
 
 function initGrist() {
@@ -597,11 +698,17 @@ function chargerDemoMode() {
     { id: 1, enseignant: 1, classe: 1, epreuve: 1, date_ccf: "2026-10-15", heure_debut: "08h00", salle: "Salle 12", annee_scolaire: ANNEE }
   ];
   stockageDocs = [];
+  affectations = [
+    { id: 1, enseignant: 1, classe: 1, epreuve: 1, annee_scolaire: ANNEE },
+    { id: 2, enseignant: 1, classe: 1, epreuve: 2, annee_scolaire: ANNEE },
+    { id: 3, enseignant: 1, classe: 2, epreuve: 1, annee_scolaire: ANNEE },
+  ];
   peuplerSelects();
   rendreListePlanning();
   rendreListeNotes();
   rendreListeDocs();
   peuplerConvocations();
+  rendreMesAffectations();
   updateBadges();
 }
 
