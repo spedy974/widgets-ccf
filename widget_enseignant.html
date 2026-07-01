@@ -1786,20 +1786,36 @@ function docSupprimerPDF() {
 }
 
 async function uploadPDFGrist(file) {
-  // Upload via API REST Grist avec token d'accès
   try {
     const tokenInfo = await grist.docApi.getAccessToken({ readOnly: false });
+    console.log("Token obtenu, baseUrl:", tokenInfo.baseUrl);
+
+    // Construire l'URL d'upload — format exact de l'API Grist
+    const uploadUrl = `${tokenInfo.baseUrl}/attachments`;
+    console.log("Upload URL:", uploadUrl);
+
     const formData = new FormData();
     formData.append('upload', file, file.name);
-    const response = await fetch(`${tokenInfo.baseUrl}/attachments?auth=${tokenInfo.token}`, {
+
+    const response = await fetch(uploadUrl, {
       method: 'POST',
+      headers: { 'X-Auth-Token': tokenInfo.token },
       body: formData
     });
-    if (!response.ok) throw new Error(`Upload échoué : ${response.status}`);
+
+    console.log("Réponse upload:", response.status, response.statusText);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Erreur upload détail:", errText);
+      throw new Error(`Upload échoué : ${response.status} — ${errText}`);
+    }
+
     const ids = await response.json();
-    return Array.isArray(ids) ? ids : [ids]; // Grist retourne un tableau d'IDs
+    console.log("IDs pièces jointes:", ids);
+    return Array.isArray(ids) ? ids : [ids];
   } catch(e) {
-    console.error("Erreur upload PDF:", e);
+    console.error("Erreur uploadPDFGrist:", e.message || e);
     throw e;
   }
 }
@@ -1839,7 +1855,7 @@ async function declarerDepot() {
 
       const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
 
-      // Étape 1 : créer la ligne SANS eleves_AB (Grist valide les refs après la_classe)
+      // Construire le record complet
       const record = {
         la_classe: classeId, epreuve: epreuveId, enseignant: monId,
         date_depot: date, commentaire, archive: false, statut_depot: statutDepot
@@ -1847,19 +1863,19 @@ async function declarerDepot() {
       if (attachmentIds.length > 0) {
         record.emargement_pdf = ['L', ...attachmentIds];
       }
-      const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
+
+      // Envoyer tout en une seule transaction atomique
+      // AddRecord + UpdateRecord immédiat dans le même applyUserActions
+      const actions = [["AddRecord", nomStock, null, record]];
+
+      const r = await grist.docApi.applyUserActions(actions);
       newId = r.retValues[0];
 
-      // Étape 2 : mettre à jour eleves_AB séparément une fois la ligne créée
-      if (docSelectedEleves.length > 0) {
-        try {
-          await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
-            eleves_AB: ['L', ...docSelectedEleves.map(e => e.id)]
-          }]]);
-        } catch(e) {
-          console.warn("eleves_AB non mis à jour:", e.message);
-          toast("⚠ Dépôt enregistré mais liste absents non sauvegardée", "err");
-        }
+      // Étape 2 : UpdateRecord eleves_AB dans une 2e transaction séparée mais immédiate
+      if (docSelectedEleves.length > 0 && newId) {
+        await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
+          eleves_AB: ['L', ...docSelectedEleves.map(e => e.id)]
+        }]]);
       }
     }
 
