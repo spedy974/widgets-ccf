@@ -494,7 +494,7 @@
         <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f0f4ff;border-bottom:1px solid #c7d7f8">
           <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
           <div style="flex:1;font-size:12px;color:var(--text)">
-            <strong>Ouvre le dépôt CCF</strong> sur le Nuage apps.education.fr
+            <strong>Ouvre le dépôt CCF</strong> sur le Nuage — dépose ton PDF et saisis ton nom
           </div>
           <a href="https://nuage01.apps.education.fr/index.php/s/jQ9P72eXkk8NzKn" target="_blank"
              style="background:#4a6cf7;color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:5px;text-decoration:none;white-space:nowrap;flex-shrink:0">
@@ -506,18 +506,42 @@
         <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff;border-bottom:1px solid #c7d7f8">
           <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
           <div style="flex:1;font-size:12px;color:var(--text)">
-            <strong>Saisis ton nom</strong> puis <strong>dépose ton PDF</strong> d'émargement signé
+            <strong>Clique sur ton fichier déposé</strong> → puis sur <em>« ··· »</em> → <em>« Copier le lien »</em>
           </div>
         </div>
 
         <!-- Étape 3 -->
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff">
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff;border-bottom:1px solid #c7d7f8">
           <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
           <div style="flex:1;font-size:12px;color:var(--text)">
-            <strong>Reviens ici</strong> et clique sur <strong>Enregistrer le dépôt</strong> — le RRUPN recevra ton fichier
+            <strong>Colle le lien</strong> dans la zone ci-dessous
           </div>
         </div>
 
+        <!-- Étape 4 -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff">
+          <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+          <div style="flex:1;font-size:12px;color:var(--text)">
+            <strong>Enregistre le dépôt</strong> en cliquant sur le bouton ci-dessous
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Champ URL -->
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+        <input type="url" id="doc-emargement-url" placeholder="Colle ici le lien vers ton PDF déposé…"
+          style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;transition:border-color 0.15s"
+          oninput="this.style.borderColor=this.value?'var(--green)':'var(--border)';
+                   var v=document.getElementById('doc-lien-verif');
+                   v.style.display=this.value?'inline':'none';v.href=this.value"
+          onfocus="this.style.borderColor='var(--blue)'"
+          onblur="this.style.borderColor=this.value?'var(--green)':'var(--border)'">
+        <a id="doc-lien-verif" href="#" target="_blank"
+           style="display:none;background:#e8f4fd;color:#2d4ecc;font-size:11px;font-weight:700;
+                  padding:6px 10px;border-radius:5px;text-decoration:none;white-space:nowrap;border:1px solid #c7d7f8">
+          🔗 Vérifier
+        </a>
       </div>
 
     </div>
@@ -1860,9 +1884,15 @@ async function declarerDepot() {
   // ── Sauvegarder immédiatement les élèves sélectionnés avant tout await ──
   // (les await peuvent déclencher un rechargement Grist qui vide docSelectedEleves)
   const elevesAB = [...docSelectedEleves];
+  const emargementUrl = (document.getElementById("doc-emargement-url")?.value || "").trim();
+  const urlPresente = !!emargementUrl;
+  const statutDepot = urlPresente ? "Complet" : "Incomplet";
 
-  // Avec la demande de fichier Nuage, on confirme juste que l'enseignant a déposé
-  const statutDepot = "Complet";
+  // Popup avertissement si pas de lien
+  if (!urlPresente) {
+    const continuer = await afficherAvertissementPDF();
+    if (!continuer) return;
+  }
 
   try {
     let newId = Date.now();
@@ -1874,6 +1904,7 @@ async function declarerDepot() {
         la_classe: classeId, epreuve: epreuveId, enseignant: monId,
         date_depot: date, commentaire, archive: false, statut_depot: statutDepot
       };
+      if (emargementUrl) record.emargement_url = emargementUrl;
 
       const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
       newId = r.retValues[0];
@@ -1894,7 +1925,8 @@ async function declarerDepot() {
 
     stockageDocs.push({
       id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monId,
-      date_depot: date, commentaire, archive: false, statut_depot: statutDepot
+      date_depot: date, commentaire, archive: false,
+      statut_depot: statutDepot, emargement_url: emargementUrl
     });
 
     rendreListeDocs();
@@ -1904,12 +1936,15 @@ async function declarerDepot() {
     document.getElementById("doc-epreuve").innerHTML = '<option value="">Choisir une épreuve…</option>';
     document.getElementById("doc-date").value = "";
     document.getElementById("doc-commentaire").value = "";
+    const urlField = document.getElementById("doc-emargement-url");
+    if (urlField) { urlField.value = ""; urlField.style.borderColor = ""; }
+    document.getElementById("doc-lien-verif").style.display = "none";
     docSelectedEleves = [];
     renderDocTags();
     document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
     document.getElementById("doc-search").disabled = true;
 
-    toast("✓ Dépôt enregistré avec succès", "ok");
+    toast(urlPresente ? "✓ Dépôt complet enregistré" : "⚠ Dépôt enregistré sans lien émargement", urlPresente ? "ok" : "err");
 
   } catch(e) {
     console.error(e);
