@@ -494,9 +494,9 @@
         <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f0f4ff;border-bottom:1px solid #c7d7f8">
           <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
           <div style="flex:1;font-size:12px;color:var(--text)">
-            <strong>Ouvre le dossier partagé CCF</strong> sur le Nuage
+            <strong>Ouvre le dépôt CCF</strong> sur le Nuage apps.education.fr
           </div>
-          <a href="https://nuage01.apps.education.fr/index.php/s/erHZKTmP7KjHfjM" target="_blank"
+          <a href="https://nuage01.apps.education.fr/index.php/s/jQ9P72eXkk8NzKn" target="_blank"
              style="background:#4a6cf7;color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:5px;text-decoration:none;white-space:nowrap;flex-shrink:0">
             📂 Ouvrir
           </a>
@@ -506,40 +506,20 @@
         <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff;border-bottom:1px solid #c7d7f8">
           <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
           <div style="flex:1;font-size:12px;color:var(--text)">
-            <strong>Dépose ton PDF</strong> dans le dossier — clique sur <em>« + »</em> ou glisse-dépose ton fichier
+            <strong>Saisis ton nom</strong> puis <strong>dépose ton PDF</strong> d'émargement signé
           </div>
         </div>
 
         <!-- Étape 3 -->
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff;border-bottom:1px solid #c7d7f8">
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff">
           <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
           <div style="flex:1;font-size:12px;color:var(--text)">
-            <strong>Copie le lien</strong> du fichier déposé — clique sur les <em>« ··· »</em> à droite du fichier → <em>« Copier le lien »</em>
-          </div>
-        </div>
-
-        <!-- Étape 4 -->
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff">
-          <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
-          <div style="flex:1;font-size:12px;color:var(--text)">
-            <strong>Colle le lien</strong> ci-dessous et clique sur Enregistrer
+            <strong>Reviens ici</strong> et clique sur <strong>Enregistrer le dépôt</strong> — le RRUPN recevra ton fichier
           </div>
         </div>
 
       </div>
 
-      <!-- Champ URL -->
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="url" id="doc-emargement-url" placeholder="Colle ici le lien vers ton PDF…"
-          style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;transition:border-color 0.15s"
-          oninput="this.style.borderColor=this.value?'var(--green)':'var(--border)';document.getElementById('doc-lien-verif').style.display=this.value?'inline':'none';document.getElementById('doc-lien-verif').href=this.value"
-          onfocus="this.style.borderColor='var(--blue)'"
-          onblur="this.style.borderColor=this.value?'var(--green)':'var(--border)'">
-        <a id="doc-lien-verif" href="#" target="_blank"
-           style="display:none;background:#e8f4fd;color:#2d4ecc;font-size:11px;font-weight:700;padding:6px 10px;border-radius:5px;text-decoration:none;white-space:nowrap;border:1px solid #c7d7f8">
-          🔗 Vérifier
-        </a>
-      </div>
     </div>
 
     <div class="form-group">
@@ -1880,17 +1860,9 @@ async function declarerDepot() {
   // ── Sauvegarder immédiatement les élèves sélectionnés avant tout await ──
   // (les await peuvent déclencher un rechargement Grist qui vide docSelectedEleves)
   const elevesAB = [...docSelectedEleves];
-  const emargementUrl = document.getElementById("doc-emargement-url").value.trim();
 
-  // Vérifier si l'URL est renseignée
-  const urlPresente = !!emargementUrl;
-  const statutDepot = urlPresente ? "Complet" : "Incomplet";
-
-  // Popup d'avertissement si pas d'URL
-  if (!urlPresente) {
-    const continuer = await afficherAvertissementPDF();
-    if (!continuer) return;
-  }
+  // Avec la demande de fichier Nuage, on confirme juste que l'enseignant a déposé
+  const statutDepot = "Complet";
 
   try {
     let newId = Date.now();
@@ -1898,25 +1870,19 @@ async function declarerDepot() {
     if (gristConnecte) {
       const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
 
-      // Construire le record complet
       const record = {
         la_classe: classeId, epreuve: epreuveId, enseignant: monId,
         date_depot: date, commentaire, archive: false, statut_depot: statutDepot
       };
-      if (emargementUrl) {
-        record.emargement_url = emargementUrl;
-      }
 
       const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
       newId = r.retValues[0];
 
       // Étape 2 : UpdateRecord eleves_AB
-      console.log("elevesAB avant UpdateRecord:", elevesAB.length, elevesAB.map(e => e.id));
       if (elevesAB.length > 0 && newId) {
         try {
-          const elevesIds = ['L', ...elevesAB.map(e => e.id)];
           const r2 = await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
-            eleves_AB: elevesIds
+            eleves_AB: ['L', ...elevesAB.map(e => e.id)]
           }]]);
           console.log("UpdateRecord eleves_AB OK:", r2);
         } catch(e) {
@@ -1928,8 +1894,7 @@ async function declarerDepot() {
 
     stockageDocs.push({
       id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monId,
-      date_depot: date, commentaire, archive: false,
-      statut_depot: statutDepot, emargement_url: emargementUrl
+      date_depot: date, commentaire, archive: false, statut_depot: statutDepot
     });
 
     rendreListeDocs();
@@ -1939,16 +1904,12 @@ async function declarerDepot() {
     document.getElementById("doc-epreuve").innerHTML = '<option value="">Choisir une épreuve…</option>';
     document.getElementById("doc-date").value = "";
     document.getElementById("doc-commentaire").value = "";
-    document.getElementById("doc-emargement-url").value = "";
-    document.getElementById("doc-emargement-url").style.borderColor = "";
     docSelectedEleves = [];
     renderDocTags();
     document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
     document.getElementById("doc-search").disabled = true;
 
-    toast(urlPresente
-      ? "✓ Dépôt complet enregistré avec lien émargement"
-      : "⚠ Dépôt enregistré comme INCOMPLET (émargement manquant)", urlPresente ? "ok" : "err");
+    toast("✓ Dépôt enregistré avec succès", "ok");
 
   } catch(e) {
     console.error(e);
