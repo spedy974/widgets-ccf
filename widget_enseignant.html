@@ -473,6 +473,41 @@
       </div>
       <div class="tags-row" id="doc-tags"></div>
     </div>
+
+    <!-- ÉMARGEMENT PDF — OBLIGATOIRE -->
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:6px">
+        Liste d'émargement signée (PDF)
+        <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">OBLIGATOIRE</span>
+      </label>
+      <div id="doc-pdf-zone"
+           onclick="document.getElementById('doc-pdf-input').click()"
+           style="border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;
+                  cursor:pointer;transition:all 0.15s;background:var(--bg);"
+           onmouseover="this.style.borderColor='var(--orange)';this.style.background='#fffbeb'"
+           onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg)'"
+           ondragover="event.preventDefault();this.style.borderColor='var(--orange)';this.style.background='#fffbeb'"
+           ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--bg)'"
+           ondrop="docOnDropPDF(event)">
+        <div style="font-size:28px;margin-bottom:6px">📄</div>
+        <div style="font-size:13px;font-weight:600;color:var(--muted)">Cliquer pour choisir le PDF</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">ou glisser-déposer ici</div>
+      </div>
+      <input type="file" id="doc-pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="docOnSelectPDF(event)">
+      <!-- Aperçu du fichier sélectionné -->
+      <div id="doc-pdf-preview" style="display:none;margin-top:8px;background:#fff7e6;border:1px solid #f5c475;
+           border-radius:6px;padding:8px 12px;display:none;align-items:center;gap:10px">
+        <span style="font-size:20px">📎</span>
+        <div style="flex:1">
+          <div id="doc-pdf-nom" style="font-weight:600;font-size:13px"></div>
+          <div id="doc-pdf-taille" style="font-size:11px;color:var(--muted)"></div>
+        </div>
+        <button onclick="docSupprimerPDF()" style="background:none;border:none;cursor:pointer;
+                color:var(--muted);font-size:18px;padding:2px 4px;border-radius:4px"
+                onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">×</button>
+      </div>
+    </div>
+
     <div class="form-group">
       <label>Commentaire</label>
       <textarea id="doc-commentaire" placeholder="Observations…"></textarea>
@@ -559,6 +594,7 @@ let enseignants = [], classes = [], epreuves = [], eleves = [];
 let plannings = [], notes = [], convocations = [], stockageDocs = [];
 let affectations = [];
 let docElevesClasse = [], docSelectedEleves = [];
+let docPdfFile = null;
 let impParsed = [];
 
 const ANNEE = "2026-2027";
@@ -1217,13 +1253,14 @@ async function enregistrerGrilleSaisie() {
     try {
       if (gristConnecte) {
         if (noteId) {
+          // note_finale est une colonne formule dans Grist : ne jamais l'écrire directement
           await grist.docApi.applyUserActions([["UpdateRecord", "Notes", noteId, {
-            note_seq1: val, note_finale: val
+            note_seq1: val
           }]]);
         } else {
           const r = await grist.docApi.applyUserActions([["AddRecord", "Notes", null, {
             enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
-            note_seq1: val, note_finale: val, publier: false
+            note_seq1: val, publier: false
           }]]);
           const newId = r.retValues[0];
           notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
@@ -1712,6 +1749,61 @@ function renderDocTags() {
   ).join("");
 }
 
+/* ══ GESTION PDF ÉMARGEMENT ══ */
+
+function docOnSelectPDF(event) {
+  const file = event.target.files[0];
+  if (file) docAfficherPDF(file);
+}
+
+function docOnDropPDF(event) {
+  event.preventDefault();
+  event.currentTarget.style.borderColor = 'var(--border)';
+  event.currentTarget.style.background = 'var(--bg)';
+  const file = event.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    docAfficherPDF(file);
+  } else {
+    toast("Seuls les fichiers PDF sont acceptés", "err");
+  }
+}
+
+function docAfficherPDF(file) {
+  docPdfFile = file;
+  document.getElementById("doc-pdf-nom").textContent = file.name;
+  document.getElementById("doc-pdf-taille").textContent = (file.size / 1024).toFixed(0) + " Ko";
+  document.getElementById("doc-pdf-preview").style.display = "flex";
+  document.getElementById("doc-pdf-zone").style.borderColor = "var(--green)";
+  document.getElementById("doc-pdf-zone").style.background = "#f0faf6";
+}
+
+function docSupprimerPDF() {
+  docPdfFile = null;
+  document.getElementById("doc-pdf-input").value = "";
+  document.getElementById("doc-pdf-preview").style.display = "none";
+  document.getElementById("doc-pdf-zone").style.borderColor = "var(--border)";
+  document.getElementById("doc-pdf-zone").style.background = "var(--bg)";
+}
+
+async function uploadPDFGrist(file) {
+  // Upload via API REST Grist avec token d'accès
+  try {
+    const tokenInfo = await grist.docApi.getAccessToken({ readOnly: false });
+    const formData = new FormData();
+    formData.append('upload', file, file.name);
+    const response = await fetch(`${tokenInfo.baseUrl}/attachments?auth=${tokenInfo.token}`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload échoué : ${response.status}`);
+    const ids = await response.json();
+    return Array.isArray(ids) ? ids : [ids]; // Grist retourne un tableau d'IDs
+  } catch(e) {
+    console.error("Erreur upload PDF:", e);
+    throw e;
+  }
+}
+
 async function declarerDepot() {
   const classeId = parseInt(document.getElementById("doc-classe").value);
   const epreuveId = parseInt(document.getElementById("doc-epreuve").value);
@@ -1720,21 +1812,54 @@ async function declarerDepot() {
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
+  // Vérifier si le PDF est joint
+  const pdfPresent = !!docPdfFile;
+  const statutDepot = pdfPresent ? "Complet" : "Incomplet";
+
+  // Popup d'avertissement si pas de PDF
+  if (!pdfPresent) {
+    const continuer = await afficherAvertissementPDF();
+    if (!continuer) return; // L'enseignant a cliqué "Annuler"
+  }
+
   try {
     let newId = Date.now();
+    let attachmentIds = [];
+
     if (gristConnecte) {
+      // Upload du PDF si présent
+      if (docPdfFile) {
+        try {
+          attachmentIds = await uploadPDFGrist(docPdfFile);
+        } catch(e) {
+          toast("⚠ PDF non uploadé — dépôt enregistré sans émargement", "err");
+          attachmentIds = [];
+        }
+      }
+
       const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
-      const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, {
+      const record = {
         la_classe: classeId, epreuve: epreuveId, enseignant: monId,
         date_depot: date, eleves_AB: docSelectedEleves.map(e => e.id),
-        commentaire, archive: false
-      }]]);
+        commentaire, archive: false, statut_depot: statutDepot
+      };
+      // Ajouter les pièces jointes si uploadées
+      if (attachmentIds.length > 0) {
+        record.emargement_pdf = ['L', ...attachmentIds]; // Format Grist pour RefList d'attachments
+      }
+      const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
       newId = r.retValues[0];
     }
-    const cls = classes.find(c => c.id === classeId);
-    const epr = epreuves.find(e => e.id === epreuveId);
-    stockageDocs.push({ id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monId, date_depot: date, commentaire, archive: false });
+
+    stockageDocs.push({
+      id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monId,
+      date_depot: date, commentaire, archive: false,
+      statut_depot: statutDepot, emargement_pdf: attachmentIds
+    });
+
     rendreListeDocs();
+
+    // Reset formulaire
     document.getElementById("doc-classe").value = "";
     document.getElementById("doc-epreuve").innerHTML = '<option value="">Choisir une épreuve…</option>';
     document.getElementById("doc-date").value = "";
@@ -1743,8 +1868,49 @@ async function declarerDepot() {
     renderDocTags();
     document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
     document.getElementById("doc-search").disabled = true;
-    toast("✓ Dépôt déclaré", "ok");
-  } catch(e) { toast("Erreur d'enregistrement", "err"); }
+    docSupprimerPDF();
+
+    if (pdfPresent) {
+      toast("✓ Dépôt complet enregistré avec émargement PDF", "ok");
+    } else {
+      toast("⚠ Dépôt enregistré comme INCOMPLET (émargement manquant)", "err");
+    }
+  } catch(e) {
+    console.error(e);
+    toast("Erreur d'enregistrement : " + (e.message || e), "err");
+  }
+}
+
+// Popup avertissement PDF manquant — retourne true si l'enseignant confirme sans PDF
+function afficherAvertissementPDF() {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(26,26,24,0.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:12px;max-width:380px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,0.25);overflow:hidden;text-align:center">
+        <div style="background:#f59e0b;padding:16px 20px">
+          <div style="font-size:32px">⚠️</div>
+        </div>
+        <div style="padding:20px 24px">
+          <div style="font-weight:800;font-size:15px;margin-bottom:8px">Émargement PDF manquant</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.5">
+            La liste d'émargement signée est <strong>obligatoire</strong> pour valider un dépôt.<br><br>
+            Si tu continues sans PDF, le dépôt sera marqué <strong style="color:#a32d2d">INCOMPLET</strong> et devra être complété ultérieurement.
+          </div>
+        </div>
+        <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px">
+          <button id="avert-annuler" style="flex:1;padding:9px;border:1.5px solid var(--border);border-radius:6px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)">
+            ← Ajouter le PDF
+          </button>
+          <button id="avert-continuer" style="flex:1;padding:9px;border:none;border-radius:6px;background:#f59e0b;font-size:13px;font-weight:600;cursor:pointer;color:#fff">
+            Continuer sans PDF
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById('avert-annuler').onclick = () => { document.body.removeChild(overlay); resolve(false); };
+    document.getElementById('avert-continuer').onclick = () => { document.body.removeChild(overlay); resolve(true); };
+  });
 }
 
 function rendreListeDocs() {
@@ -1752,16 +1918,25 @@ function rendreListeDocs() {
   if (!stockageDocs.length) { container.innerHTML = '<div class="empty">Aucun dépôt déclaré.</div>'; return; }
   container.innerHTML = `
     <table class="data-table">
-      <thead><tr><th>Classe</th><th>Épreuve</th><th>Date dépôt</th><th>Archivé</th></tr></thead>
+      <thead><tr><th>Classe</th><th>Épreuve</th><th>Date dépôt</th><th>Émargement</th><th>Statut</th></tr></thead>
       <tbody>${stockageDocs.map(d => {
         const cls = classes.find(c => c.id === (d.la_classe || d.classe));
         const epr = epreuves.find(e => e.id === d.epreuve);
         const dateStr = d.date_depot ? new Date(d.date_depot).toLocaleDateString("fr-FR") : "—";
+        const hasEmargement = d.emargement_pdf && (Array.isArray(d.emargement_pdf) ? d.emargement_pdf.length > 0 : d.emargement_pdf);
+        const statut = d.statut_depot || (d.archive ? 'Complet' : 'En attente');
         return `<tr>
           <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
           <td>${epr ? epr.repere : '?'}</td>
           <td>${dateStr}</td>
-          <td>${d.archive ? '<span class="pill pill-green">✓ Archivé</span>' : '<span class="pill pill-gray">En attente</span>'}</td>
+          <td>${hasEmargement
+            ? '<span class="pill pill-green">✓ PDF joint</span>'
+            : '<span class="pill" style="background:#fee2e2;color:#991b1b">⚠ Manquant</span>'}</td>
+          <td>${statut === 'Complet'
+            ? '<span class="pill pill-green">✓ Complet</span>'
+            : statut === 'Incomplet'
+            ? '<span class="pill" style="background:#faeeda;color:#633806">⚠ Incomplet</span>'
+            : '<span class="pill pill-gray">En attente</span>'}</td>
         </tr>`;
       }).join('')}</tbody>
     </table>`;
