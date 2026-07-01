@@ -1821,6 +1821,9 @@ async function uploadPDFGrist(file) {
 }
 
 async function declarerDepot() {
+  // LOG VISUEL TEMPORAIRE
+  alert(`Élèves sélectionnés (${docSelectedEleves.length}) : ${docSelectedEleves.map(e => e.nom).join(', ') || 'AUCUN'}`);
+
   const classeId = parseInt(document.getElementById("doc-classe").value);
   const epreuveId = parseInt(document.getElementById("doc-epreuve").value);
   const date = document.getElementById("doc-date").value;
