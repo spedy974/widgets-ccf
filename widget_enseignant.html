@@ -486,15 +486,26 @@
         Lien vers la liste d'émargement signée
         <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">OBLIGATOIRE</span>
       </label>
+
+      <!-- Bouton accès dossier partagé -->
+      <div style="background:#e8f4fd;border:1px solid #4a6cf7;border-radius:6px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">☁️</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:#2d4ecc;margin-bottom:2px">Dossier partagé CCF — Nuage apps.education.fr</div>
+          <div style="font-size:11px;color:#4a6cf7">Dépose ton PDF ici, puis copie le lien direct et colle-le ci-dessous.</div>
+        </div>
+        <a href="https://nuage01.apps.education.fr/index.php/s/erHZKTmP7KjHfjM" target="_blank"
+           style="background:#4a6cf7;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:6px;text-decoration:none;white-space:nowrap;flex-shrink:0">
+          📂 Ouvrir le dossier
+        </a>
+      </div>
+
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="url" id="doc-emargement-url" placeholder="https://nuage.apps.education.fr/... ou lien Drive"
+        <input type="url" id="doc-emargement-url" placeholder="Colle ici le lien vers ton PDF déposé…"
           style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;transition:border-color 0.15s"
           oninput="this.style.borderColor=this.value?'var(--green)':'var(--border)'"
           onfocus="this.style.borderColor='var(--blue)'"
           onblur="this.style.borderColor=this.value?'var(--green)':'var(--border)'">
-        <a id="doc-emargement-preview" href="#" target="_blank" style="display:none;font-size:12px;color:var(--blue);white-space:nowrap">
-          🔗 Vérifier le lien
-        </a>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:4px">
         Dépose ton PDF sur <strong>Nextcloud (Metice)</strong> ou sur <strong>Nuage</strong> (apps.education.fr) ou <strong>Google Drive</strong> et colle ici le lien de partage.
