@@ -1724,7 +1724,7 @@ function renderDocEleves(liste) {
   container.innerHTML = liste.map(e => {
     const checked = docSelectedEleves.some(s => s.id === e.id);
     return `<div class="eleve-opt ${checked ? 'checked' : ''}" onclick="toggleDocEleve(${e.id}, '${e.nom_prenom.replace(/'/g,"\\'")}', this)">
-      <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation()">
+      <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.preventDefault();event.stopPropagation();toggleDocEleve(${e.id}, '${e.nom_prenom.replace(/'/g,"\\'")}', this.parentElement)">
       ${e.nom_prenom}
     </div>`;
   }).join("");
