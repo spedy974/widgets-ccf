@@ -1872,10 +1872,21 @@ async function declarerDepot() {
       newId = r.retValues[0];
 
       // Étape 2 : UpdateRecord eleves_AB dans une 2e transaction séparée mais immédiate
+      console.log("docSelectedEleves avant UpdateRecord:", docSelectedEleves.length, docSelectedEleves.map(e => e.id));
       if (docSelectedEleves.length > 0 && newId) {
-        await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
-          eleves_AB: ['L', ...docSelectedEleves.map(e => e.id)]
-        }]]);
+        try {
+          const elevesIds = ['L', ...docSelectedEleves.map(e => e.id)];
+          console.log("Envoi eleves_AB:", elevesIds, "sur ligne ID:", newId, "table:", nomStock);
+          const r2 = await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
+            eleves_AB: elevesIds
+          }]]);
+          console.log("UpdateRecord eleves_AB OK:", r2);
+        } catch(e) {
+          console.error("ERREUR UpdateRecord eleves_AB:", e.message || e);
+          toast("⚠ Élèves absents non sauvegardés : " + (e.message || e), "err");
+        }
+      } else {
+        console.log("Pas d'élèves absents à enregistrer. newId:", newId, "nb élèves:", docSelectedEleves.length);
       }
     }
 
