@@ -96,7 +96,7 @@
   .aff-search { padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .aff-search input { width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 12px; outline: none; background: var(--bg); }
   .aff-search input:focus { border-color: var(--purple); }
-  .aff-ens-scroll { overflow-y: auto; flex: 1; }
+  .aff-ens-scroll { overflow-y: auto; flex: 1; max-height: 230px; }
   .aff-ens-item { padding: 8px 14px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.1s; }
   .aff-ens-item:hover { background: var(--bg); }
   .aff-ens-item.active { background: #f3e8ff; border-left-color: var(--purple); }
@@ -223,26 +223,24 @@
 
 <!-- ═══ AFFECTATIONS ═══ -->
 <div class="tab-content" id="tab-affectations">
-  <div class="aff-layout" style="grid-template-columns:1fr">
+  <div class="aff-layout">
 
-    <!-- Sélection enseignant en liste déroulante 4 lignes -->
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-title" style="margin-bottom:10px">
-        Enseignant
-        <span id="aff-count" style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0"></span>
+    <!-- Sidebar enseignants -->
+    <div class="aff-sidebar">
+      <div class="aff-sidebar-title">
+        Enseignants
+        <span id="aff-count" style="font-weight:400;font-size:10px;letter-spacing:0;text-transform:none"></span>
       </div>
-      <select id="aff-select-ens" size="4" onchange="affSelectionner(parseInt(this.value))"
-        style="width:100%;border:1.5px solid var(--border);border-radius:6px;font-size:13px;
-               padding:4px 0;outline:none;background:var(--card);color:var(--text);
-               transition:border-color 0.15s;">
-        <option value="" disabled>Choisir un enseignant…</option>
-      </select>
+      <div class="aff-search">
+        <input type="text" id="aff-search-input" placeholder="🔍 Rechercher…" oninput="affFiltrerListe()">
+      </div>
+      <div class="aff-ens-scroll" id="aff-ens-list"></div>
     </div>
 
     <!-- Panneau principal -->
     <div class="aff-main" id="aff-main">
       <div class="aff-no-select" id="aff-no-select">
-        <div style="font-size:32px;margin-bottom:12px">☝️</div>
+        <div style="font-size:32px;margin-bottom:12px">👈</div>
         <div style="font-weight:600;margin-bottom:6px">Sélectionne un enseignant</div>
         <div style="font-size:12px">pour voir et gérer ses affectations de classes</div>
       </div>
@@ -292,42 +290,58 @@ async function getNomAff() {
 }
 
 function affInitialiser() {
-  const sel = document.getElementById("aff-select-ens");
-  if (!sel) return;
   const countEl = document.getElementById("aff-count");
   const ens = [...enseignants].sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
-  if (countEl) countEl.textContent = `(${ens.length} enseignant${ens.length>1?'s':''})`;
+  if (countEl) countEl.textContent = `(${ens.length})`;
+  affRendreListe(ens);
+}
 
-  const currentVal = sel.value;
-  sel.innerHTML = '';
-  ens.forEach(e => {
+function affRendreListe(liste) {
+  const container = document.getElementById("aff-ens-list");
+  if (!container) return;
+  if (liste.length === 0) {
+    container.innerHTML = '<div style="padding:12px 14px;font-size:12px;color:var(--muted);font-style:italic">Aucun résultat.</div>';
+    return;
+  }
+  container.innerHTML = liste.map(e => {
     const affEns = affectations.filter(a => a.enseignant === e.id);
     const nbClasses = new Set(affEns.map(a => a.classe)).size;
     const nbEpr = affEns.length;
     const mat = e.matiere || e.matiere_principale || '';
-    const detail = nbClasses > 0
-      ? ` · ${nbClasses} cl. · ${nbEpr} épr.`
-      : ' · non affecté';
-    const o = document.createElement("option");
-    o.value = e.id;
-    o.textContent = e.nom_prenom + (mat ? ` — ${mat}` : '') + detail;
-    sel.appendChild(o);
-  });
-
-  if (currentVal && [...sel.options].some(o => o.value === String(currentVal))) {
-    sel.value = currentVal;
-  }
-  if (selectedEnsAff) affRendreDetail();
+    const isActive = selectedEnsAff === e.id;
+    return `
+      <div class="aff-ens-item ${isActive ? 'active' : ''}"
+           onclick="affSelectionner(${e.id})" id="aff-ens-item-${e.id}">
+        <div class="aff-ens-nom">${e.nom_prenom}</div>
+        ${mat ? `<div class="aff-ens-meta">${mat}</div>` : ''}
+        <div class="aff-ens-badges">
+          ${nbClasses > 0
+            ? `<span class="aff-ens-badge" style="background:#f3e8ff;color:#7c3aed">${nbClasses} cl. · ${nbEpr} épr.</span>`
+            : `<span class="aff-ens-badge" style="background:#f1efe8;color:#b4b2a9">Non affecté</span>`}
+        </div>
+      </div>`;
+  }).join('');
 }
 
-function affFiltrerListe() { /* compatibilité — plus utilisée */ }
+function affFiltrerListe() {
+  const q = (document.getElementById("aff-search-input").value || '').toLowerCase();
+  const filtre = enseignants.filter(e =>
+    e.nom_prenom.toLowerCase().includes(q) ||
+    (e.matiere || e.matiere_principale || '').toLowerCase().includes(q)
+  ).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+  affRendreListe(filtre);
+}
 
 function affSelectionner(ensId) {
   if (!ensId) return;
   selectedEnsAff = ensId;
-  // Synchroniser le select si l'appel vient d'ailleurs
-  const sel = document.getElementById("aff-select-ens");
-  if (sel) sel.value = ensId;
+  // Mise en évidence dans la liste
+  document.querySelectorAll('.aff-ens-item').forEach(el => el.classList.remove('active'));
+  const item = document.getElementById('aff-ens-item-' + ensId);
+  if (item) {
+    item.classList.add('active');
+    item.scrollIntoView({ block: 'nearest' });
+  }
   document.getElementById("aff-no-select").style.display = "none";
   document.getElementById("aff-ens-detail").style.display = "block";
   affRendreDetail();
