@@ -1821,9 +1821,6 @@ async function uploadPDFGrist(file) {
 }
 
 async function declarerDepot() {
-  // LOG VISUEL TEMPORAIRE
-  alert(`Élèves sélectionnés (${docSelectedEleves.length}) : ${docSelectedEleves.map(e => e.nom).join(', ') || 'AUCUN'}`);
-
   const classeId = parseInt(document.getElementById("doc-classe").value);
   const epreuveId = parseInt(document.getElementById("doc-epreuve").value);
   const date = document.getElementById("doc-date").value;
@@ -1831,14 +1828,19 @@ async function declarerDepot() {
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
+  // ── Sauvegarder immédiatement les élèves sélectionnés avant tout await ──
+  // (les await peuvent déclencher un rechargement Grist qui vide docSelectedEleves)
+  const elevesAB = [...docSelectedEleves];
+  const pdfFile = docPdfFile;
+
   // Vérifier si le PDF est joint
-  const pdfPresent = !!docPdfFile;
+  const pdfPresent = !!pdfFile;
   const statutDepot = pdfPresent ? "Complet" : "Incomplet";
 
   // Popup d'avertissement si pas de PDF
   if (!pdfPresent) {
     const continuer = await afficherAvertissementPDF();
-    if (!continuer) return; // L'enseignant a cliqué "Annuler"
+    if (!continuer) return;
   }
 
   try {
@@ -1846,10 +1848,10 @@ async function declarerDepot() {
     let attachmentIds = [];
 
     if (gristConnecte) {
-      // Upload du PDF si présent
-      if (docPdfFile) {
+      // Upload du PDF si présent — utiliser la copie locale pdfFile
+      if (pdfFile) {
         try {
-          attachmentIds = await uploadPDFGrist(docPdfFile);
+          attachmentIds = await uploadPDFGrist(pdfFile);
         } catch(e) {
           toast("⚠ PDF non uploadé — dépôt enregistré sans émargement", "err");
           attachmentIds = [];
@@ -1867,19 +1869,15 @@ async function declarerDepot() {
         record.emargement_pdf = ['L', ...attachmentIds];
       }
 
-      // Envoyer tout en une seule transaction atomique
-      // AddRecord + UpdateRecord immédiat dans le même applyUserActions
-      const actions = [["AddRecord", nomStock, null, record]];
-
-      const r = await grist.docApi.applyUserActions(actions);
+      const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
       newId = r.retValues[0];
 
-      // Étape 2 : UpdateRecord eleves_AB dans une 2e transaction séparée mais immédiate
-      console.log("docSelectedEleves avant UpdateRecord:", docSelectedEleves.length, docSelectedEleves.map(e => e.id));
-      if (docSelectedEleves.length > 0 && newId) {
+      // Étape 2 : UpdateRecord eleves_AB — utiliser la copie locale elevesAB
+      console.log("elevesAB avant UpdateRecord:", elevesAB.length, elevesAB.map(e => e.id));
+      if (elevesAB.length > 0 && newId) {
         try {
-          const elevesIds = ['L', ...docSelectedEleves.map(e => e.id)];
-          console.log("Envoi eleves_AB:", elevesIds, "sur ligne ID:", newId, "table:", nomStock);
+          const elevesIds = ['L', ...elevesAB.map(e => e.id)];
+          console.log("Envoi eleves_AB:", elevesIds, "sur ligne ID:", newId);
           const r2 = await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
             eleves_AB: elevesIds
           }]]);
@@ -1889,7 +1887,7 @@ async function declarerDepot() {
           toast("⚠ Élèves absents non sauvegardés : " + (e.message || e), "err");
         }
       } else {
-        console.log("Pas d'élèves absents à enregistrer. newId:", newId, "nb élèves:", docSelectedEleves.length);
+        console.log("Pas d'élèves absents. newId:", newId, "nb:", elevesAB.length);
       }
     }
 
