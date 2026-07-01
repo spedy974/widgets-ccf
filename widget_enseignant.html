@@ -1699,6 +1699,13 @@ function filtrerElevesDoc() {
   sel.value = "";
   renderDocEleves(docElevesClasse);
 
+  // LOG VISUEL TEMPORAIRE — À SUPPRIMER APRÈS DIAGNOSTIC
+  const debugZone = document.getElementById("doc-eleves-list");
+  const debugInfo = document.createElement("div");
+  debugInfo.style.cssText = "background:#e8f4fd;border:1px solid #4a6cf7;border-radius:4px;padding:6px 8px;margin-top:6px;font-size:10px;font-family:monospace;color:#2d4ecc";
+  debugInfo.innerHTML = `<strong>DEBUG IDs élèves (${docElevesClasse.length}) :</strong> ${docElevesClasse.slice(0,5).map(e => `${e.id}:${e.nom_prenom.split(' ')[0]}`).join(', ')}${docElevesClasse.length > 5 ? '...' : ''}`;
+  debugZone.appendChild(debugInfo);
+
   // Épreuves — limitées à mes affectations pour cette classe
   const selEpr = document.getElementById("doc-epreuve");
   const eprAffectees = mesEpreuvesPourClasse(classeId);
