@@ -223,24 +223,26 @@
 
 <!-- ═══ AFFECTATIONS ═══ -->
 <div class="tab-content" id="tab-affectations">
-  <div class="aff-layout">
+  <div class="aff-layout" style="grid-template-columns:1fr">
 
-    <!-- Sidebar enseignants -->
-    <div class="aff-sidebar">
-      <div class="aff-sidebar-title">
-        Enseignants
-        <span id="aff-count" style="font-weight:400;font-size:10px"></span>
+    <!-- Sélection enseignant en liste déroulante 4 lignes -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title" style="margin-bottom:10px">
+        Enseignant
+        <span id="aff-count" style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0"></span>
       </div>
-      <div class="aff-search">
-        <input type="text" id="aff-search-input" placeholder="🔍 Rechercher…" oninput="affFiltrerListe()">
-      </div>
-      <div class="aff-ens-scroll" id="aff-ens-list"></div>
+      <select id="aff-select-ens" size="4" onchange="affSelectionner(parseInt(this.value))"
+        style="width:100%;border:1.5px solid var(--border);border-radius:6px;font-size:13px;
+               padding:4px 0;outline:none;background:var(--card);color:var(--text);
+               transition:border-color 0.15s;">
+        <option value="" disabled>Choisir un enseignant…</option>
+      </select>
     </div>
 
     <!-- Panneau principal -->
     <div class="aff-main" id="aff-main">
       <div class="aff-no-select" id="aff-no-select">
-        <div style="font-size:32px;margin-bottom:12px">👈</div>
+        <div style="font-size:32px;margin-bottom:12px">☝️</div>
         <div style="font-weight:600;margin-bottom:6px">Sélectionne un enseignant</div>
         <div style="font-size:12px">pour voir et gérer ses affectations de classes</div>
       </div>
@@ -290,45 +292,42 @@ async function getNomAff() {
 }
 
 function affInitialiser() {
-  const ens = [...enseignants].sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+  const sel = document.getElementById("aff-select-ens");
+  if (!sel) return;
   const countEl = document.getElementById("aff-count");
-  if (countEl) countEl.textContent = `(${ens.length})`;
-  affRendreListe(ens);
-}
+  const ens = [...enseignants].sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+  if (countEl) countEl.textContent = `(${ens.length} enseignant${ens.length>1?'s':''})`;
 
-function affRendreListe(liste) {
-  const container = document.getElementById("aff-ens-list");
-  container.innerHTML = liste.map(e => {
+  const currentVal = sel.value;
+  sel.innerHTML = '';
+  ens.forEach(e => {
     const affEns = affectations.filter(a => a.enseignant === e.id);
     const nbClasses = new Set(affEns.map(a => a.classe)).size;
-    const nbEpreuves = affEns.length;
+    const nbEpr = affEns.length;
     const mat = e.matiere || e.matiere_principale || '';
-    const isActive = selectedEnsAff === e.id;
-    return `
-      <div class="aff-ens-item ${isActive ? 'active' : ''}"
-           onclick="affSelectionner(${e.id})" id="aff-ens-item-${e.id}">
-        <div class="aff-ens-nom">${e.nom_prenom}</div>
-        ${mat ? `<div class="aff-ens-meta">${mat}</div>` : ''}
-        <div class="aff-ens-badges">
-          ${nbClasses > 0
-            ? `<span class="aff-ens-badge" style="background:#f3e8ff;color:#7c3aed">${nbClasses} classe${nbClasses>1?'s':''} · ${nbEpreuves} épreuve${nbEpreuves>1?'s':''}</span>`
-            : `<span class="aff-ens-badge" style="background:#f1efe8;color:#b4b2a9">Non affecté</span>`}
-        </div>
-      </div>`;
-  }).join('');
+    const detail = nbClasses > 0
+      ? ` · ${nbClasses} cl. · ${nbEpr} épr.`
+      : ' · non affecté';
+    const o = document.createElement("option");
+    o.value = e.id;
+    o.textContent = e.nom_prenom + (mat ? ` — ${mat}` : '') + detail;
+    sel.appendChild(o);
+  });
+
+  if (currentVal && [...sel.options].some(o => o.value === String(currentVal))) {
+    sel.value = currentVal;
+  }
+  if (selectedEnsAff) affRendreDetail();
 }
 
-function affFiltrerListe() {
-  const q = document.getElementById("aff-search-input").value.toLowerCase();
-  const filtre = enseignants.filter(e => e.nom_prenom.toLowerCase().includes(q) || (e.matiere||'').toLowerCase().includes(q));
-  affRendreListe(filtre);
-}
+function affFiltrerListe() { /* compatibilité — plus utilisée */ }
 
 function affSelectionner(ensId) {
+  if (!ensId) return;
   selectedEnsAff = ensId;
-  document.querySelectorAll('.aff-ens-item').forEach(el => el.classList.remove('active'));
-  const item = document.getElementById('aff-ens-item-' + ensId);
-  if (item) item.classList.add('active');
+  // Synchroniser le select si l'appel vient d'ailleurs
+  const sel = document.getElementById("aff-select-ens");
+  if (sel) sel.value = ensId;
   document.getElementById("aff-no-select").style.display = "none";
   document.getElementById("aff-ens-detail").style.display = "block";
   affRendreDetail();
@@ -451,17 +450,30 @@ function affFiltrerEpreuves() {
     return;
   }
 
-  // Trouver les épreuves déjà affectées pour cet enseignant et cette classe
+  // Détecter le diplôme de la classe choisie
+  const cls = classes.find(c => c.id === classeId);
+  const diplomeId = cls ? cls.diplome : null;
+
+  // Filtrer les épreuves selon le diplôme de la classe
+  const eprDuDiplome = diplomeId
+    ? epreuves.filter(e => e.diplome === diplomeId)
+    : epreuves; // fallback : toutes les épreuves si diplôme non trouvé
+
+  if (eprDuDiplome.length === 0) {
+    selEpr.innerHTML = '<option value="">Aucune épreuve pour ce diplôme</option>';
+    return;
+  }
+
+  // Épreuves déjà affectées à cet enseignant pour cette classe (à désactiver)
   const eprDejaAff = affectations
     .filter(a => a.enseignant === selectedEnsAff && a.classe === classeId)
     .map(a => a.epreuve);
 
-  // Afficher toutes les épreuves, marquer celles déjà affectées
   selEpr.innerHTML = '<option value="">Choisir une épreuve…</option>' +
-    epreuves.map(e => {
+    eprDuDiplome.map(e => {
       const dejaAff = eprDejaAff.includes(e.id);
       return `<option value="${e.id}" ${dejaAff ? 'disabled style="color:#b4b2a9"' : ''}>
-        ${e.repere} — ${e.libelle}${dejaAff ? ' (déjà affecté)' : ''}
+        ${e.repere} — ${e.libelle}${dejaAff ? ' ✓' : ''}
       </option>`;
     }).join('');
 }
