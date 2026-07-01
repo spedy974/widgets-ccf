@@ -122,11 +122,17 @@
   .eleves-box { border: 1.5px solid var(--border); border-radius: 6px; background: var(--card); }
   .eleves-search-row { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
   .eleves-search-row input { flex: 1; border: none; outline: none; font-size: 13px; background: transparent; }
-  .eleves-list-box { max-height: 140px; overflow-y: auto; }
-  .eleve-opt { display: flex; align-items: center; gap: 8px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
-  .eleve-opt:hover { background: var(--bg); }
-  .eleve-opt.checked { background: #eef1fe; }
-  .eleve-opt input[type="checkbox"] { accent-color: var(--blue); }
+  .eleves-list-box { padding: 8px; }
+  .eleves-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .eleve-opt {
+    padding: 6px 8px; cursor: pointer; font-size: 11px; font-weight: 500;
+    border-radius: 6px; border: 1.5px solid var(--border); background: var(--bg);
+    text-align: center; transition: all 0.12s; user-select: none;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .eleve-opt:hover { border-color: var(--blue); color: var(--blue); background: #f0f3ff; }
+  .eleve-opt.checked { background: #e24b4a; color: #fff; border-color: #c93b3a; font-weight: 700; }
+  .eleve-opt.checked:hover { background: #c93b3a; }
   .tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
   .tag { background: #e8ecfe; color: #2d4ecc; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
   .tag button { background: none; border: none; cursor: pointer; color: #2d4ecc; font-size: 13px; padding: 0; line-height: 1; }
@@ -1721,19 +1727,34 @@ function filtrerListeDoc() {
 function renderDocEleves(liste) {
   const container = document.getElementById("doc-eleves-list");
   if (!liste.length) { container.innerHTML = '<div class="empty">Aucun élève.</div>'; return; }
-  container.innerHTML = liste.map(e => {
-    const checked = docSelectedEleves.some(s => s.id === e.id);
-    return `<div class="eleve-opt ${checked ? 'checked' : ''}" onclick="toggleDocEleve(${e.id}, '${e.nom_prenom.replace(/'/g,"\\'")}', this)">
-      <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.preventDefault();event.stopPropagation();toggleDocEleve(${e.id}, '${e.nom_prenom.replace(/'/g,"\\'")}', this.parentElement)">
-      ${e.nom_prenom}
-    </div>`;
-  }).join("");
+  container.innerHTML = `<div class="eleves-grid">` +
+    liste.map(e => {
+      const checked = docSelectedEleves.some(s => s.id === e.id);
+      // Afficher nom abrégé : NOM Prénom → "NOM P."
+      const parts = e.nom_prenom.trim().split(/\s+/);
+      const maj = parts.filter(p => p === p.toUpperCase() && p.length > 1);
+      const min = parts.filter(p => p !== p.toUpperCase());
+      const label = maj.length > 0
+        ? maj.join(' ') + (min.length > 0 ? ' ' + min[0][0] + '.' : '')
+        : e.nom_prenom;
+      return `<div class="eleve-opt ${checked ? 'checked' : ''}"
+        title="${e.nom_prenom}"
+        onclick="toggleDocEleve(${e.id}, '${e.nom_prenom.replace(/'/g,"\\'")}', this)">
+        ${label}
+      </div>`;
+    }).join('') +
+  `</div>`;
 }
 
 function toggleDocEleve(id, nom, el) {
   const idx = docSelectedEleves.findIndex(s => s.id === id);
-  if (idx >= 0) { docSelectedEleves.splice(idx, 1); el.classList.remove("checked"); el.querySelector("input").checked = false; }
-  else { docSelectedEleves.push({ id, nom }); el.classList.add("checked"); el.querySelector("input").checked = true; }
+  if (idx >= 0) {
+    docSelectedEleves.splice(idx, 1);
+    el.classList.remove("checked");
+  } else {
+    docSelectedEleves.push({ id, nom });
+    el.classList.add("checked");
+  }
   renderDocTags();
 }
 
