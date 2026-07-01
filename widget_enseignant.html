@@ -480,37 +480,24 @@
       <div class="tags-row" id="doc-tags"></div>
     </div>
 
-    <!-- ÉMARGEMENT PDF — OBLIGATOIRE -->
+    <!-- ÉMARGEMENT — LIEN URL -->
     <div class="form-group">
       <label style="display:flex;align-items:center;gap:6px">
-        Liste d'émargement signée (PDF)
+        Lien vers la liste d'émargement signée
         <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">OBLIGATOIRE</span>
       </label>
-      <div id="doc-pdf-zone"
-           onclick="document.getElementById('doc-pdf-input').click()"
-           style="border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;
-                  cursor:pointer;transition:all 0.15s;background:var(--bg);"
-           onmouseover="this.style.borderColor='var(--orange)';this.style.background='#fffbeb'"
-           onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg)'"
-           ondragover="event.preventDefault();this.style.borderColor='var(--orange)';this.style.background='#fffbeb'"
-           ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--bg)'"
-           ondrop="docOnDropPDF(event)">
-        <div style="font-size:28px;margin-bottom:6px">📄</div>
-        <div style="font-size:13px;font-weight:600;color:var(--muted)">Cliquer pour choisir le PDF</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">ou glisser-déposer ici</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="url" id="doc-emargement-url" placeholder="https://nuage.apps.education.fr/... ou lien Drive"
+          style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;transition:border-color 0.15s"
+          oninput="this.style.borderColor=this.value?'var(--green)':'var(--border)'"
+          onfocus="this.style.borderColor='var(--blue)'"
+          onblur="this.style.borderColor=this.value?'var(--green)':'var(--border)'">
+        <a id="doc-emargement-preview" href="#" target="_blank" style="display:none;font-size:12px;color:var(--blue);white-space:nowrap">
+          🔗 Vérifier le lien
+        </a>
       </div>
-      <input type="file" id="doc-pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="docOnSelectPDF(event)">
-      <!-- Aperçu du fichier sélectionné -->
-      <div id="doc-pdf-preview" style="display:none;margin-top:8px;background:#fff7e6;border:1px solid #f5c475;
-           border-radius:6px;padding:8px 12px;display:none;align-items:center;gap:10px">
-        <span style="font-size:20px">📎</span>
-        <div style="flex:1">
-          <div id="doc-pdf-nom" style="font-weight:600;font-size:13px"></div>
-          <div id="doc-pdf-taille" style="font-size:11px;color:var(--muted)"></div>
-        </div>
-        <button onclick="docSupprimerPDF()" style="background:none;border:none;cursor:pointer;
-                color:var(--muted);font-size:18px;padding:2px 4px;border-radius:4px"
-                onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">×</button>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">
+        Dépose ton PDF sur le <strong>Nuage</strong> (apps.education.fr) ou <strong>Google Drive</strong> et colle ici le lien de partage.
       </div>
     </div>
 
@@ -1852,33 +1839,22 @@ async function declarerDepot() {
   // ── Sauvegarder immédiatement les élèves sélectionnés avant tout await ──
   // (les await peuvent déclencher un rechargement Grist qui vide docSelectedEleves)
   const elevesAB = [...docSelectedEleves];
-  const pdfFile = docPdfFile;
+  const emargementUrl = document.getElementById("doc-emargement-url").value.trim();
 
-  // Vérifier si le PDF est joint
-  const pdfPresent = !!pdfFile;
-  const statutDepot = pdfPresent ? "Complet" : "Incomplet";
+  // Vérifier si l'URL est renseignée
+  const urlPresente = !!emargementUrl;
+  const statutDepot = urlPresente ? "Complet" : "Incomplet";
 
-  // Popup d'avertissement si pas de PDF
-  if (!pdfPresent) {
+  // Popup d'avertissement si pas d'URL
+  if (!urlPresente) {
     const continuer = await afficherAvertissementPDF();
     if (!continuer) return;
   }
 
   try {
     let newId = Date.now();
-    let attachmentIds = [];
 
     if (gristConnecte) {
-      // Upload du PDF si présent — utiliser la copie locale pdfFile
-      if (pdfFile) {
-        try {
-          attachmentIds = await uploadPDFGrist(pdfFile);
-        } catch(e) {
-          toast("⚠ PDF non uploadé — dépôt enregistré sans émargement", "err");
-          attachmentIds = [];
-        }
-      }
-
       const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
 
       // Construire le record complet
@@ -1886,19 +1862,18 @@ async function declarerDepot() {
         la_classe: classeId, epreuve: epreuveId, enseignant: monId,
         date_depot: date, commentaire, archive: false, statut_depot: statutDepot
       };
-      if (attachmentIds.length > 0) {
-        record.emargement_pdf = ['L', ...attachmentIds];
+      if (emargementUrl) {
+        record.emargement_url = emargementUrl;
       }
 
       const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
       newId = r.retValues[0];
 
-      // Étape 2 : UpdateRecord eleves_AB — utiliser la copie locale elevesAB
+      // Étape 2 : UpdateRecord eleves_AB
       console.log("elevesAB avant UpdateRecord:", elevesAB.length, elevesAB.map(e => e.id));
       if (elevesAB.length > 0 && newId) {
         try {
           const elevesIds = ['L', ...elevesAB.map(e => e.id)];
-          console.log("Envoi eleves_AB:", elevesIds, "sur ligne ID:", newId);
           const r2 = await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
             eleves_AB: elevesIds
           }]]);
@@ -1907,15 +1882,13 @@ async function declarerDepot() {
           console.error("ERREUR UpdateRecord eleves_AB:", e.message || e);
           toast("⚠ Élèves absents non sauvegardés : " + (e.message || e), "err");
         }
-      } else {
-        console.log("Pas d'élèves absents. newId:", newId, "nb:", elevesAB.length);
       }
     }
 
     stockageDocs.push({
       id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monId,
       date_depot: date, commentaire, archive: false,
-      statut_depot: statutDepot, emargement_pdf: attachmentIds
+      statut_depot: statutDepot, emargement_url: emargementUrl
     });
 
     rendreListeDocs();
@@ -1925,17 +1898,17 @@ async function declarerDepot() {
     document.getElementById("doc-epreuve").innerHTML = '<option value="">Choisir une épreuve…</option>';
     document.getElementById("doc-date").value = "";
     document.getElementById("doc-commentaire").value = "";
+    document.getElementById("doc-emargement-url").value = "";
+    document.getElementById("doc-emargement-url").style.borderColor = "";
     docSelectedEleves = [];
     renderDocTags();
     document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
     document.getElementById("doc-search").disabled = true;
-    docSupprimerPDF();
 
-    if (pdfPresent) {
-      toast("✓ Dépôt complet enregistré avec émargement PDF", "ok");
-    } else {
-      toast("⚠ Dépôt enregistré comme INCOMPLET (émargement manquant)", "err");
-    }
+    toast(urlPresente
+      ? "✓ Dépôt complet enregistré avec lien émargement"
+      : "⚠ Dépôt enregistré comme INCOMPLET (émargement manquant)", urlPresente ? "ok" : "err");
+
   } catch(e) {
     console.error(e);
     toast("Erreur d'enregistrement : " + (e.message || e), "err");
@@ -1990,8 +1963,8 @@ function rendreListeDocs() {
           <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
           <td>${epr ? epr.repere : '?'}</td>
           <td>${dateStr}</td>
-          <td>${hasEmargement
-            ? '<span class="pill pill-green">✓ PDF joint</span>'
+          <td>${d.emargement_url
+            ? `<a href="${d.emargement_url}" target="_blank" style="color:var(--blue);font-size:12px;text-decoration:none" title="${d.emargement_url}">🔗 Voir</a>`
             : '<span class="pill" style="background:#fee2e2;color:#991b1b">⚠ Manquant</span>'}</td>
           <td>${statut === 'Complet'
             ? '<span class="pill pill-green">✓ Complet</span>'
