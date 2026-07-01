@@ -1838,18 +1838,29 @@ async function declarerDepot() {
       }
 
       const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
+
+      // Étape 1 : créer la ligne SANS eleves_AB (Grist valide les refs après la_classe)
       const record = {
         la_classe: classeId, epreuve: epreuveId, enseignant: monId,
-        date_depot: date,
-        eleves_AB: docSelectedEleves.length > 0 ? ['L', ...docSelectedEleves.map(e => e.id)] : null,
-        commentaire, archive: false, statut_depot: statutDepot
+        date_depot: date, commentaire, archive: false, statut_depot: statutDepot
       };
-      // Ajouter les pièces jointes si uploadées
       if (attachmentIds.length > 0) {
-        record.emargement_pdf = ['L', ...attachmentIds]; // Format Grist pour RefList d'attachments
+        record.emargement_pdf = ['L', ...attachmentIds];
       }
       const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
       newId = r.retValues[0];
+
+      // Étape 2 : mettre à jour eleves_AB séparément une fois la ligne créée
+      if (docSelectedEleves.length > 0) {
+        try {
+          await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
+            eleves_AB: ['L', ...docSelectedEleves.map(e => e.id)]
+          }]]);
+        } catch(e) {
+          console.warn("eleves_AB non mis à jour:", e.message);
+          toast("⚠ Dépôt enregistré mais liste absents non sauvegardée", "err");
+        }
+      }
     }
 
     stockageDocs.push({
