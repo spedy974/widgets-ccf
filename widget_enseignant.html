@@ -480,35 +480,65 @@
       <div class="tags-row" id="doc-tags"></div>
     </div>
 
-    <!-- ÉMARGEMENT — LIEN URL -->
+    <!-- ÉMARGEMENT — GUIDE ÉTAPE PAR ÉTAPE -->
     <div class="form-group">
       <label style="display:flex;align-items:center;gap:6px">
-        Lien vers la liste d'émargement signée
+        Liste d'émargement signée (PDF)
         <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">OBLIGATOIRE</span>
       </label>
 
-      <!-- Bouton accès dossier partagé -->
-      <div style="background:#e8f4fd;border:1px solid #4a6cf7;border-radius:6px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:20px">☁️</span>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#2d4ecc;margin-bottom:2px">Dossier partagé CCF — Nuage apps.education.fr</div>
-          <div style="font-size:11px;color:#4a6cf7">Dépose ton PDF ici, puis copie le lien direct et colle-le ci-dessous.</div>
+      <!-- Étapes guidées -->
+      <div style="border:1px solid #c7d7f8;border-radius:8px;overflow:hidden;margin-bottom:10px">
+
+        <!-- Étape 1 -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f0f4ff;border-bottom:1px solid #c7d7f8">
+          <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+          <div style="flex:1;font-size:12px;color:var(--text)">
+            <strong>Ouvre le dossier partagé CCF</strong> sur le Nuage
+          </div>
+          <a href="https://nuage01.apps.education.fr/index.php/s/erHZKTmP7KjHfjM" target="_blank"
+             style="background:#4a6cf7;color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:5px;text-decoration:none;white-space:nowrap;flex-shrink:0">
+            📂 Ouvrir
+          </a>
         </div>
-        <a href="https://nuage01.apps.education.fr/index.php/s/erHZKTmP7KjHfjM" target="_blank"
-           style="background:#4a6cf7;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:6px;text-decoration:none;white-space:nowrap;flex-shrink:0">
-          📂 Ouvrir le dossier
-        </a>
+
+        <!-- Étape 2 -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff;border-bottom:1px solid #c7d7f8">
+          <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+          <div style="flex:1;font-size:12px;color:var(--text)">
+            <strong>Dépose ton PDF</strong> dans le dossier — clique sur <em>« + »</em> ou glisse-dépose ton fichier
+          </div>
+        </div>
+
+        <!-- Étape 3 -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff;border-bottom:1px solid #c7d7f8">
+          <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+          <div style="flex:1;font-size:12px;color:var(--text)">
+            <strong>Copie le lien</strong> du fichier déposé — clique sur les <em>« ··· »</em> à droite du fichier → <em>« Copier le lien »</em>
+          </div>
+        </div>
+
+        <!-- Étape 4 -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f7f9ff">
+          <div style="width:24px;height:24px;border-radius:50%;background:#4a6cf7;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+          <div style="flex:1;font-size:12px;color:var(--text)">
+            <strong>Colle le lien</strong> ci-dessous et clique sur Enregistrer
+          </div>
+        </div>
+
       </div>
 
+      <!-- Champ URL -->
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="url" id="doc-emargement-url" placeholder="Colle ici le lien vers ton PDF déposé…"
+        <input type="url" id="doc-emargement-url" placeholder="Colle ici le lien vers ton PDF…"
           style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;transition:border-color 0.15s"
-          oninput="this.style.borderColor=this.value?'var(--green)':'var(--border)'"
+          oninput="this.style.borderColor=this.value?'var(--green)':'var(--border)';document.getElementById('doc-lien-verif').style.display=this.value?'inline':'none';document.getElementById('doc-lien-verif').href=this.value"
           onfocus="this.style.borderColor='var(--blue)'"
           onblur="this.style.borderColor=this.value?'var(--green)':'var(--border)'">
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">
-        Dépose ton PDF sur <strong>Nextcloud (Metice)</strong> ou sur <strong>Nuage</strong> (apps.education.fr) ou <strong>Google Drive</strong> et colle ici le lien de partage.
+        <a id="doc-lien-verif" href="#" target="_blank"
+           style="display:none;background:#e8f4fd;color:#2d4ecc;font-size:11px;font-weight:700;padding:6px 10px;border-radius:5px;text-decoration:none;white-space:nowrap;border:1px solid #c7d7f8">
+          🔗 Vérifier
+        </a>
       </div>
     </div>
 
