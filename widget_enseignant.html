@@ -1840,7 +1840,8 @@ async function declarerDepot() {
       const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
       const record = {
         la_classe: classeId, epreuve: epreuveId, enseignant: monId,
-        date_depot: date, eleves_AB: docSelectedEleves.map(e => e.id),
+        date_depot: date,
+        eleves_AB: docSelectedEleves.length > 0 ? ['L', ...docSelectedEleves.map(e => e.id)] : null,
         commentaire, archive: false, statut_depot: statutDepot
       };
       // Ajouter les pièces jointes si uploadées
