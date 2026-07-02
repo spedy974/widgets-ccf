@@ -110,7 +110,7 @@
   /* EMPTY STATE */
   .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 24px; }
 
-  /* TOAST */
+  @keyframes spin { to { transform: rotate(360deg); } }
   #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; opacity: 0; transition: transform 0.25s, opacity 0.25s; pointer-events: none; z-index: 999; }
   #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   #toast.ok { background: var(--green); color: #fff; }
@@ -514,6 +514,17 @@
         <button onclick="docSupprimerPDF()"
                 style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;padding:2px 4px;border-radius:4px"
                 onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">×</button>
+      </div>
+
+      <!-- Barre de progression upload -->
+      <div id="doc-pdf-upload-progress" style="display:none;margin-top:8px">
+        <div style="background:#e8f4fd;border:1px solid #c7d7f8;border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <div style="width:20px;height:20px;border:2px solid #4a6cf7;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#2d4ecc">Téléversement en cours…</div>
+            <div id="doc-pdf-progress-nom" style="font-size:11px;color:#4a6cf7;margin-top:2px"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Message d'erreur upload -->
@@ -1869,6 +1880,11 @@ async function declarerDepot() {
     if (!continuer) return;
   }
 
+  // Bloquer le bouton Enregistrer pendant toute l'opération
+  const btnEnregistrer = document.querySelector('.btn-orange');
+  const btnTexteOriginal = btnEnregistrer ? btnEnregistrer.textContent : '';
+  if (btnEnregistrer) { btnEnregistrer.disabled = true; btnEnregistrer.textContent = "⏳ Traitement en cours…"; }
+
   try {
     let newId = Date.now();
     let attachmentIds = [];
@@ -1877,12 +1893,25 @@ async function declarerDepot() {
       // Upload PDF si présent
       if (pdfFile) {
         try {
+          // Afficher la barre de progression
+          const progressEl = document.getElementById("doc-pdf-upload-progress");
+          const progressNom = document.getElementById("doc-pdf-progress-nom");
+          if (progressEl) progressEl.style.display = "block";
+          if (progressNom) progressNom.textContent = pdfFile.name;
+          if (btnEnregistrer) btnEnregistrer.textContent = "⏳ Téléversement du PDF…";
+
           attachmentIds = await uploadPDFGrist(pdfFile);
           console.log("PDF uploadé, IDs:", attachmentIds);
+
+          // Masquer la progression
+          if (progressEl) progressEl.style.display = "none";
+          if (btnEnregistrer) btnEnregistrer.textContent = "⏳ Enregistrement…";
         } catch(e) {
+          const progressEl = document.getElementById("doc-pdf-upload-progress");
+          if (progressEl) progressEl.style.display = "none";
           const errEl = document.getElementById("doc-pdf-erreur");
           if (errEl) {
-            errEl.textContent = "⚠ Upload PDF bloqué par le serveur (CORS). Le dépôt sera enregistré sans émargement.";
+            errEl.textContent = "⚠ Upload PDF bloqué par le serveur. Le dépôt sera enregistré sans émargement.";
             errEl.style.display = "block";
           }
           attachmentIds = [];
@@ -1947,6 +1976,14 @@ async function declarerDepot() {
   } catch(e) {
     console.error(e);
     toast("Erreur d'enregistrement : " + (e.message || e), "err");
+  } finally {
+    // Toujours réactiver le bouton
+    if (btnEnregistrer) {
+      btnEnregistrer.disabled = false;
+      btnEnregistrer.textContent = btnTexteOriginal;
+    }
+    const progressEl = document.getElementById("doc-pdf-upload-progress");
+    if (progressEl) progressEl.style.display = "none";
   }
 }
 
