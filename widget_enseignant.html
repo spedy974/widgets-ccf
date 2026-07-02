@@ -480,56 +480,28 @@
       <div class="tags-row" id="doc-tags"></div>
     </div>
 
-    <!-- ÉMARGEMENT PDF — UPLOAD DIRECT GRIST -->
+    <!-- ÉMARGEMENT PDF — VIA GRIST DIRECTEMENT -->
     <div class="form-group">
       <label style="display:flex;align-items:center;gap:6px">
         Liste d'émargement signée (PDF)
         <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">OBLIGATOIRE</span>
       </label>
-
-      <!-- Zone drag & drop -->
-      <div id="doc-pdf-zone"
-           onclick="document.getElementById('doc-pdf-input').click()"
-           ondragover="event.preventDefault();this.style.borderColor='var(--orange)';this.style.background='#fffbeb'"
-           ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--bg)'"
-           ondrop="docOnDropPDF(event)"
-           style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;
-                  cursor:pointer;transition:all 0.15s;background:var(--bg);"
-           onmouseover="this.style.borderColor='var(--orange)';this.style.background='#fffbeb'"
-           onmouseout="if(!docPdfFile){this.style.borderColor='var(--border)';this.style.background='var(--bg)'}">
-        <div style="font-size:28px;margin-bottom:6px">📄</div>
-        <div style="font-size:13px;font-weight:600;color:var(--muted)">Cliquer pour choisir le PDF</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">ou glisser-déposer ici</div>
-      </div>
-      <input type="file" id="doc-pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="docOnSelectPDF(event)">
-
-      <!-- Aperçu fichier sélectionné -->
-      <div id="doc-pdf-preview" style="display:none;margin-top:8px;background:#fff7e6;border:1px solid #f5c475;
-           border-radius:6px;padding:8px 12px;align-items:center;gap:10px">
-        <span style="font-size:20px">📎</span>
-        <div style="flex:1">
-          <div id="doc-pdf-nom" style="font-weight:600;font-size:13px"></div>
-          <div id="doc-pdf-taille" style="font-size:11px;color:var(--muted)"></div>
+      <div style="background:#f0faf6;border:1px solid #9FE1CB;border-radius:8px;padding:12px 14px">
+        <div style="font-size:12px;color:#0d6e50;margin-bottom:10px;line-height:1.5">
+          📋 <strong>Après avoir cliqué sur Enregistrer</strong>, ouvre la table <strong>Mes documents</strong> dans Grist et attache ton PDF directement sur la ligne créée.
         </div>
-        <button onclick="docSupprimerPDF()"
-                style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;padding:2px 4px;border-radius:4px"
-                onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">×</button>
-      </div>
-
-      <!-- Barre de progression upload -->
-      <div id="doc-pdf-upload-progress" style="display:none;margin-top:8px">
-        <div style="background:#e8f4fd;border:1px solid #c7d7f8;border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px">
-          <div style="width:20px;height:20px;border:2px solid #4a6cf7;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:#2d4ecc">Téléversement en cours…</div>
-            <div id="doc-pdf-progress-nom" style="font-size:11px;color:#4a6cf7;margin-top:2px"></div>
-          </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://grist.numerique.gouv.fr/o/docs/7RpAwffKC5ei/Gestion-des-CCF/p/14"
+             target="_blank"
+             style="display:inline-flex;align-items:center;gap:6px;background:#1D9E75;color:#fff;
+                    font-size:12px;font-weight:700;padding:7px 14px;border-radius:6px;text-decoration:none">
+            📎 Ouvrir Mes documents dans Grist
+          </a>
+        </div>
+        <div style="font-size:11px;color:#0d6e50;margin-top:8px">
+          Dans Grist → clique sur la cellule <strong>emargement_pdf</strong> de ta ligne → icône trombone 📎 → choisir le fichier
         </div>
       </div>
-
-      <!-- Message d'erreur upload -->
-      <div id="doc-pdf-erreur" style="display:none;margin-top:6px;background:#fee2e2;border:1px solid #F7C1C1;
-           border-radius:6px;padding:8px 12px;font-size:12px;color:#991b1b"></div>
     </div>
 
     <div class="form-group">
@@ -1326,11 +1298,24 @@ async function enregistrerGrilleSaisie() {
 }
 
 function ouvrirPopupConfirm(nbOk, nbErr, session) {
-  const iconEl = document.getElementById("popup-confirm-icon");
+  const iconEl  = document.getElementById("popup-confirm-icon");
   const titreEl = document.getElementById("popup-confirm-titre");
-  const subEl = document.getElementById("popup-confirm-sub");
+  const subEl   = document.getElementById("popup-confirm-sub");
 
-  if (nbErr === 0) {
+  // Cas spécial : dépôt document (rappel PDF)
+  if (session && session.intitule && session.intitule.startsWith("N'oublie")) {
+    iconEl.textContent  = "✅";
+    titreEl.textContent = "Dépôt enregistré avec succès";
+    subEl.innerHTML = `La ligne a été créée dans Grist.<br><br>
+      <strong style="color:#a32d2d">⚠ N'oublie pas :</strong> ouvre <strong>Mes documents</strong> dans Grist
+      et attache le PDF d'émargement signé sur cette ligne.<br><br>
+      <a href="https://grist.numerique.gouv.fr/o/docs/7RpAwffKC5ei/Gestion-des-CCF/p/14"
+         target="_blank"
+         style="display:inline-block;background:#1D9E75;color:#fff;font-size:12px;font-weight:700;
+                padding:7px 14px;border-radius:6px;text-decoration:none;margin-top:4px">
+        📎 Ouvrir Mes documents dans Grist
+      </a>`;
+  } else if (nbErr === 0) {
     iconEl.textContent = "✅";
     titreEl.textContent = nbOk > 0
       ? `${nbOk} note${nbOk>1?'s':''} enregistrée${nbOk>1?'s':''}`
@@ -1867,72 +1852,30 @@ async function declarerDepot() {
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
-  // ── Sauvegarder immédiatement les élèves sélectionnés avant tout await ──
-  // (les await peuvent déclencher un rechargement Grist qui vide docSelectedEleves)
+  // Sauvegarder les élèves sélectionnés avant tout await
   const elevesAB = [...docSelectedEleves];
-  const pdfFile = docPdfFile;
-  const pdfPresent = !!pdfFile;
-  const statutDepot = pdfPresent ? "Complet" : "Incomplet";
+  const statutDepot = "Incomplet"; // Incomplet jusqu'à ce que le PDF soit joint dans Grist
 
-  // Popup avertissement si pas de PDF
-  if (!pdfPresent) {
-    const continuer = await afficherAvertissementPDF();
-    if (!continuer) return;
-  }
-
-  // Bloquer le bouton Enregistrer pendant toute l'opération
+  // Bloquer le bouton pendant l'enregistrement
   const btnEnregistrer = document.querySelector('.btn-orange');
   const btnTexteOriginal = btnEnregistrer ? btnEnregistrer.textContent : '';
-  if (btnEnregistrer) { btnEnregistrer.disabled = true; btnEnregistrer.textContent = "⏳ Traitement en cours…"; }
+  if (btnEnregistrer) { btnEnregistrer.disabled = true; btnEnregistrer.textContent = "⏳ Enregistrement…"; }
 
   try {
     let newId = Date.now();
-    let attachmentIds = [];
 
     if (gristConnecte) {
-      // Upload PDF si présent
-      if (pdfFile) {
-        try {
-          // Afficher la barre de progression
-          const progressEl = document.getElementById("doc-pdf-upload-progress");
-          const progressNom = document.getElementById("doc-pdf-progress-nom");
-          if (progressEl) progressEl.style.display = "block";
-          if (progressNom) progressNom.textContent = pdfFile.name;
-          if (btnEnregistrer) btnEnregistrer.textContent = "⏳ Téléversement du PDF…";
-
-          attachmentIds = await uploadPDFGrist(pdfFile);
-          console.log("PDF uploadé, IDs:", attachmentIds);
-
-          // Masquer la progression
-          if (progressEl) progressEl.style.display = "none";
-          if (btnEnregistrer) btnEnregistrer.textContent = "⏳ Enregistrement…";
-        } catch(e) {
-          const progressEl = document.getElementById("doc-pdf-upload-progress");
-          if (progressEl) progressEl.style.display = "none";
-          const errEl = document.getElementById("doc-pdf-erreur");
-          if (errEl) {
-            errEl.textContent = "⚠ Upload PDF bloqué par le serveur. Le dépôt sera enregistré sans émargement.";
-            errEl.style.display = "block";
-          }
-          attachmentIds = [];
-        }
-      }
-
       const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
 
       const record = {
         la_classe: classeId, epreuve: epreuveId, enseignant: monId,
-        date_depot: date, commentaire, archive: false,
-        statut_depot: attachmentIds.length > 0 ? "Complet" : statutDepot
+        date_depot: date, commentaire, archive: false, statut_depot: statutDepot
       };
-      if (attachmentIds.length > 0) {
-        record.emargement_pdf = ['L', ...attachmentIds];
-      }
 
       const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
       newId = r.retValues[0];
 
-      // Étape 2 : UpdateRecord eleves_AB
+      // UpdateRecord eleves_AB
       if (elevesAB.length > 0 && newId) {
         try {
           await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
@@ -1947,9 +1890,7 @@ async function declarerDepot() {
 
     stockageDocs.push({
       id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monId,
-      date_depot: date, commentaire, archive: false,
-      statut_depot: attachmentIds.length > 0 ? "Complet" : statutDepot,
-      emargement_pdf: attachmentIds
+      date_depot: date, commentaire, archive: false, statut_depot: statutDepot
     });
 
     rendreListeDocs();
@@ -1963,27 +1904,18 @@ async function declarerDepot() {
     renderDocTags();
     document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
     document.getElementById("doc-search").disabled = true;
-    docSupprimerPDF();
-    const errEl = document.getElementById("doc-pdf-erreur");
-    if (errEl) errEl.style.display = "none";
 
-    toast(attachmentIds.length > 0
-      ? "✓ Dépôt complet enregistré avec émargement PDF"
-      : pdfPresent
-        ? "⚠ Dépôt enregistré sans PDF (blocage serveur)"
-        : "⚠ Dépôt enregistré sans émargement", attachmentIds.length > 0 ? "ok" : "err");
+    // Popup de confirmation avec rappel d'attacher le PDF
+    ouvrirPopupConfirm(1, 0, { intitule: "N\'oublie pas d\'attacher le PDF dans Grist !" });
 
   } catch(e) {
     console.error(e);
     toast("Erreur d'enregistrement : " + (e.message || e), "err");
   } finally {
-    // Toujours réactiver le bouton
     if (btnEnregistrer) {
       btnEnregistrer.disabled = false;
       btnEnregistrer.textContent = btnTexteOriginal;
     }
-    const progressEl = document.getElementById("doc-pdf-upload-progress");
-    if (progressEl) progressEl.style.display = "none";
   }
 }
 
