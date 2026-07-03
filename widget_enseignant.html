@@ -264,10 +264,21 @@
   </div>
 </div>
 
-<!-- TABS VISIBLES -->
+<!-- TABS GROUPÉS -->
 <div class="tabs" id="tabs-bar">
-  <div class="tab active" onclick="showTab('dashboard', 'travail')" id="tab-btn-dashboard">🏠 Tableau de bord</div>
-  <div class="tab" onclick="showTab('affectations', 'travail')" id="tab-btn-affectations">👥 Mes affectations</div>
+
+  <div class="tab active" onclick="showTab('dashboard', 'dashboard')" id="tab-btn-dashboard">🏠 Tableau de bord</div>
+
+  <div class="tab dropdown-tab" id="group-travail">
+    <span onclick="toggleGroup('travail')">📋 Travail <span class="chevron">▾</span></span>
+    <div class="tab-dropdown">
+      <div class="tab-dropdown-item" onclick="showTab('affectations', 'travail')">👥 Mes affectations</div>
+      <div class="tab-dropdown-item" onclick="showTab('planning', 'travail')">
+        📅 Mon planning <span class="badge" id="badge-planning">0</span>
+      </div>
+    </div>
+  </div>
+
   <div class="tab dropdown-tab" id="group-evaluation">
     <span onclick="toggleGroup('evaluation')">📝 Évaluation <span class="chevron">▾</span></span>
     <div class="tab-dropdown">
@@ -277,17 +288,16 @@
       </div>
     </div>
   </div>
+
   <div class="tab dropdown-tab" id="group-administratif">
     <span onclick="toggleGroup('administratif')">🗄️ Administratif <span class="chevron">▾</span></span>
     <div class="tab-dropdown">
-      <div class="tab-dropdown-item" onclick="showTab('planning', 'administratif')">
-        📅 Mon planning <span class="badge" id="badge-planning">0</span>
-      </div>
       <div class="tab-dropdown-item" onclick="showTab('convocations', 'administratif')">📋 Mes convocations</div>
       <div class="tab-dropdown-item" onclick="showTab('documents', 'administratif')">🗄️ Mes documents</div>
       <div class="tab-dropdown-item" onclick="showTab('import', 'administratif')">📥 Import élèves</div>
     </div>
   </div>
+
 </div>
 
 <!-- ═══ ONGLET PLANNING ═══ -->
