@@ -22,27 +22,27 @@
   .app-header .user-role { font-size: 11px; color: var(--muted); }
   .app-header .logo { font-size: 22px; }
 
-  /* TABS GROUPÉS — MENUS DÉROULANTS */
+  /* TABS MIXTES */
   .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); position: relative; z-index: 50; }
-  .tab-group { position: relative; }
-  .tab-group-btn {
-    padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted);
-    border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.15s;
-    display: flex; align-items: center; gap: 6px; background: none; border-left: none; border-right: none; border-top: none;
-  }
-  .tab-group-btn:hover { color: var(--text); background: var(--bg); }
-  .tab-group-btn.active-group { color: var(--blue); border-bottom-color: var(--blue); }
-  .tab-group-btn .chevron { font-size: 9px; transition: transform 0.15s; opacity: 0.6; }
-  .tab-group.open .chevron { transform: rotate(180deg); }
-  .tab-group-btn .badge { background: var(--blue); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; }
+  .tab { padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted);
+         border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.15s;
+         display: flex; align-items: center; gap: 6px; position: relative; }
+  .tab:hover { color: var(--text); background: var(--bg); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab .badge { background: var(--blue); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; }
+  .tab .chevron { font-size: 9px; transition: transform 0.15s; opacity: 0.6; }
 
+  /* Onglets avec dropdown */
+  .dropdown-tab { position: relative; user-select: none; }
+  .dropdown-tab.open { color: var(--text); background: var(--bg); }
+  .dropdown-tab.open .chevron { transform: rotate(180deg); }
   .tab-dropdown {
     position: absolute; top: 100%; left: 0; min-width: 220px;
     background: var(--card); border: 1px solid var(--border); border-radius: 0 0 8px 8px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    display: none; flex-direction: column; padding: 6px;
+    display: none; flex-direction: column; padding: 6px; z-index: 100;
   }
-  .tab-group.open .tab-dropdown { display: flex; }
+  .dropdown-tab.open .tab-dropdown { display: flex; }
   .tab-dropdown-item {
     padding: 9px 12px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text);
     border-radius: 6px; display: flex; align-items: center; gap: 8px; transition: background 0.1s;
@@ -264,26 +264,12 @@
   </div>
 </div>
 
-<!-- TABS GROUPÉS -->
+<!-- TABS VISIBLES -->
 <div class="tabs" id="tabs-bar">
-
-  <div class="tab-group" id="group-travail">
-    <button class="tab-group-btn active-group" onclick="toggleGroup('travail')">
-      📋 Travail <span class="chevron">▾</span>
-    </button>
-    <div class="tab-dropdown">
-      <div class="tab-dropdown-item active" onclick="showTab('dashboard', 'travail')">🏠 Tableau de bord</div>
-      <div class="tab-dropdown-item" onclick="showTab('affectations', 'travail')">👥 Mes affectations</div>
-      <div class="tab-dropdown-item" onclick="showTab('planning', 'travail')">
-        📅 Mon planning <span class="badge" id="badge-planning">0</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="tab-group" id="group-evaluation">
-    <button class="tab-group-btn" onclick="toggleGroup('evaluation')">
-      📝 Évaluation <span class="chevron">▾</span>
-    </button>
+  <div class="tab active" onclick="showTab('dashboard', 'travail')" id="tab-btn-dashboard">🏠 Tableau de bord</div>
+  <div class="tab" onclick="showTab('affectations', 'travail')" id="tab-btn-affectations">👥 Mes affectations</div>
+  <div class="tab dropdown-tab" id="group-evaluation">
+    <span onclick="toggleGroup('evaluation')">📝 Évaluation <span class="chevron">▾</span></span>
     <div class="tab-dropdown">
       <div class="tab-dropdown-item" onclick="showTab('saisie', 'evaluation')">✏️ Saisie de notes</div>
       <div class="tab-dropdown-item" onclick="showTab('notes', 'evaluation')">
@@ -291,18 +277,17 @@
       </div>
     </div>
   </div>
-
-  <div class="tab-group" id="group-administratif">
-    <button class="tab-group-btn" onclick="toggleGroup('administratif')">
-      🗄️ Administratif <span class="chevron">▾</span>
-    </button>
+  <div class="tab dropdown-tab" id="group-administratif">
+    <span onclick="toggleGroup('administratif')">🗄️ Administratif <span class="chevron">▾</span></span>
     <div class="tab-dropdown">
+      <div class="tab-dropdown-item" onclick="showTab('planning', 'administratif')">
+        📅 Mon planning <span class="badge" id="badge-planning">0</span>
+      </div>
       <div class="tab-dropdown-item" onclick="showTab('convocations', 'administratif')">📋 Mes convocations</div>
       <div class="tab-dropdown-item" onclick="showTab('documents', 'administratif')">🗄️ Mes documents</div>
       <div class="tab-dropdown-item" onclick="showTab('import', 'administratif')">📥 Import élèves</div>
     </div>
   </div>
-
 </div>
 
 <!-- ═══ ONGLET PLANNING ═══ -->
@@ -651,7 +636,7 @@ const ANNEE = "2026-2027";
 function toggleGroup(groupId) {
   const group = document.getElementById('group-' + groupId);
   const isOpen = group.classList.contains('open');
-  document.querySelectorAll('.tab-group').forEach(g => g.classList.remove('open'));
+  document.querySelectorAll('.dropdown-tab').forEach(g => g.classList.remove('open'));
   if (!isOpen) group.classList.add('open');
 }
 
@@ -659,24 +644,30 @@ function showTab(id, groupId) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + id).classList.add('active');
 
+  // Retirer active de tous les onglets directs et items dropdown
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-dropdown-item').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-group-btn').forEach(b => b.classList.remove('active-group'));
 
-  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+  // Marquer l'onglet direct si applicable
+  const tabBtn = document.getElementById('tab-btn-' + id);
+  if (tabBtn) tabBtn.classList.add('active');
 
-  if (groupId) {
-    const btn = document.querySelector('#group-' + groupId + ' .tab-group-btn');
-    if (btn) btn.classList.add('active-group');
+  // Marquer l'item dropdown si applicable
+  if (event && event.currentTarget && event.currentTarget.classList.contains('tab-dropdown-item')) {
+    event.currentTarget.classList.add('active');
+    // Marquer le parent dropdown comme actif
+    const parent = event.currentTarget.closest('.dropdown-tab');
+    if (parent) parent.classList.add('active');
   }
 
-  // Fermer le menu déroulant après sélection
-  document.querySelectorAll('.tab-group').forEach(g => g.classList.remove('open'));
+  // Fermer tous les dropdowns
+  document.querySelectorAll('.dropdown-tab').forEach(g => g.classList.remove('open'));
 }
 
 // Fermer les menus déroulants si clic en dehors
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('.tab-group')) {
-    document.querySelectorAll('.tab-group').forEach(g => g.classList.remove('open'));
+  if (!e.target.closest('.dropdown-tab')) {
+    document.querySelectorAll('.dropdown-tab').forEach(g => g.classList.remove('open'));
   }
 });
 
@@ -949,6 +940,12 @@ function rendreDashboard() {
         return `<div class="db-doc-item">
           <span class="db-cls-pill" style="background:${complet?'var(--green)':'var(--orange)'}">${cls?.code_classe||'?'}</span>
           <span style="font-size:12px;flex:1">${epr?.repere||'?'} · ${epr?.libelle||'?'}</span>
+          ${!complet ? `<a href="https://grist.numerique.gouv.fr/o/docs/7RpAwffKC5ei/Gestion-des-CCF/p/14"
+              target="_blank"
+              style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
+                     background:#e24b4a;color:#fff;text-decoration:none;white-space:nowrap;flex-shrink:0">
+              📎 Compléter
+            </a>` : ''}
           <span class="db-doc-complet ${complet?'doc-complet':'doc-incomplet'}">${complet?'✓ Complet':'⚠ Incomplet'}</span>
           <span class="db-doc-date">${dateStr}</span>
         </div>`;
