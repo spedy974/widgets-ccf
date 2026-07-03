@@ -111,6 +111,47 @@
   .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 24px; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── TABLEAU DE BORD ── */
+  .db-titre { font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px; }
+  .db-sub { font-size:12px;color:var(--muted);margin-bottom:16px; }
+
+  .db-stats { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px; }
+  .db-stat { background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center; }
+  .db-stat .val { font-size:28px;font-weight:800;color:var(--text); }
+  .db-stat .lbl { font-size:11px;color:var(--muted);margin-top:3px; }
+
+  .db-blocs { display:flex;flex-direction:column;gap:16px; }
+  .db-bloc { background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden; }
+  .db-bloc-header { padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px; }
+  .db-bloc-titre { font-size:13px;font-weight:700;flex:1; }
+  .db-bloc-badge { font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px; }
+
+  /* Bloc affectations */
+  .db-aff-classe { border-bottom:1px solid #f1efe8; }
+  .db-aff-classe:last-child { border-bottom:none; }
+  .db-aff-classe-hdr { display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fafaf8; }
+  .db-cls-pill { font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:var(--blue);color:#fff; }
+  .db-aff-epr { display:flex;align-items:center;gap:8px;padding:6px 16px 6px 32px;border-top:1px solid #f5f3f0; }
+  .db-epr-repere { font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:#e8ecfe;color:#2d4ecc;min-width:46px;text-align:center; }
+  .db-epr-libelle { font-size:12px;color:var(--text);flex:1; }
+
+  /* Bloc planning */
+  .db-pl-item { display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid #f1efe8; }
+  .db-pl-item:last-child { border-bottom:none; }
+  .db-pl-date { font-size:11px;font-weight:700;color:var(--muted);min-width:80px; }
+  .db-pl-statut { font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0; }
+  .statut-planifie { background:#e8ecfe;color:#2d4ecc; }
+  .statut-realise { background:#e0f5ee;color:#0d6e50; }
+  .statut-annule { background:#fee2e2;color:#991b1b; }
+
+  /* Bloc documents */
+  .db-doc-item { display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid #f1efe8; }
+  .db-doc-item:last-child { border-bottom:none; }
+  .db-doc-complet { font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0; }
+  .doc-complet { background:#e0f5ee;color:#0d6e50; }
+  .doc-incomplet { background:#faeeda;color:#633806; }
+  .db-doc-date { font-size:11px;color:var(--muted);margin-left:auto; }
   #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; opacity: 0; transition: transform 0.25s, opacity 0.25s; pointer-events: none; z-index: 999; }
   #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   #toast.ok { background: var(--green); color: #fff; }
@@ -231,7 +272,8 @@
       📋 Travail <span class="chevron">▾</span>
     </button>
     <div class="tab-dropdown">
-      <div class="tab-dropdown-item active" onclick="showTab('affectations', 'travail')">👥 Mes affectations</div>
+      <div class="tab-dropdown-item active" onclick="showTab('dashboard', 'travail')">🏠 Tableau de bord</div>
+      <div class="tab-dropdown-item" onclick="showTab('affectations', 'travail')">👥 Mes affectations</div>
       <div class="tab-dropdown-item" onclick="showTab('planning', 'travail')">
         📅 Mon planning <span class="badge" id="badge-planning">0</span>
       </div>
@@ -520,8 +562,16 @@
   </div>
 </div>
 
+<!-- ═══ ONGLET TABLEAU DE BORD ═══ -->
+<div class="tab-content active" id="tab-dashboard">
+  <!-- Contenu injecté par JS -->
+  <div id="dashboard-content">
+    <div class="empty" style="padding:40px">Chargement du tableau de bord…</div>
+  </div>
+</div>
+
 <!-- ═══ ONGLET MES AFFECTATIONS ═══ -->
-<div class="tab-content active" id="tab-affectations">
+<div class="tab-content" id="tab-affectations">
   <div class="myaff-stats" id="myaff-stats"></div>
   <div class="card">
     <div class="card-title">Mes classes et épreuves affectées</div>
@@ -812,6 +862,7 @@ function initialiserInterface() {
   rendreListeDocs();
   peuplerConvocations();
   rendreMesAffectations();
+  rendreDashboard();
   rendreListeSessions();
   updateBadges();
 }
@@ -819,6 +870,153 @@ function initialiserInterface() {
 /* ══════════════════════════════════════════
    MES AFFECTATIONS (lecture seule)
 ══════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   TABLEAU DE BORD
+══════════════════════════════════════════ */
+function rendreDashboard() {
+  const container = document.getElementById("dashboard-content");
+  if (!container) return;
+
+  // ── Stats globales ──
+  const nbClasses   = new Set(affectations.map(a => a.classe)).size;
+  const nbEpreuves  = affectations.length;
+  const nbPlannings = plannings.length;
+  const plRealises  = plannings.filter(p => p.statut === 'Réalisé' || p.date_realisee).length;
+  const nbDocs      = stockageDocs.length;
+  const docsComplets = stockageDocs.filter(d => d.statut_depot === 'Complet').length;
+  const nbNotes     = notes.length;
+
+  // ── Bloc Affectations ──
+  const parClasse = {};
+  affectations.forEach(a => {
+    if (!parClasse[a.classe]) parClasse[a.classe] = [];
+    parClasse[a.classe].push(a);
+  });
+  const clsIds = Object.keys(parClasse).sort((a,b) => {
+    const ca = classes.find(c => c.id === parseInt(a));
+    const cb = classes.find(c => c.id === parseInt(b));
+    return (ca?.code_classe||'').localeCompare(cb?.code_classe||'');
+  });
+  const htmlAff = clsIds.length === 0
+    ? '<div class="empty" style="padding:14px">Aucune affectation enregistrée.</div>'
+    : clsIds.map(clsId => {
+        const cls = classes.find(c => c.id === parseInt(clsId));
+        const affsCls = parClasse[clsId];
+        const eprLignes = affsCls.map(a => {
+          const epr = epreuves.find(e => e.id === a.epreuve);
+          return `<div class="db-aff-epr">
+            <span class="db-epr-repere">${epr?.repere||'?'}</span>
+            <span class="db-epr-libelle">${epr?.libelle||'?'}</span>
+          </div>`;
+        }).join('');
+        return `<div class="db-aff-classe">
+          <div class="db-aff-classe-hdr">
+            <span class="db-cls-pill">${cls?.code_classe||'?'}</span>
+            <span style="font-size:11px;color:var(--muted)">${affsCls.length} épreuve${affsCls.length>1?'s':''}</span>
+          </div>
+          ${eprLignes}
+        </div>`;
+      }).join('');
+
+  // ── Bloc Planning ──
+  const plTries = [...plannings].sort((a,b) => (a.date_prevue||'').localeCompare(b.date_prevue||''));
+  const htmlPl = plTries.length === 0
+    ? '<div class="empty" style="padding:14px">Aucun planning enregistré.</div>'
+    : plTries.map(p => {
+        const cls = classes.find(c => c.id === p.classe);
+        const epr = epreuves.find(e => e.id === p.epreuve);
+        const dateP = p.date_prevue ? new Date(p.date_prevue*1000).toLocaleDateString('fr-FR') : '—';
+        const dateR = p.date_realisee ? new Date(p.date_realisee*1000).toLocaleDateString('fr-FR') : null;
+        const statut = dateR ? 'realise' : (p.statut||'planifie').toLowerCase().replace('é','e').replace('é','e');
+        const statutLabel = dateR ? '✓ Réalisé' : p.statut || 'Planifié';
+        const statutClass = dateR ? 'statut-realise' : statut.includes('annul') ? 'statut-annule' : 'statut-planifie';
+        return `<div class="db-pl-item">
+          <span class="db-pl-date">${dateR || dateP}</span>
+          <span style="font-size:12px;flex:1"><strong>${cls?.code_classe||'?'}</strong> · ${epr?.repere||'?'}</span>
+          <span class="db-pl-statut ${statutClass}">${statutLabel}</span>
+        </div>`;
+      }).join('');
+
+  // ── Bloc Documents ──
+  const docsTries = [...stockageDocs].sort((a,b) => (b.date_depot||'').localeCompare(a.date_depot||''));
+  const htmlDocs = docsTries.length === 0
+    ? '<div class="empty" style="padding:14px">Aucun dépôt déclaré.</div>'
+    : docsTries.map(d => {
+        const cls = classes.find(c => c.id === (d.la_classe||d.classe));
+        const epr = epreuves.find(e => e.id === d.epreuve);
+        const dateStr = d.date_depot ? new Date(d.date_depot).toLocaleDateString('fr-FR') : '—';
+        const complet = d.statut_depot === 'Complet';
+        return `<div class="db-doc-item">
+          <span class="db-cls-pill" style="background:${complet?'var(--green)':'var(--orange)'}">${cls?.code_classe||'?'}</span>
+          <span style="font-size:12px;flex:1">${epr?.repere||'?'} · ${epr?.libelle||'?'}</span>
+          <span class="db-doc-complet ${complet?'doc-complet':'doc-incomplet'}">${complet?'✓ Complet':'⚠ Incomplet'}</span>
+          <span class="db-doc-date">${dateStr}</span>
+        </div>`;
+      }).join('');
+
+  // ── Taux progression ──
+  const tauxPl  = nbPlannings > 0 ? Math.round((plRealises/nbPlannings)*100) : 0;
+  const tauxDoc = nbDocs > 0 ? Math.round((docsComplets/nbDocs)*100) : 0;
+
+  container.innerHTML = `
+    <div class="db-titre">👋 Bonjour ${monNom || 'Enseignant'}</div>
+    <div class="db-sub">Lycée Polyvalent Gérard Ethève — Session 2026-2027</div>
+
+    <!-- Stats -->
+    <div class="db-stats">
+      <div class="db-stat" style="border-top:3px solid var(--blue)">
+        <div class="val" style="color:var(--blue)">${nbClasses}</div>
+        <div class="lbl">Classe${nbClasses>1?'s':''} affectée${nbClasses>1?'s':''}</div>
+      </div>
+      <div class="db-stat" style="border-top:3px solid var(--green)">
+        <div class="val" style="color:var(--green)">${plRealises}<span style="font-size:16px;font-weight:400;color:var(--muted)">/${nbPlannings}</span></div>
+        <div class="lbl">CCF réalisés</div>
+      </div>
+      <div class="db-stat" style="border-top:3px solid var(--orange)">
+        <div class="val" style="color:var(--orange)">${nbNotes}</div>
+        <div class="lbl">Note${nbNotes>1?'s':''} saisie${nbNotes>1?'s':''}</div>
+      </div>
+      <div class="db-stat" style="border-top:3px solid ${tauxDoc===100?'var(--green)':'#e24b4a'}">
+        <div class="val" style="color:${tauxDoc===100?'var(--green)':'#e24b4a'}">${docsComplets}<span style="font-size:16px;font-weight:400;color:var(--muted)">/${nbDocs}</span></div>
+        <div class="lbl">Dépôts complets</div>
+      </div>
+    </div>
+
+    <div class="db-blocs">
+
+      <!-- Affectations -->
+      <div class="db-bloc">
+        <div class="db-bloc-header" style="background:#e8ecfe30">
+          <span style="font-size:16px">👥</span>
+          <span class="db-bloc-titre" style="color:var(--blue)">Mes affectations</span>
+          <span class="db-bloc-badge" style="background:#e8ecfe;color:#2d4ecc">${nbEpreuves} épreuve${nbEpreuves>1?'s':''}</span>
+        </div>
+        ${htmlAff}
+      </div>
+
+      <!-- Planning -->
+      <div class="db-bloc">
+        <div class="db-bloc-header" style="background:#fef3c730">
+          <span style="font-size:16px">📅</span>
+          <span class="db-bloc-titre" style="color:#78350f">Mon planning CCF</span>
+          <span class="db-bloc-badge" style="background:#fef3c7;color:#78350f">${tauxPl}% réalisé</span>
+        </div>
+        ${htmlPl}
+      </div>
+
+      <!-- Documents -->
+      <div class="db-bloc">
+        <div class="db-bloc-header" style="background:#e0f5ee30">
+          <span style="font-size:16px">🗄️</span>
+          <span class="db-bloc-titre" style="color:#0d6e50">Mes dépôts de documents</span>
+          <span class="db-bloc-badge" style="background:${tauxDoc===100?'#e0f5ee':'#faeeda'};color:${tauxDoc===100?'#0d6e50':'#633806'}">${tauxDoc}% complet${tauxDoc===100?'s':''}</span>
+        </div>
+        ${htmlDocs}
+      </div>
+
+    </div>`;
+}
+
 function rendreMesAffectations() {
   const statsEl = document.getElementById("myaff-stats");
   const contentEl = document.getElementById("myaff-content");
@@ -933,6 +1131,7 @@ function chargerDemoMode() {
   rendreListeDocs();
   peuplerConvocations();
   rendreMesAffectations();
+  rendreDashboard();
   rendreListeSessions();
   updateBadges();
 }
