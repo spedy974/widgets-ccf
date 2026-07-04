@@ -438,59 +438,76 @@
 <!-- ═══ ONGLET CONVOCATIONS ═══ -->
 <div class="tab-content" id="tab-convocations">
 
-  <!-- Formulaire de création -->
-  <div class="card">
-    <div class="card-title">Programmer une convocation</div>
-    <div class="row2">
-      <div class="form-group">
-        <label>Classe</label>
-        <select id="conv-new-classe" onchange="filtrerEpreuvesConv()"><option value="">Choisir une classe…</option></select>
+  <!-- Message verrouillage si pas de planning -->
+  <div id="conv-no-planning" style="display:none">
+    <div style="background:#fff7e6;border:2px solid #f59e0b;border-radius:12px;padding:28px 24px;text-align:center;margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:12px">📅</div>
+      <div style="font-size:16px;font-weight:800;color:#78350f;margin-bottom:8px">Planning requis</div>
+      <div style="font-size:13px;color:#92400e;line-height:1.6;margin-bottom:16px">
+        Vous devez d'abord établir votre <strong>planning CCF</strong> avant de pouvoir créer des convocations.<br>
+        Les convocations sont générées à partir des séances planifiées.
       </div>
-      <div class="form-group">
-        <label>Épreuve</label>
-        <select id="conv-new-epreuve" disabled><option value="">Choisir une classe d'abord…</option></select>
-      </div>
-    </div>
-    <div class="row2">
-      <div class="form-group">
-        <label>Date du CCF</label>
-        <input type="date" id="conv-new-date">
-      </div>
-      <div class="form-group">
-        <label>Heure de début</label>
-        <input type="time" id="conv-new-heure" value="08:00">
-      </div>
-    </div>
-    <div class="row2">
-      <div class="form-group">
-        <label>Salle</label>
-        <input type="text" id="conv-new-salle" placeholder="ex. Atelier B102">
-      </div>
-      <div class="form-group">
-        <label>Année scolaire</label>
-        <input type="text" id="conv-new-annee" value="2026-2027">
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-green" onclick="creerConvocation()">✓ Enregistrer la convocation</button>
+      <button class="btn btn-primary" onclick="showTab('planning','organisation')">
+        📅 Aller à Mon planning
+      </button>
     </div>
   </div>
 
-  <!-- Sélection et impression -->
-  <div class="card">
-    <div class="card-title">Générer une convocation PDF</div>
-    <div class="form-group">
-      <label>Sélectionner une convocation</label>
-      <select id="conv-sel" onchange="afficherApercuConv()"><option value="">Choisir…</option></select>
+  <!-- Formulaire de création (affiché si planning existe) -->
+  <div id="conv-form-zone">
+    <div class="card">
+      <div class="card-title">Programmer une convocation</div>
+      <div class="row2">
+        <div class="form-group">
+          <label>Classe</label>
+          <select id="conv-new-classe" onchange="filtrerEpreuvesConv()"><option value="">Choisir une classe…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Épreuve</label>
+          <select id="conv-new-epreuve" disabled><option value="">Choisir une classe d'abord…</option></select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="form-group">
+          <label>Date du CCF</label>
+          <input type="date" id="conv-new-date">
+        </div>
+        <div class="form-group">
+          <label>Heure de début</label>
+          <input type="time" id="conv-new-heure" value="08:00">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="form-group">
+          <label>Salle</label>
+          <input type="text" id="conv-new-salle" placeholder="ex. Atelier B102">
+        </div>
+        <div class="form-group">
+          <label>Année scolaire</label>
+          <input type="text" id="conv-new-annee" value="2026-2027">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" onclick="creerConvocation()">✓ Enregistrer la convocation</button>
+      </div>
     </div>
-    <div id="conv-apercu" style="display:none;margin-top:12px">
-      <div class="row2" id="conv-info-grid"></div>
-      <div id="conv-eleves-preview" style="margin-top:10px"></div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" id="conv-btn-listing" onclick="imprimerConv('listing')" disabled>🖨️ Listing global</button>
-      <button class="btn btn-green" id="conv-btn-indiv" onclick="imprimerConv('individuel')" disabled>👤 Convocations individuelles</button>
-      <button class="btn btn-purple" id="conv-btn-complet" onclick="imprimerConv('complet')" disabled>📄 PDF complet</button>
+
+    <!-- Sélection et impression -->
+    <div class="card">
+      <div class="card-title">Générer une convocation PDF</div>
+      <div class="form-group">
+        <label>Sélectionner une convocation</label>
+        <select id="conv-sel" onchange="afficherApercuConv()"><option value="">Choisir…</option></select>
+      </div>
+      <div id="conv-apercu" style="display:none;margin-top:12px">
+        <div class="row2" id="conv-info-grid"></div>
+        <div id="conv-eleves-preview" style="margin-top:10px"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="conv-btn-listing" onclick="imprimerConv('listing')" disabled>🖨️ Listing global</button>
+        <button class="btn btn-green" id="conv-btn-indiv" onclick="imprimerConv('individuel')" disabled>👤 Convocations individuelles</button>
+        <button class="btn btn-purple" id="conv-btn-complet" onclick="imprimerConv('complet')" disabled>📄 PDF complet</button>
+      </div>
     </div>
   </div>
 </div>
@@ -830,6 +847,7 @@ function initialiserInterface() {
   rendreNotesCouleurs();
   rendreListeDocs();
   peuplerConvocations();
+  peuplerConvClasses();
   rendreEmargement();
   rendreMesAffectations();
   rendreDashboard();
@@ -1107,6 +1125,7 @@ function chargerDemoMode() {
   rendreNotesCouleurs();
   rendreListeDocs();
   peuplerConvocations();
+  peuplerConvClasses();
   rendreEmargement();
   rendreMesAffectations();
   rendreDashboard();
@@ -1148,7 +1167,7 @@ function peuplerSelects() {
   const mesCls = mesClasses();
 
   // Classes — limitées à mes affectations
-  ['pl-classe', 'doc-classe', 'releve-filtre-classe', 'imp-classe', 'conv-new-classe'].forEach(id => {
+  ['pl-classe', 'doc-classe', 'releve-filtre-classe', 'imp-classe'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const isFiltre = id === 'releve-filtre-classe';
@@ -1833,6 +1852,38 @@ function rendreEmargement() {
 /* ══════════════════════════════════════════
    CRÉATION DE CONVOCATION
 ══════════════════════════════════════════ */
+function peuplerConvClasses() {
+  // Vérifier si un planning existe
+  const noPlanning = !plannings || plannings.length === 0;
+  const noPlanningEl = document.getElementById("conv-no-planning");
+  const formZoneEl   = document.getElementById("conv-form-zone");
+
+  if (noPlanning) {
+    if (noPlanningEl) noPlanningEl.style.display = "block";
+    if (formZoneEl)   formZoneEl.style.display   = "none";
+    return;
+  }
+
+  if (noPlanningEl) noPlanningEl.style.display = "none";
+  if (formZoneEl)   formZoneEl.style.display   = "block";
+
+  // Classes distinctes présentes dans le planning
+  const classesPlanning = [...new Set(plannings.map(p => p.classe))]
+    .map(id => classes.find(c => c.id === id))
+    .filter(Boolean)
+    .sort((a, b) => a.code_classe.localeCompare(b.code_classe));
+
+  const sel = document.getElementById("conv-new-classe");
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Choisir une classe…</option>';
+  classesPlanning.forEach(c => {
+    const o = document.createElement("option");
+    o.value = c.id;
+    o.textContent = c.code_classe;
+    sel.appendChild(o);
+  });
+}
+
 function filtrerEpreuvesConv() {
   const classeId = parseInt(document.getElementById("conv-new-classe").value);
   const selEpr = document.getElementById("conv-new-epreuve");
@@ -1841,12 +1892,22 @@ function filtrerEpreuvesConv() {
     selEpr.disabled = true;
     return;
   }
-  const eprCls = mesEpreuvesPourClasse(classeId);
+
+  // Épreuves présentes dans le planning pour cette classe
+  const eprIdsPlanning = [...new Set(
+    plannings.filter(p => p.classe === classeId).map(p => p.epreuve)
+  )];
+
+  const eprDisponibles = epreuves
+    .filter(e => eprIdsPlanning.includes(e.id))
+    .sort((a, b) => (a.repere || '').localeCompare(b.repere || ''));
+
   selEpr.disabled = false;
-  selEpr.innerHTML = eprCls.length === 0
-    ? '<option value="">Aucune épreuve affectée pour cette classe</option>'
+  selEpr.innerHTML = eprDisponibles.length === 0
+    ? '<option value="">Aucune épreuve dans le planning pour cette classe</option>'
     : '<option value="">Choisir une épreuve…</option>';
-  eprCls.forEach(e => {
+
+  eprDisponibles.forEach(e => {
     const o = document.createElement("option");
     o.value = e.id;
     o.textContent = e.repere + " — " + e.libelle;
