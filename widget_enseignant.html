@@ -267,33 +267,38 @@
 <!-- TABS GROUPÉS -->
 <div class="tabs" id="tabs-bar">
 
+  <!-- 1. Tableau de bord -->
   <div class="tab active" onclick="showTab('dashboard', 'dashboard')" id="tab-btn-dashboard">🏠 Tableau de bord</div>
 
-  <div class="tab dropdown-tab" id="group-travail">
-    <span onclick="toggleGroup('travail')">📋 Travail <span class="chevron">▾</span></span>
+  <!-- 2. Organisation -->
+  <div class="tab dropdown-tab" id="group-organisation">
+    <span onclick="toggleGroup('organisation')">📅 Organisation <span class="chevron">▾</span></span>
     <div class="tab-dropdown">
-      <div class="tab-dropdown-item" onclick="showTab('affectations', 'travail')">👥 Mes affectations</div>
-      <div class="tab-dropdown-item" onclick="showTab('planning', 'travail')">
-        📅 Mon planning <span class="badge" id="badge-planning">0</span>
+      <div class="tab-dropdown-item" onclick="showTab('planning', 'organisation')">
+        📅 Calendrier – planning <span class="badge" id="badge-planning">0</span>
       </div>
+      <div class="tab-dropdown-item" onclick="showTab('convocations', 'organisation')">📋 Édition des convocations</div>
+      <div class="tab-dropdown-item" onclick="showTab('emargement', 'organisation')">📝 Liste d'émargement des convocs</div>
     </div>
   </div>
 
+  <!-- 3. Évaluation -->
   <div class="tab dropdown-tab" id="group-evaluation">
     <span onclick="toggleGroup('evaluation')">📝 Évaluation <span class="chevron">▾</span></span>
     <div class="tab-dropdown">
-      <div class="tab-dropdown-item" onclick="showTab('saisie', 'evaluation')">✏️ Saisie de notes</div>
+      <div class="tab-dropdown-item" onclick="showTab('saisie', 'evaluation')">✏️ Saisie des notes</div>
       <div class="tab-dropdown-item" onclick="showTab('notes', 'evaluation')">
-        📊 Relevés et couleurs <span class="badge" id="badge-notes">0</span>
+        📊 Relevé de notes (bilan) <span class="badge" id="badge-notes">0</span>
       </div>
+      <div class="tab-dropdown-item" onclick="showTab('couleurs', 'evaluation')">🎨 Notes en couleur</div>
     </div>
   </div>
 
+  <!-- 4. Administratif -->
   <div class="tab dropdown-tab" id="group-administratif">
     <span onclick="toggleGroup('administratif')">🗄️ Administratif <span class="chevron">▾</span></span>
     <div class="tab-dropdown">
-      <div class="tab-dropdown-item" onclick="showTab('convocations', 'administratif')">📋 Mes convocations</div>
-      <div class="tab-dropdown-item" onclick="showTab('documents', 'administratif')">🗄️ Mes documents</div>
+      <div class="tab-dropdown-item" onclick="showTab('documents', 'administratif')">🗄️ Archivage des docs CCF</div>
       <div class="tab-dropdown-item" onclick="showTab('import', 'administratif')">📥 Import élèves</div>
     </div>
   </div>
@@ -432,7 +437,7 @@
   </div>
 </div>
 
-<!-- ═══ ONGLET RELEVÉS DE NOTES ET COULEURS ═══ -->
+<!-- ═══ ONGLET RELEVÉS DE NOTES (BILAN) ═══ -->
 <div class="tab-content" id="tab-notes">
 
   <div class="filtre-row" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -458,10 +463,25 @@
     </div>
   </div>
 
-  <!-- Liste notes -->
   <div class="card">
-    <div class="card-title">Mes notes saisies</div>
+    <div class="card-title">Relevé de notes</div>
     <div id="notes-list"><div class="empty">Aucune note saisie.</div></div>
+  </div>
+</div>
+
+<!-- ═══ ONGLET NOTES EN COULEUR ═══ -->
+<div class="tab-content" id="tab-couleurs">
+  <div class="card">
+    <div class="card-title">Notes en couleur — Vue synthétique</div>
+    <div id="couleurs-list"><div class="empty">Chargement…</div></div>
+  </div>
+</div>
+
+<!-- ═══ ONGLET LISTE D'ÉMARGEMENT DES CONVOCATIONS ═══ -->
+<div class="tab-content" id="tab-emargement">
+  <div class="card">
+    <div class="card-title">Liste d'émargement des convocations</div>
+    <div id="emargement-list"><div class="empty">Aucune convocation enregistrée.</div></div>
   </div>
 </div>
 
@@ -860,8 +880,10 @@ function initialiserInterface() {
   peuplerSelects();
   rendreListePlanning();
   rendreListeNotes();
+  rendreNotesCouleurs();
   rendreListeDocs();
   peuplerConvocations();
+  rendreEmargement();
   rendreMesAffectations();
   rendreDashboard();
   rendreListeSessions();
@@ -1135,8 +1157,10 @@ function chargerDemoMode() {
   peuplerSelects();
   rendreListePlanning();
   rendreListeNotes();
+  rendreNotesCouleurs();
   rendreListeDocs();
   peuplerConvocations();
+  rendreEmargement();
   rendreMesAffectations();
   rendreDashboard();
   rendreListeSessions();
@@ -1769,6 +1793,96 @@ function rendreListeNotes() {
 /* ══════════════════════════════════════════
    CONVOCATIONS
 ══════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   NOTES EN COULEUR
+══════════════════════════════════════════ */
+function rendreNotesCouleurs() {
+  const container = document.getElementById("couleurs-list");
+  if (!container) return;
+  if (!notes.length) { container.innerHTML = '<div class="empty">Aucune note saisie.</div>'; return; }
+
+  // Grouper par épreuve
+  const parEpreuve = {};
+  notes.forEach(n => {
+    if (!parEpreuve[n.epreuve]) parEpreuve[n.epreuve] = [];
+    parEpreuve[n.epreuve].push(n);
+  });
+
+  container.innerHTML = Object.keys(parEpreuve).map(eprId => {
+    const epr = epreuves.find(e => e.id === parseInt(eprId));
+    const notesEpr = parEpreuve[eprId];
+    const lignes = notesEpr.map(n => {
+      const elv = eleves.find(e => e.id === n.eleve);
+      const cls = elv ? classes.find(c => c.id === elv.classe) : null;
+      const couleur = n.couleur || (n.note_finale >= 12 ? 'vert' : n.note_finale >= 8 ? 'orange' : 'rouge');
+      const bg = couleur === 'vert' ? '#e0f5ee' : couleur === 'orange' ? '#faeeda' : '#fee2e2';
+      const fg = couleur === 'vert' ? '#0d6e50' : couleur === 'orange' ? '#633806' : '#991b1b';
+      return `<tr style="background:${bg}">
+        <td style="padding:6px 12px;font-weight:600">${elv?.nom_prenom||'?'}</td>
+        <td style="padding:6px 12px">${cls?.code_classe||'?'}</td>
+        <td style="padding:6px 12px;font-weight:700">${n.note_seq1??'—'}${n.bareme?'/'+n.bareme:''}</td>
+        <td style="padding:6px 12px">
+          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${bg};color:${fg};border:1px solid ${fg}40">
+            ${couleur.charAt(0).toUpperCase()+couleur.slice(1)}
+          </span>
+        </td>
+      </tr>`;
+    }).join('');
+    return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <div style="background:#f7f6f3;padding:8px 12px;font-weight:700;font-size:12px;border-bottom:1px solid var(--border)">
+        ${epr?.repere||'?'} — ${epr?.libelle||'?'}
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f0f0ee">
+          <th style="padding:5px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Élève</th>
+          <th style="padding:5px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Classe</th>
+          <th style="padding:5px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Note</th>
+          <th style="padding:5px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Couleur</th>
+        </tr></thead>
+        <tbody>${lignes}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════
+   LISTE D'ÉMARGEMENT DES CONVOCATIONS
+══════════════════════════════════════════ */
+function rendreEmargement() {
+  const container = document.getElementById("emargement-list");
+  if (!container) return;
+  if (!convocations.length) { container.innerHTML = '<div class="empty">Aucune convocation enregistrée.</div>'; return; }
+
+  container.innerHTML = convocations.map(conv => {
+    const cls = classes.find(c => c.id === conv.classe);
+    const epr = epreuves.find(e => e.id === conv.epreuve);
+    const dateStr = conv.date_ccf ? new Date(conv.date_ccf*1000).toLocaleDateString('fr-FR') : '—';
+    const elevesClasse = eleves.filter(e => e.classe === conv.classe).sort((a,b) => a.nom_prenom.localeCompare(b.nom_prenom));
+
+    const lignes = elevesClasse.map((elv, idx) => `
+      <tr style="background:${idx%2===0?'#fff':'#f9f8f6'}">
+        <td style="padding:7px 12px">${idx+1}</td>
+        <td style="padding:7px 12px;font-weight:600">${elv.nom_prenom}</td>
+        <td style="padding:7px 12px;text-align:center;color:var(--muted)">___________</td>
+      </tr>`).join('');
+
+    return `<div style="margin-bottom:20px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <div style="background:#e8ecfe;padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-weight:700;font-size:13px;color:#2d4ecc">${cls?.code_classe||'?'} — ${epr?.repere||'?'} ${epr?.libelle||''}</div>
+        <div style="font-size:11px;color:#4a6cf7;margin-top:2px">📅 ${dateStr} · 🕐 ${conv.heure_debut||'—'} · 🏫 ${conv.salle||'—'}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f0f0ee">
+          <th style="padding:5px 12px;text-align:left;font-size:11px;color:var(--muted);width:40px">N°</th>
+          <th style="padding:5px 12px;text-align:left;font-size:11px;color:var(--muted)">Nom et Prénom</th>
+          <th style="padding:5px 12px;text-align:center;font-size:11px;color:var(--muted);width:120px">Signature</th>
+        </tr></thead>
+        <tbody>${lignes}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+}
+
 function peuplerConvocations() {
   const sel = document.getElementById("conv-sel");
   sel.innerHTML = '<option value="">Choisir une convocation…</option>';
