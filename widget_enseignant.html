@@ -487,6 +487,46 @@
 
 <!-- ═══ ONGLET CONVOCATIONS ═══ -->
 <div class="tab-content" id="tab-convocations">
+
+  <!-- Formulaire de création -->
+  <div class="card">
+    <div class="card-title">Programmer une convocation</div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Classe</label>
+        <select id="conv-new-classe" onchange="filtrerEpreuvesConv()"><option value="">Choisir une classe…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Épreuve</label>
+        <select id="conv-new-epreuve" disabled><option value="">Choisir une classe d'abord…</option></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Date du CCF</label>
+        <input type="date" id="conv-new-date">
+      </div>
+      <div class="form-group">
+        <label>Heure de début</label>
+        <input type="time" id="conv-new-heure" value="08:00">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Salle</label>
+        <input type="text" id="conv-new-salle" placeholder="ex. Atelier B102">
+      </div>
+      <div class="form-group">
+        <label>Année scolaire</label>
+        <input type="text" id="conv-new-annee" value="2026-2027">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="creerConvocation()">✓ Enregistrer la convocation</button>
+    </div>
+  </div>
+
+  <!-- Sélection et impression -->
   <div class="card">
     <div class="card-title">Générer une convocation PDF</div>
     <div class="form-group">
@@ -1201,7 +1241,7 @@ function peuplerSelects() {
   const mesCls = mesClasses();
 
   // Classes — limitées à mes affectations
-  ['pl-classe', 'doc-classe', 'releve-filtre-classe', 'imp-classe'].forEach(id => {
+  ['pl-classe', 'doc-classe', 'releve-filtre-classe', 'imp-classe', 'conv-new-classe'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const isFiltre = id === 'releve-filtre-classe';
@@ -1881,6 +1921,75 @@ function rendreEmargement() {
       </table>
     </div>`;
   }).join('');
+}
+
+/* ══════════════════════════════════════════
+   CRÉATION DE CONVOCATION
+══════════════════════════════════════════ */
+function filtrerEpreuvesConv() {
+  const classeId = parseInt(document.getElementById("conv-new-classe").value);
+  const selEpr = document.getElementById("conv-new-epreuve");
+  if (!classeId) {
+    selEpr.innerHTML = '<option value="">Choisir une classe d\'abord…</option>';
+    selEpr.disabled = true;
+    return;
+  }
+  const eprCls = mesEpreuvesPourClasse(classeId);
+  selEpr.disabled = false;
+  selEpr.innerHTML = eprCls.length === 0
+    ? '<option value="">Aucune épreuve affectée pour cette classe</option>'
+    : '<option value="">Choisir une épreuve…</option>';
+  eprCls.forEach(e => {
+    const o = document.createElement("option");
+    o.value = e.id;
+    o.textContent = e.repere + " — " + e.libelle;
+    selEpr.appendChild(o);
+  });
+}
+
+async function creerConvocation() {
+  const classeId  = parseInt(document.getElementById("conv-new-classe").value);
+  const epreuveId = parseInt(document.getElementById("conv-new-epreuve").value);
+  const date      = document.getElementById("conv-new-date").value;
+  const heure     = document.getElementById("conv-new-heure").value;
+  const salle     = document.getElementById("conv-new-salle").value.trim();
+  const annee     = document.getElementById("conv-new-annee").value.trim();
+
+  if (!classeId || !epreuveId || !date) {
+    toast("Remplis au minimum : classe, épreuve et date", "err");
+    return;
+  }
+
+  try {
+    let newId = Date.now();
+    if (gristConnecte) {
+      const r = await grist.docApi.applyUserActions([["AddRecord", "Convocations", null, {
+        classe: classeId, epreuve: epreuveId, enseignant: monId,
+        date_ccf: date, heure_debut: heure, salle, annee_scolaire: annee, statut: "Brouillon"
+      }]]);
+      newId = r.retValues[0];
+    }
+    convocations.push({
+      id: newId, classe: classeId, epreuve: epreuveId, enseignant: monId,
+      date_ccf: date, heure_debut: heure, salle, annee_scolaire: annee, statut: "Brouillon"
+    });
+
+    // Reset formulaire
+    document.getElementById("conv-new-classe").value = "";
+    document.getElementById("conv-new-epreuve").innerHTML = '<option value="">Choisir une classe d\'abord…</option>';
+    document.getElementById("conv-new-epreuve").disabled = true;
+    document.getElementById("conv-new-date").value = "";
+    document.getElementById("conv-new-heure").value = "08:00";
+    document.getElementById("conv-new-salle").value = "";
+
+    peuplerConvocations();
+    rendreEmargement();
+    updateBadges();
+    toast("✓ Convocation enregistrée", "ok");
+  } catch(e) {
+    console.error(e);
+    toast("Erreur d'enregistrement : " + (e.message || e), "err");
+  }
 }
 
 function peuplerConvocations() {
