@@ -238,7 +238,7 @@
     <div class="tab-dropdown">
       <div class="tab-dropdown-item" onclick="showTab('saisie', 'evaluation')">✏️ Saisie des notes</div>
       <div class="tab-dropdown-item" onclick="showTab('notes', 'evaluation')">
-        📊 Relevé de notes (bilan) <span class="badge" id="badge-notes">0</span>
+        📊 Bilan de classe <span class="badge" id="badge-notes">0</span>
       </div>
       <div class="tab-dropdown-item" onclick="showTab('couleurs', 'evaluation')">🎨 Notes en couleur</div>
     </div>
@@ -396,35 +396,24 @@
   </div>
 </div>
 
-<!-- ═══ ONGLET RELEVÉS DE NOTES (BILAN) ═══ -->
+<!-- ═══ ONGLET BILAN DE CLASSE ═══ -->
 <div class="tab-content" id="tab-notes">
 
-  <div class="filtre-row" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
-      <label>Filtrer par classe</label>
-      <select id="releve-filtre-classe" onchange="rendreListeNotes()"><option value="">Toutes mes classes</option></select>
+  <!-- Filtres -->
+  <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <div class="form-group" style="flex:1;min-width:150px;margin-bottom:0">
+      <label>Classe</label>
+      <select id="releve-filtre-classe" onchange="rendreBilanClasse()"><option value="">Toutes mes classes</option></select>
     </div>
-    <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
-      <label>Filtrer par épreuve</label>
-      <select id="releve-filtre-epreuve" onchange="onChangeFiltreEpreuveReleve()"><option value="">Toutes mes épreuves</option></select>
-    </div>
-  </div>
-
-  <div class="card" id="releve-mode-card" style="display:none;padding:10px 16px">
-    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
-      <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Calcul de la 2ᵉ note</span>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-        <input type="radio" name="releve-mode-calc" value="moyenne" checked onchange="onChangeModeCalc()"> Moyenne
-      </label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-        <input type="radio" name="releve-mode-calc" value="addition" onchange="onChangeModeCalc()"> Addition
-      </label>
+    <div class="form-group" style="flex:1;min-width:150px;margin-bottom:0">
+      <label>Épreuve</label>
+      <select id="releve-filtre-epreuve" onchange="rendreBilanClasse()"><option value="">Toutes mes épreuves</option></select>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-title">Relevé de notes</div>
-    <div id="notes-list"><div class="empty">Aucune note saisie.</div></div>
+  <!-- Contenu injecté par JS -->
+  <div id="bilan-content">
+    <div class="empty">Sélectionne une classe et une épreuve pour afficher le bilan.</div>
   </div>
 </div>
 
@@ -1843,126 +1832,175 @@ function setModeCalc(epreuveId, mode) {
   try { localStorage.setItem(clefModeCalc(epreuveId), mode); } catch(e) {}
 }
 
-function onChangeFiltreEpreuveReleve() {
-  const filtreEpreuveEl = document.getElementById("releve-filtre-epreuve");
-  const epreuveId = filtreEpreuveEl ? parseInt(filtreEpreuveEl.value) : null;
-  const modeCard = document.getElementById("releve-mode-card");
+function onChangeFiltreEpreuveReleve() { rendreBilanClasse(); }
+function onChangeModeCalc() { rendreBilanClasse(); }
 
-  if (epreuveId) {
-    const mode = getModeCalc(epreuveId);
-    document.querySelectorAll('input[name="releve-mode-calc"]').forEach(r => r.checked = (r.value === mode));
-    modeCard.style.display = "block";
-  } else {
-    modeCard.style.display = "none";
+/* ══════════════════════════════════════════
+   BILAN DE CLASSE
+══════════════════════════════════════════ */
+function rendreListeNotes() { rendreBilanClasse(); }
+
+function rendreBilanClasse() {
+  const container = document.getElementById("bilan-content");
+  if (!container) return;
+
+  const classeId  = parseInt(document.getElementById("releve-filtre-classe")?.value) || 0;
+  const epreuveId = parseInt(document.getElementById("releve-filtre-epreuve")?.value) || 0;
+
+  let notesFiltrees = notes.filter(n => n.enseignant === monId || true); // toutes mes notes
+  if (classeId) {
+    const elevesClasse = eleves.filter(e => e.classe === classeId).map(e => e.id);
+    notesFiltrees = notesFiltrees.filter(n => elevesClasse.includes(n.eleve));
   }
-  rendreListeNotes();
-}
+  if (epreuveId) notesFiltrees = notesFiltrees.filter(n => n.epreuve === epreuveId);
 
-function onChangeModeCalc() {
-  const filtreEpreuveEl = document.getElementById("releve-filtre-epreuve");
-  const epreuveId = filtreEpreuveEl ? parseInt(filtreEpreuveEl.value) : null;
-  if (!epreuveId) return;
-  const mode = document.querySelector('input[name="releve-mode-calc"]:checked').value;
-  setModeCalc(epreuveId, mode);
-  rendreListeNotes();
-}
-
-function rendreListeNotes() {
-  const container = document.getElementById("notes-list");
-  const filtreClasseEl = document.getElementById("releve-filtre-classe");
-  const filtreEpreuveEl = document.getElementById("releve-filtre-epreuve");
-  const filtreClasse = filtreClasseEl ? parseInt(filtreClasseEl.value) : null;
-  const filtreEpreuve = filtreEpreuveEl ? parseInt(filtreEpreuveEl.value) : null;
-
-  let notesAffichees = notes;
-  if (filtreClasse) {
-    notesAffichees = notesAffichees.filter(n => {
-      const elv = eleves.find(e => e.id === n.eleve);
-      return elv && elv.classe === filtreClasse;
-    });
-  }
-  if (filtreEpreuve) {
-    notesAffichees = notesAffichees.filter(n => n.epreuve === filtreEpreuve);
-  }
-
-  if (!notesAffichees.length) { container.innerHTML = '<div class="empty">Aucune note saisie.</div>'; return; }
-
-  // ── Cas particulier : une épreuve précise est filtrée → regrouper par élève
-  // pour pouvoir combiner plusieurs sessions (moyenne ou addition)
-  if (filtreEpreuve) {
-    const mode = getModeCalc(filtreEpreuve);
-    const parEleve = {};
-    notesAffichees.forEach(n => {
-      if (!parEleve[n.eleve]) parEleve[n.eleve] = [];
-      parEleve[n.eleve].push(n);
-    });
-
-    const lignesHtml = Object.keys(parEleve).map(eleveId => {
-      const notesElv = parEleve[eleveId].sort((a,b) => (a.id||0) - (b.id||0));
-      const elv = eleves.find(e => e.id === parseInt(eleveId));
-      const cls = elv ? classes.find(c => c.id === elv.classe) : null;
-
-      // Convertir chaque note sur 20 pour pouvoir combiner même si barèmes différents
-      const notesConverties = notesElv.map(n => {
-        const bareme = n.bareme || 20;
-        return (n.note_seq1 / bareme) * 20;
-      });
-
-      let resultat;
-      if (notesConverties.length === 1) {
-        resultat = notesConverties[0];
-      } else if (mode === 'addition') {
-        resultat = notesConverties.reduce((a,b) => a+b, 0);
-      } else {
-        resultat = notesConverties.reduce((a,b) => a+b, 0) / notesConverties.length;
-      }
-      resultat = Math.round(resultat * 100) / 100;
-
-      const couleur = resultat >= 12 ? "vert" : resultat >= 8 ? "orange" : "rouge";
-      const noteClass = couleur === "vert" ? "note-vert" : couleur === "orange" ? "note-orange" : "note-rouge";
-
-      const detailNotes = notesElv.map(n => `${n.intitule || 'Note'} : ${n.note_seq1}/${n.bareme || 20}`).join(' · ');
-
-      return `<tr>
-          <td>${elv ? elv.nom_prenom : '?'}</td>
-          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
-          <td style="font-size:11px;color:var(--muted)">${detailNotes}${notesElv.length>1?` <span style="font-weight:600">(${mode === 'addition' ? 'somme' : 'moyenne'})</span>`:''}</td>
-          <td style="font-weight:700">${resultat}<span style="font-weight:400;color:var(--muted)">/20</span></td>
-          <td><span class="${noteClass}">${couleur.charAt(0).toUpperCase()+couleur.slice(1)}</span></td>
-        </tr>`;
-    }).join('');
-
-    container.innerHTML = `
-      <table class="data-table">
-        <thead><tr><th>Élève</th><th>Classe</th><th>Détail des notes</th><th>Résultat</th><th>Couleur</th></tr></thead>
-        <tbody>${lignesHtml}</tbody>
-      </table>`;
+  if (notesFiltrees.length === 0) {
+    container.innerHTML = '<div class="empty">Aucune note pour cette sélection.</div>';
     return;
   }
 
-  // ── Cas général : pas de filtre épreuve → une ligne par note brute
+  const vals = notesFiltrees.map(n => parseFloat(n.note_finale ?? n.note_seq1)).filter(v => !isNaN(v));
+  if (vals.length === 0) { container.innerHTML = '<div class="empty">Aucune note numérique disponible.</div>'; return; }
+
+  const bareme  = parseFloat(notesFiltrees[0]?.bareme) || 20;
+  const nbTotal = classeId ? eleves.filter(e => e.classe === classeId).length : vals.length;
+  const nbEval  = vals.length;
+  const nbAbs   = Math.max(0, nbTotal - nbEval);
+  const moy     = vals.reduce((a,b) => a+b, 0) / vals.length;
+  const sorted  = [...vals].sort((a,b) => a-b);
+  const median  = sorted.length % 2 === 0
+    ? (sorted[sorted.length/2-1] + sorted[sorted.length/2]) / 2
+    : sorted[Math.floor(sorted.length/2)];
+  const minV = sorted[0], maxV = sorted[sorted.length-1];
+  const q1   = sorted[Math.floor(sorted.length*0.25)];
+  const q3   = sorted[Math.floor(sorted.length*0.75)];
+  const nbReussite = vals.filter(v => v >= bareme/2).length;
+  const tauxReussite = Math.round((nbReussite/vals.length)*100);
+
+  const niveaux = [
+    { label:'Très insuffisant', smin:0,          smax:bareme*0.4,   color:'#c0392b' },
+    { label:'Fragile',          smin:bareme*0.4,  smax:bareme*0.5,   color:'#d68910' },
+    { label:'Satisfaisant',     smin:bareme*0.5,  smax:bareme*0.8,   color:'#d4ac0d' },
+    { label:'Très bon',         smin:bareme*0.8,  smax:bareme+0.01,  color:'#27ae60' },
+  ].map(s => ({ ...s, count: vals.filter(v => v >= s.smin && v < s.smax).length }));
+
+  const classement = notesFiltrees.map(n => {
+    const elv = eleves.find(e => e.id === n.eleve);
+    return { nom: elv?.nom_prenom || '?', note: parseFloat(n.note_finale ?? n.note_seq1) };
+  }).filter(x => !isNaN(x.note)).sort((a,b) => b.note - a.note);
+
+  const cls = classeId ? classes.find(c => c.id === classeId) : null;
+  const epr = epreuveId ? epreuves.find(e => e.id === epreuveId) : null;
+  const titre = [cls?.code_classe, epr?.repere, epr?.libelle].filter(Boolean).join(' · ') || 'Toutes les notes';
+
+  // ── SVG Boîte à moustaches ──
+  const svgW=280,svgH=180,pL=45,pR=15,pT=15,pB=25;
+  const cH=svgH-pT-pB, cW=svgW-pL-pR;
+  const sc = v => pT + cH - ((v/bareme)*cH);
+  const bx=pL+cW*0.25, bw=cW*0.5;
+  const ticks = [0,bareme*0.25,bareme*0.5,bareme*0.75,bareme];
+  const svgBox = `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:260px">
+    <line x1="${pL}" y1="${pT}" x2="${pL}" y2="${pT+cH}" stroke="#ddd" stroke-width="1"/>
+    ${ticks.map(v=>`<line x1="${pL}" y1="${sc(v)}" x2="${pL+cW}" y2="${sc(v)}" stroke="#eee" stroke-width="1" stroke-dasharray="3"/>
+      <text x="${pL-4}" y="${sc(v)+4}" font-size="9" fill="#aaa" text-anchor="end">${v.toFixed(0)}</text>`).join('')}
+    <line x1="${bx+bw/2}" y1="${sc(minV)}" x2="${bx+bw/2}" y2="${sc(q1)}" stroke="#4a6cf7" stroke-width="1.5"/>
+    <line x1="${bx+bw*0.3}" y1="${sc(minV)}" x2="${bx+bw*0.7}" y2="${sc(minV)}" stroke="#4a6cf7" stroke-width="1.5"/>
+    <rect x="${bx}" y="${sc(q3)}" width="${bw}" height="${sc(q1)-sc(q3)}" fill="#4a6cf720" stroke="#4a6cf7" stroke-width="1.5" rx="2"/>
+    <line x1="${bx}" y1="${sc(median)}" x2="${bx+bw}" y2="${sc(median)}" stroke="#4a6cf7" stroke-width="2.5"/>
+    <line x1="${bx+bw/2}" y1="${sc(q3)}" x2="${bx+bw/2}" y2="${sc(maxV)}" stroke="#4a6cf7" stroke-width="1.5"/>
+    <line x1="${bx+bw*0.3}" y1="${sc(maxV)}" x2="${bx+bw*0.7}" y2="${sc(maxV)}" stroke="#4a6cf7" stroke-width="1.5"/>
+  </svg>`;
+
+  // ── SVG Camembert ──
+  const pr=55, pw=120, ph=120; let sa=-Math.PI/2;
+  const slices = niveaux.filter(n=>n.count>0).map(n=>{
+    const a=(n.count/vals.length)*2*Math.PI;
+    const x1=pr+pr*Math.cos(sa), y1=pr+pr*Math.sin(sa);
+    sa+=a;
+    const x2=pr+pr*Math.cos(sa), y2=pr+pr*Math.sin(sa);
+    const ma=sa-a/2, lx=pr+pr*0.62*Math.cos(ma), ly=pr+pr*0.62*Math.sin(ma);
+    const pct=Math.round((n.count/vals.length)*100);
+    return {...n, path:`M${pr},${pr} L${x1},${y1} A${pr},${pr} 0 ${a>Math.PI?1:0},1 ${x2},${y2} Z`, lx,ly,pct};
+  });
+  const svgPie = `<svg viewBox="0 0 ${pw} ${ph}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:120px">
+    ${slices.map(s=>`<path d="${s.path}" fill="${s.color}" stroke="#fff" stroke-width="1.5"/>`).join('')}
+    ${slices.map(s=>s.pct>6?`<text x="${s.lx}" y="${s.ly+3}" font-size="8" fill="#fff" font-weight="700" text-anchor="middle">${s.pct}%</text>`:'').join('')}
+  </svg>`;
+
   container.innerHTML = `
-    <table class="data-table">
-      <thead><tr><th>Élève</th><th>Classe</th><th>Épreuve</th><th>Intitulé</th><th>Note</th><th>Couleur</th><th>Statut</th></tr></thead>
-      <tbody>${notesAffichees.map(n => {
-        const elv = eleves.find(e => e.id === n.eleve);
-        const cls = elv ? classes.find(c => c.id === elv.classe) : null;
-        const epr = epreuves.find(e => e.id === n.epreuve);
-        const noteClass = n.couleur === "vert" ? "note-vert" : n.couleur === "orange" ? "note-orange" : "note-rouge";
-        return `<tr>
-          <td>${elv ? elv.nom_prenom : '?'}</td>
-          <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
-          <td>${epr ? epr.repere : '?'}</td>
-          <td style="font-size:12px;color:var(--muted)">${n.intitule || '—'}</td>
-          <td style="font-weight:700">${n.note_seq1 ?? n.note_finale ?? '—'}${n.bareme ? '<span style="font-weight:400;color:var(--muted)">/'+n.bareme+'</span>' : ''}</td>
-          <td><span class="${noteClass}">${n.couleur ? (n.couleur.charAt(0).toUpperCase()+n.couleur.slice(1)) : '—'}</span></td>
-          <td>${n.publier ? '<span class="pill pill-green">Publiée</span>' : '<span class="pill pill-gray">Confidentielle</span>'}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`;
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#4a6cf7,#2d4ecc);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">📊</span>
+        <div>
+          <div style="font-weight:800;font-size:15px">${titre}</div>
+          <div style="font-size:11px;opacity:0.85">${nbEval} élève${nbEval>1?'s':''} évalué${nbEval>1?'s':''} · Barème /${bareme}</div>
+        </div>
+      </div>
+
+      <!-- Compteurs -->
+      <div style="display:flex;flex-wrap:wrap;gap:1px;background:var(--border)">
+        ${[
+          {lbl:'Élèves évalués', val:nbEval,             sub:`sur ${nbTotal}`,                    col:'#4a6cf7'},
+          {lbl:'Absents',        val:nbAbs,              sub:`soit ${Math.round(nbAbs/nbTotal*100)||0}%`, col:'#e24b4a'},
+          {lbl:'Moyenne',        val:moy.toFixed(2),     sub:`/${bareme}`,                         col:'#0d6e50'},
+          {lbl:'Médiane',        val:median.toFixed(2),  sub:`/${bareme}`,                         col:'#0d6e50'},
+          {lbl:'Note minimale',  val:minV.toFixed(2),    sub:`/${bareme}`,                         col:'#e24b4a'},
+          {lbl:'Note maximale',  val:maxV.toFixed(2),    sub:`/${bareme}`,                         col:'#27ae60'},
+          {lbl:'Taux de réussite',val:`${tauxReussite}%`,sub:`${nbReussite} élèves ≥ ${(bareme/2).toFixed(0)}/${bareme}`, col:'#d68910'},
+        ].map(c=>`<div style="flex:1;min-width:85px;background:var(--card);padding:9px 12px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${c.lbl}</div>
+          <div style="font-size:18px;font-weight:800;color:${c.col};line-height:1.1">${c.val}</div>
+          <div style="font-size:10px;color:var(--muted)">${c.sub}</div>
+        </div>`).join('')}
+      </div>
+
+      <!-- Corps -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+
+        <!-- Classement -->
+        <div style="padding:14px 16px;border-right:1px solid var(--border);overflow:auto;max-height:360px">
+          <div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:10px">Classement des élèves</div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="border-bottom:2px solid var(--border)">
+              <th style="padding:4px 6px;text-align:left;font-size:10px;color:var(--muted)">Rang</th>
+              <th style="padding:4px 6px;text-align:left;font-size:10px;color:var(--muted)">Élève</th>
+              <th style="padding:4px 6px;text-align:right;font-size:10px;color:var(--muted)">Note /${bareme}</th>
+            </tr></thead>
+            <tbody>${classement.map((e,i)=>`
+              <tr style="border-bottom:1px solid #f5f3f0">
+                <td style="padding:5px 6px;font-size:11px;color:var(--muted)">${i+1}</td>
+                <td style="padding:5px 6px;font-size:12px;font-weight:600">${e.nom}</td>
+                <td style="padding:5px 6px;font-size:12px;font-weight:700;text-align:right">${e.note.toFixed(2)}</td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>
+
+        <!-- Graphiques -->
+        <div style="padding:14px 16px">
+          <div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px">Dispersion des notes</div>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+            ${svgBox}
+            <div style="font-size:10px;display:flex;flex-direction:column;gap:4px;white-space:nowrap">
+              ${[{l:'Maximum',v:maxV,b:false},{l:'Q3',v:q3,b:false},{l:'Médiane',v:median,b:true,c:'#4a6cf7'},{l:'Q1',v:q1,b:false},{l:'Minimum',v:minV,b:false}]
+                .map(r=>`<div style="display:flex;justify-content:space-between;gap:8px;${r.b?'color:'+r.c+';font-weight:700':'color:var(--muted)'}"><span>${r.l}</span><span>${r.v.toFixed(2)}</span></div>`).join('')}
+            </div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px">Répartition par niveaux</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            ${svgPie}
+            <div style="font-size:10px;display:flex;flex-direction:column;gap:5px">
+              ${niveaux.map(n=>`<div style="display:flex;align-items:center;gap:5px">
+                <span style="width:9px;height:9px;border-radius:2px;background:${n.color};flex-shrink:0"></span>
+                <span style="color:var(--muted)">${n.label}<br><span style="color:var(--text);font-weight:600">${n.count} (${Math.round(n.count/vals.length*100)}%)</span></span>
+              </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
 }
 
-/* ══════════════════════════════════════════
+/* ═════
    CONVOCATIONS
 ══════════════════════════════════════════ */
 /* ══════════════════════════════════════════
