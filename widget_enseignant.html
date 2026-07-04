@@ -514,74 +514,83 @@
 
 <!-- ═══ ONGLET DOCUMENTS ═══ -->
 <div class="tab-content" id="tab-documents">
-  <div class="card">
-    <div class="card-title">Déclarer un dépôt de documents CCF</div>
-    <div class="row2">
-      <div class="form-group">
-        <label>Classe</label>
-        <select id="doc-classe" onchange="filtrerElevesDoc()"><option value="">Choisir…</option></select>
-      </div>
-      <div class="form-group">
-        <label>Épreuve</label>
-        <select id="doc-epreuve"><option value="">Choisir…</option></select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Date de dépôt</label>
-      <input type="date" id="doc-date">
-    </div>
-    <div class="form-group">
-      <label>Élèves absents / abandon (eleves_AB)</label>
-      <div class="eleves-box">
-        <div class="eleves-search-row">
-          <span>🔍</span>
-          <input type="text" id="doc-search" placeholder="Rechercher un élève…" oninput="filtrerListeDoc()" disabled>
-        </div>
-        <div class="eleves-list-box" id="doc-eleves-list">
-          <div class="empty">Sélectionne d'abord une classe.</div>
-        </div>
-      </div>
-      <div class="tags-row" id="doc-tags"></div>
-    </div>
 
-    <!-- ÉMARGEMENT PDF — VIA GRIST DIRECTEMENT -->
-    <div class="form-group">
-      <label style="display:flex;align-items:center;gap:6px">
-        Liste d'émargement signée (PDF)
-        <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">OBLIGATOIRE</span>
-      </label>
-      <div style="background:#f0faf6;border:1px solid #9FE1CB;border-radius:8px;padding:12px 14px">
-        <div style="font-size:12px;color:#0d6e50;margin-bottom:10px;line-height:1.5">
-          📋 <strong>Après avoir cliqué sur Enregistrer</strong>, ouvre la table <strong>Mes documents</strong> dans Grist et attache ton PDF directement sur la ligne créée.
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a href="https://grist.numerique.gouv.fr/o/docs/7RpAwffKC5ei/Gestion-des-CCF/p/25"
-             target="_blank"
-             style="display:inline-flex;align-items:center;gap:6px;background:#1D9E75;color:#fff;
-                    font-size:12px;font-weight:700;padding:7px 14px;border-radius:6px;text-decoration:none">
-            📎 Ouvrir Mes documents dans Grist
-          </a>
-        </div>
-        <div style="font-size:11px;color:#0d6e50;margin-top:8px">
-          Dans Grist → clique sur la cellule <strong>emargement_pdf</strong> de ta ligne → icône trombone 📎 → choisir le fichier
-        </div>
+  <!-- Message verrouillage si pas de CCF passé -->
+  <div id="doc-no-ccf-passe" style="display:none">
+    <div style="background:#fff7e6;border:2px solid #f59e0b;border-radius:12px;padding:28px 24px;text-align:center;margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:12px">📅</div>
+      <div style="font-size:16px;font-weight:800;color:#78350f;margin-bottom:8px">Aucun CCF réalisé pour l'instant</div>
+      <div style="font-size:13px;color:#92400e;line-height:1.6;margin-bottom:16px">
+        L'archivage des documents CCF n'est disponible qu'après la réalisation d'au moins une séance.<br>
+        Revenez ici une fois votre premier CCF effectué.
       </div>
-    </div>
-
-    <div class="form-group">
-      <label>Commentaire</label>
-      <textarea id="doc-commentaire" placeholder="Observations…"></textarea>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-orange" onclick="declarerDepot()">📁 Enregistrer le dépôt</button>
+      <button class="btn btn-primary" onclick="showTab('planning','organisation')">
+        📅 Voir mon planning
+      </button>
     </div>
   </div>
 
-  <!-- Liste dépôts -->
-  <div class="card">
-    <div class="card-title">Mes dépôts déclarés</div>
-    <div id="docs-list"><div class="empty">Aucun dépôt déclaré.</div></div>
+  <!-- Formulaire dépôt (affiché si CCF passé) -->
+  <div id="doc-form-zone">
+    <div class="card">
+      <div class="card-title">Déclarer un dépôt de documents CCF</div>
+      <div class="row2">
+        <div class="form-group">
+          <label>Classe</label>
+          <select id="doc-classe" onchange="filtrerElevesDoc()"><option value="">Choisir…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Épreuve</label>
+          <select id="doc-epreuve"><option value="">Choisir…</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Date de dépôt</label>
+        <input type="date" id="doc-date">
+      </div>
+      <div class="form-group">
+        <label>Élèves absents / abandon (eleves_AB)</label>
+        <div class="eleves-box">
+          <div class="eleves-search-row">
+            <span>🔍</span>
+            <input type="text" id="doc-search" placeholder="Rechercher un élève…" oninput="filtrerListeDoc()" disabled>
+          </div>
+          <div class="eleves-list-box" id="doc-eleves-list">
+            <div class="empty">Sélectionne d'abord une classe.</div>
+          </div>
+        </div>
+        <div class="tags-row" id="doc-tags"></div>
+      </div>
+
+      <!-- ÉMARGEMENT PDF — INFO UNIQUEMENT -->
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:6px">
+          Liste d'émargement signée (PDF)
+          <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">OBLIGATOIRE</span>
+        </label>
+        <div style="background:#f0faf6;border:1px solid #9FE1CB;border-radius:8px;padding:12px 14px">
+          <div style="font-size:12px;color:#0d6e50;line-height:1.5">
+            📋 <strong>Après avoir cliqué sur Enregistrer</strong>, une fenêtre s'ouvrira avec le lien direct vers Grist pour attacher votre PDF d'émargement signé sur la ligne créée.
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Commentaire</label>
+        <textarea id="doc-commentaire" placeholder="Observations…"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-orange" onclick="declarerDepot()">📁 Enregistrer le dépôt</button>
+      </div>
+    </div>
+
+    <!-- Liste dépôts -->
+    <div class="card">
+      <div class="card-title">Mes dépôts déclarés</div>
+      <div id="docs-list"><div class="empty">Aucun dépôt déclaré.</div></div>
+    </div>
   </div>
+
 </div>
 
 <!-- ═══ ONGLET TABLEAU DE BORD ═══ -->
@@ -898,6 +907,7 @@ function initialiserInterface() {
   rendreListeNotes();
   rendreNotesCouleurs();
   rendreListeDocs();
+  verifierAccesDocuments();
   peuplerConvocations();
   peuplerConvClasses();
   rendreEmargement();
@@ -1279,6 +1289,7 @@ function chargerDemoMode() {
   rendreListeNotes();
   rendreNotesCouleurs();
   rendreListeDocs();
+  verifierAccesDocuments();
   peuplerConvocations();
   peuplerConvClasses();
   rendreEmargement();
@@ -2501,6 +2512,29 @@ function afficherAvertissementPDF() {
     document.getElementById('avert-annuler').onclick = () => { document.body.removeChild(overlay); resolve(false); };
     document.getElementById('avert-continuer').onclick = () => { document.body.removeChild(overlay); resolve(true); };
   });
+}
+
+function verifierAccesDocuments() {
+  const aujourdhui = new Date();
+  aujourdhui.setHours(0, 0, 0, 0);
+
+  // Vérifie s'il existe au moins une séance de planning dont la date est passée
+  const aCCFPasse = plannings.some(p => {
+    if (!p.date_prevue && !p.date_realisee) return false;
+    // date_realisee = CCF effectivement réalisé
+    if (p.date_realisee) return true;
+    // date_prevue passée
+    const d = typeof p.date_prevue === 'number'
+      ? new Date(p.date_prevue * 1000)
+      : new Date(p.date_prevue);
+    d.setHours(0, 0, 0, 0);
+    return d < aujourdhui;
+  });
+
+  const msgEl  = document.getElementById("doc-no-ccf-passe");
+  const formEl = document.getElementById("doc-form-zone");
+  if (msgEl)  msgEl.style.display  = aCCFPasse ? "none"  : "block";
+  if (formEl) formEl.style.display = aCCFPasse ? "block" : "none";
 }
 
 function rendreListeDocs() {
