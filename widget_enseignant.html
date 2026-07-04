@@ -951,6 +951,10 @@ function rendreDashboard() {
   // ── Bloc Convocations à venir ──
   const aujourdhui = new Date();
   aujourdhui.setHours(0, 0, 0, 0);
+
+  // DEBUG temporaire — à supprimer après diagnostic
+  console.log("convocations total:", convocations.length, convocations.map(c => ({id:c.id, date_ccf:c.date_ccf, type:typeof c.date_ccf})));
+
   const convsAvenir = convocations
     .filter(c => {
       if (!c.date_ccf) return false;
