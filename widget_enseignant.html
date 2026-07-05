@@ -809,109 +809,94 @@ document.addEventListener('click', function(e) {
 /* ══════════════════════════════════════════
    INIT GRIST
 ══════════════════════════════════════════ */
-async function chargerDonnees() {
+function chargerDonnees() {
   if (gristConnecte) return;
   gristConnecte = true;
-  document.getElementById("notice").style.display = "none";
+  if (document.getElementById("notice")) document.getElementById("notice").style.display = "none";
 
-  try {
-    // ── 1. Identifier l'utilisateur via SessionUtilisateurs ──
-    // Technique : créer une ligne temporaire → Grist y injecte user.Email automatiquement
-    let emailConnecte = null;
-    try {
-      const newRowResult = await grist.docApi.applyUserActions([
-        ["AddRecord", "SessionUtilisateurs", null, {}]
+  var emailConnecte = null;
+
+  grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
+    .then(function(result) {
+      var newRowId = result.retValues[0];
+      return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
+        var idx = sessions.id.indexOf(newRowId);
+        emailConnecte = idx !== -1 && sessions.email_session
+          ? sessions.email_session[idx] : null;
+        return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]]);
+      });
+    })
+    .catch(function(e) {
+      console.warn("SessionUtilisateurs non disponible:", e.message);
+    })
+    .then(function() {
+      return grist.docApi.listTables();
+    })
+    .then(function(tables) {
+      var nomAff   = tables.find(function(t) { return t.toLowerCase().includes("affectation"); }) || "AffectationEnseignants";
+      var nomStock = tables.find(function(t) { return t.toLowerCase().includes("stockage"); })    || "StockageDocs";
+      return Promise.all([
+        grist.docApi.fetchTable("Enseignants"),
+        grist.docApi.fetchTable("Classes"),
+        grist.docApi.fetchTable("ConfigEpreuves"),
+        grist.docApi.fetchTable("Eleves"),
+        grist.docApi.fetchTable("PlanningDesCCF"),
+        grist.docApi.fetchTable("Notes"),
+        grist.docApi.fetchTable("Convocations"),
+        grist.docApi.fetchTable(nomStock),
+        grist.docApi.fetchTable(nomAff),
       ]);
-      const newRowId = newRowResult.retValues[0];
-      const sessions = await grist.docApi.fetchTable("SessionUtilisateurs");
-      const idx = sessions.id.indexOf(newRowId);
-      if (idx !== -1) {
-        emailConnecte = sessions.email_session ? sessions.email_session[idx] : null;
-        console.log("Email connecté détecté:", emailConnecte);
+    })
+    .then(function(resultats) {
+      var ens   = resultats[0], cls  = resultats[1], epr  = resultats[2];
+      var elv   = resultats[3], pl   = resultats[4], nt   = resultats[5];
+      var conv  = resultats[6], stock = resultats[7], aff = resultats[8];
+
+      enseignants = parseTable(ens);
+      classes     = parseTable(cls);
+      epreuves    = parseTable(epr);
+      eleves      = parseTable(elv);
+
+      window._pl_raw    = pl;
+      window._nt_raw    = nt;
+      window._conv_raw  = conv;
+      window._stock_raw = stock;
+      window._aff_raw   = aff;
+
+      // Identifier l'enseignant
+      if (emailConnecte) {
+        var moi = enseignants.find(function(e) {
+          return e.email_academique &&
+            e.email_academique.toLowerCase().trim() === emailConnecte.toLowerCase().trim();
+        });
+        if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
       }
-      // Supprimer la ligne temporaire
-      await grist.docApi.applyUserActions([
-        ["RemoveRecord", "SessionUtilisateurs", newRowId]
-      ]);
-    } catch(e) {
-      console.warn("Détection email impossible:", e.message);
-    }
 
-    // ── 2. Charger toutes les tables ──
-    const tables = await grist.docApi.listTables();
-    const nomAff   = tables.find(t => t.toLowerCase().includes("affectation")) || "AffectationEnseignants";
-    const nomStock = tables.find(t => t.toLowerCase().includes("stockage"))    || "StockageDocs";
-
-    const [ens, cls, epr, elv, pl, nt, conv, stock, aff] = await Promise.all([
-      grist.docApi.fetchTable("Enseignants"),
-      grist.docApi.fetchTable("Classes"),
-      grist.docApi.fetchTable("ConfigEpreuves"),
-      grist.docApi.fetchTable("Eleves"),
-      grist.docApi.fetchTable("PlanningDesCCF"),
-      grist.docApi.fetchTable("Notes"),
-      grist.docApi.fetchTable("Convocations"),
-      grist.docApi.fetchTable(nomStock),
-      grist.docApi.fetchTable(nomAff),
-    ]);
-
-    document.getElementById("notice").style.display = "none";
-
-    enseignants = parseTable(ens);
-    classes     = parseTable(cls);
-    epreuves    = parseTable(epr);
-    eleves      = parseTable(elv);
-
-    window._pl_raw    = pl;
-    window._nt_raw    = nt;
-    window._conv_raw  = conv;
-    window._stock_raw = stock;
-    window._aff_raw   = aff;
-
-    // ── 3. Identifier l'enseignant depuis l'email connecté ──
-    if (emailConnecte) {
-      const moi = enseignants.find(e =>
-        e.email_academique &&
-        e.email_academique.toLowerCase().trim() === emailConnecte.toLowerCase().trim()
-      );
-      if (moi) {
-        monId  = moi.id;
-        monNom = moi.nom_prenom;
-        console.log("Enseignant identifié automatiquement:", monNom);
-      } else {
-        console.warn("Email", emailConnecte, "non trouvé dans Enseignants");
+      // Fallback localStorage
+      if (!monId) {
+        try {
+          var sid  = localStorage.getItem('ccf_enseignant_id');
+          var snom = localStorage.getItem('ccf_enseignant_nom');
+          if (sid && snom) { monId = parseInt(sid); monNom = snom; }
+        } catch(e) {}
       }
-    }
 
-    // ── 4. Ouvrir l'interface ──
-    if (monId) {
-      // Identifié → sauvegarder et ouvrir directement
-      try {
-        localStorage.setItem('ccf_enseignant_id', monId);
-        localStorage.setItem('ccf_enseignant_nom', monNom);
-      } catch(e) {}
-      initialiserInterface();
-    } else {
-      // Non identifié → vérifier localStorage puis ouvrir quand même
-      try {
-        const savedId  = localStorage.getItem('ccf_enseignant_id');
-        const savedNom = localStorage.getItem('ccf_enseignant_nom');
-        if (savedId && savedNom) {
-          monId  = parseInt(savedId);
-          monNom = savedNom;
-          initialiserInterface();
-          return;
-        }
-      } catch(e) {}
-      // Aucune identification possible → ouvrir quand même avec nom générique
-      initialiserInterface();
-    }
+      if (monId) {
+        try {
+          localStorage.setItem('ccf_enseignant_id', monId);
+          localStorage.setItem('ccf_enseignant_nom', monNom);
+        } catch(e) {}
+      }
 
-  } catch(e) {
-    console.error("Erreur chargement:", e);
-    gristConnecte = false;
-    document.getElementById("notice").style.display = "block";
-    chargerDemoMode();
-  }
+      if (document.getElementById("notice")) document.getElementById("notice").style.display = "none";
+      initialiserInterface();
+    })
+    .catch(function(e) {
+      console.error("ERREUR chargerDonnees:", e.message);
+      gristConnecte = false;
+      if (document.getElementById("notice")) document.getElementById("notice").style.display = "block";
+      chargerDemoMode();
+    });
 }
 
 // Helper : transformer un objet fetchTable en tableau d'objets
@@ -1279,10 +1264,11 @@ function rendreMesAffectations() {
 function initGrist() {
   if (typeof grist !== "undefined") {
     grist.ready({ requiredAccess: "full" });
-    chargerDonnees();
-    grist.onOptions(() => { if (!gristConnecte) chargerDonnees(); });
-    grist.onRecord(() => { if (!gristConnecte) chargerDonnees(); });
-    grist.onRecords(() => { if (!gristConnecte) chargerDonnees(); });
+    grist.onRecords(function() { chargerDonnees(); });
+    grist.onRecord(function() { chargerDonnees(); });
+    [500, 1000, 2000, 3500, 5000].forEach(function(d) {
+      setTimeout(chargerDonnees, d);
+    });
   } else {
     if (document.getElementById("notice")) document.getElementById("notice").style.display = "block";
     chargerDemoMode();
@@ -2961,7 +2947,13 @@ function toast(msg, type) {
   setTimeout(() => { t.className = ""; }, 2800);
 }
 
-document.addEventListener("DOMContentLoaded", initGrist);
+(function waitForGrist() {
+  if (typeof grist !== "undefined") {
+    initGrist();
+  } else {
+    setTimeout(waitForGrist, 100);
+  }
+})();
 </script>
 </body>
 </html>
