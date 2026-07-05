@@ -560,17 +560,56 @@
         <div class="tags-row" id="doc-tags"></div>
       </div>
 
-      <!-- ÉMARGEMENT PDF — INFO UNIQUEMENT -->
+      <!-- ÉMARGEMENT PDF — UPLOAD DIRECT -->
       <div class="form-group">
         <label style="display:flex;align-items:center;gap:6px">
           Liste d'émargement signée (PDF)
           <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">OBLIGATOIRE</span>
         </label>
-        <div style="background:#f0faf6;border:1px solid #9FE1CB;border-radius:8px;padding:12px 14px">
-          <div style="font-size:12px;color:#0d6e50;line-height:1.5">
-            📋 <strong>Après avoir cliqué sur Enregistrer</strong>, une fenêtre s'ouvrira avec le lien direct vers Grist pour attacher votre PDF d'émargement signé sur la ligne créée.
+
+        <!-- Zone drag & drop -->
+        <div id="doc-pdf-zone"
+             onclick="document.getElementById('doc-pdf-input').click()"
+             ondragover="event.preventDefault();this.style.borderColor='var(--orange)';this.style.background='#fffbeb'"
+             ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--bg)'"
+             ondrop="docOnDropPDF(event)"
+             style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;
+                    cursor:pointer;transition:all 0.15s;background:var(--bg);"
+             onmouseover="this.style.borderColor='var(--orange)';this.style.background='#fffbeb'"
+             onmouseout="if(!docPdfFile){this.style.borderColor='var(--border)';this.style.background='var(--bg)'}">
+          <div style="font-size:28px;margin-bottom:6px">📄</div>
+          <div style="font-size:13px;font-weight:600;color:var(--muted)">Cliquer pour choisir le PDF</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">ou glisser-déposer ici</div>
+        </div>
+        <input type="file" id="doc-pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="docOnSelectPDF(event)">
+
+        <!-- Aperçu fichier sélectionné -->
+        <div id="doc-pdf-preview" style="display:none;margin-top:8px;background:#fff7e6;border:1px solid #f5c475;
+             border-radius:6px;padding:8px 12px;align-items:center;gap:10px">
+          <span style="font-size:20px">📎</span>
+          <div style="flex:1">
+            <div id="doc-pdf-nom" style="font-weight:600;font-size:13px"></div>
+            <div id="doc-pdf-taille" style="font-size:11px;color:var(--muted)"></div>
+          </div>
+          <button onclick="docSupprimerPDF()"
+                  style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;padding:2px 4px"
+                  onmouseover="this.style.color='#e24b4a'" onmouseout="this.style.color='var(--muted)'">×</button>
+        </div>
+
+        <!-- Barre de progression -->
+        <div id="doc-pdf-progress" style="display:none;margin-top:8px;background:#e8f4fd;border:1px solid #c7d7f8;
+             border-radius:6px;padding:10px 14px;align-items:center;gap:10px">
+          <div style="width:18px;height:18px;border:2px solid #4a6cf7;border-top-color:transparent;
+               border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#2d4ecc">Téléversement en cours…</div>
+            <div id="doc-pdf-progress-nom" style="font-size:11px;color:#4a6cf7"></div>
           </div>
         </div>
+
+        <!-- Erreur upload -->
+        <div id="doc-pdf-erreur" style="display:none;margin-top:6px;background:#fee2e2;border:1px solid #f7c1c1;
+             border-radius:6px;padding:8px 12px;font-size:12px;color:#991b1b"></div>
       </div>
 
       <div class="form-group">
@@ -1240,11 +1279,12 @@ function rendreMesAffectations() {
 function initGrist() {
   if (typeof grist !== "undefined") {
     grist.ready({ requiredAccess: "full" });
+    chargerDonnees();
     grist.onOptions(() => { if (!gristConnecte) chargerDonnees(); });
     grist.onRecord(() => { if (!gristConnecte) chargerDonnees(); });
-    [1000, 2000, 3500].forEach(d => setTimeout(() => { if (!gristConnecte) chargerDonnees(); }, d));
+    grist.onRecords(() => { if (!gristConnecte) chargerDonnees(); });
   } else {
-    document.getElementById("notice").style.display = "block";
+    if (document.getElementById("notice")) document.getElementById("notice").style.display = "block";
     chargerDemoMode();
   }
 }
@@ -1797,22 +1837,126 @@ function rendreListePlanning() {
   if (!plannings.length) { container.innerHTML = '<div class="empty">Aucune épreuve programmée.</div>'; return; }
   container.innerHTML = `
     <table class="data-table">
-      <thead><tr><th>Classe</th><th>Épreuve</th><th>Séquence</th><th>Date prévue</th><th>Salle</th><th>Statut</th></tr></thead>
+      <thead><tr><th>Classe</th><th>Épreuve</th><th>Séquence</th><th>Date prévue</th><th>Salle</th><th>Statut</th><th></th></tr></thead>
       <tbody>${plannings.map(p => {
         const cls = classes.find(c => c.id === p.classe);
         const epr = epreuves.find(e => e.id === p.epreuve);
-        const dateStr = p.date_prevue ? new Date(p.date_prevue).toLocaleDateString("fr-FR") : "—";
-        const statutClass = p.statut === "Réalisé" ? "statut-realise" : p.statut === "En retard" ? "statut-retard" : p.statut === "À venir" ? "statut-avenir" : "statut-nonplanifie";
-        return `<tr>
+        let dateVal = '';
+        if (p.date_prevue) {
+          const d = typeof p.date_prevue === 'number'
+            ? new Date(p.date_prevue * 1000)
+            : new Date(p.date_prevue);
+          dateVal = d.toISOString().split('T')[0];
+        }
+        const dateStr = dateVal
+          ? new Date(dateVal).toLocaleDateString("fr-FR")
+          : "—";
+        const statutClass = p.statut === "Réalisé" ? "statut-realise"
+          : p.statut === "En retard" ? "statut-retard"
+          : p.statut === "À venir" ? "statut-avenir"
+          : "statut-nonplanifie";
+
+        return `<tr id="pl-row-${p.id}">
           <td><span class="pill pill-blue">${cls ? cls.code_classe : '?'}</span></td>
-          <td>${epr ? epr.repere + ' — ' + epr.libelle : '?'}</td>
+          <td style="font-size:12px">${epr ? epr.repere + ' — ' + epr.libelle : '?'}</td>
           <td>${p.sequence || '—'}</td>
-          <td>${dateStr}</td>
-          <td>${p.salle || '—'}</td>
+
+          <!-- Date : mode lecture -->
+          <td id="pl-date-view-${p.id}">${dateStr}</td>
+          <!-- Date : mode édition (caché par défaut) -->
+          <td id="pl-date-edit-${p.id}" style="display:none">
+            <input type="date" id="pl-date-${p.id}" value="${dateVal}"
+              style="border:1.5px solid var(--blue);border-radius:5px;padding:4px 6px;
+                     font-size:12px;outline:none;background:var(--card);color:var(--text);width:130px">
+          </td>
+
+          <!-- Salle : mode lecture -->
+          <td id="pl-salle-view-${p.id}">${p.salle || '—'}</td>
+          <!-- Salle : mode édition (caché par défaut) -->
+          <td id="pl-salle-edit-${p.id}" style="display:none">
+            <input type="text" id="pl-salle-${p.id}" value="${p.salle || ''}"
+              placeholder="Salle…"
+              style="border:1.5px solid var(--blue);border-radius:5px;padding:4px 6px;
+                     font-size:12px;outline:none;background:var(--card);color:var(--text);width:90px">
+          </td>
+
           <td class="${statutClass}">${p.statut || 'À venir'}</td>
+
+          <!-- Boutons -->
+          <td style="white-space:nowrap">
+            <button id="pl-btn-edit-${p.id}" onclick="activerEditionPlanning(${p.id})"
+              style="background:#f0f4ff;color:var(--blue);border:1px solid #c7d7f8;border-radius:5px;
+                     padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+              ✏️ Modifier
+            </button>
+            <button id="pl-btn-save-${p.id}" onclick="sauvegarderLignePlanning(${p.id})"
+              style="display:none;background:var(--blue);color:#fff;border:none;border-radius:5px;
+                     padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+              💾 Sauver
+            </button>
+            <button id="pl-btn-cancel-${p.id}" onclick="annulerEditionPlanning(${p.id})"
+              style="display:none;background:#f1efe8;color:var(--muted);border:1px solid var(--border);
+                     border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;margin-left:4px">
+              ✕
+            </button>
+          </td>
         </tr>`;
       }).join('')}</tbody>
     </table>`;
+}
+
+function activerEditionPlanning(id) {
+  // Passer en mode édition
+  document.getElementById(`pl-date-view-${id}`).style.display  = "none";
+  document.getElementById(`pl-date-edit-${id}`).style.display  = "table-cell";
+  document.getElementById(`pl-salle-view-${id}`).style.display = "none";
+  document.getElementById(`pl-salle-edit-${id}`).style.display = "table-cell";
+  document.getElementById(`pl-btn-edit-${id}`).style.display   = "none";
+  document.getElementById(`pl-btn-save-${id}`).style.display   = "inline-block";
+  document.getElementById(`pl-btn-cancel-${id}`).style.display = "inline-block";
+  document.getElementById(`pl-date-${id}`).focus();
+}
+
+function annulerEditionPlanning(id) {
+  // Revenir en mode lecture sans sauvegarder
+  document.getElementById(`pl-date-view-${id}`).style.display  = "table-cell";
+  document.getElementById(`pl-date-edit-${id}`).style.display  = "none";
+  document.getElementById(`pl-salle-view-${id}`).style.display = "table-cell";
+  document.getElementById(`pl-salle-edit-${id}`).style.display = "none";
+  document.getElementById(`pl-btn-edit-${id}`).style.display   = "inline-block";
+  document.getElementById(`pl-btn-save-${id}`).style.display   = "none";
+  document.getElementById(`pl-btn-cancel-${id}`).style.display = "none";
+}
+
+async function sauvegarderLignePlanning(planningId) {
+  const newDate  = document.getElementById(`pl-date-${planningId}`).value;
+  const newSalle = document.getElementById(`pl-salle-${planningId}`).value.trim();
+
+  if (!newDate) { toast("La date est obligatoire", "err"); return; }
+
+  const pl = plannings.find(p => p.id === planningId);
+  if (!pl) return;
+
+  const btnSave = document.getElementById(`pl-btn-save-${planningId}`);
+  if (btnSave) { btnSave.disabled = true; btnSave.textContent = "⏳…"; }
+
+  try {
+    if (gristConnecte) {
+      await grist.docApi.applyUserActions([["UpdateRecord", "PlanningDesCCF", planningId, {
+        date_prevue: newDate,
+        salle: newSalle
+      }]]);
+    }
+    pl.date_prevue = newDate;
+    pl.salle = newSalle;
+    toast("✓ Planning mis à jour", "ok");
+    rendreListePlanning();
+    rendreDashboard();
+  } catch(e) {
+    console.error("Erreur sauvegarde planning:", e.message || e);
+    toast("Erreur : " + (e.message || e), "err");
+    if (btnSave) { btnSave.disabled = false; btnSave.textContent = "💾 Sauver"; }
+  }
 }
 
 /* ══════════════════════════════════════════
@@ -2486,37 +2630,81 @@ async function uploadPDFGrist(file) {
 }
 
 async function declarerDepot() {
-  const classeId = parseInt(document.getElementById("doc-classe").value);
-  const epreuveId = parseInt(document.getElementById("doc-epreuve").value);
-  const date = document.getElementById("doc-date").value;
+  const classeId    = parseInt(document.getElementById("doc-classe").value);
+  const epreuveId   = parseInt(document.getElementById("doc-epreuve").value);
+  const date        = document.getElementById("doc-date").value;
   const commentaire = document.getElementById("doc-commentaire").value.trim();
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
-  // Sauvegarder les élèves sélectionnés avant tout await
-  const elevesAB = [...docSelectedEleves];
-  const statutDepot = "Incomplet"; // Incomplet jusqu'à ce que le PDF soit joint dans Grist
+  // ── Copier TOUT avant le premier await ──
+  const elevesAB    = [...docSelectedEleves];
+  const pdfFile     = docPdfFile;
+  const monIdLocal  = monId;
+  const pdfPresent  = !!pdfFile;
+  const statutDepot = pdfPresent ? "Complet" : "Incomplet";
 
-  // Bloquer le bouton pendant l'enregistrement
-  const btnEnregistrer = document.querySelector('.btn-orange');
+  // Popup avertissement si pas de PDF (await — doit être APRÈS les copies)
+  if (!pdfPresent) {
+    const continuer = await afficherAvertissementPDF();
+    if (!continuer) return;
+  }
+
+  // Bloquer le bouton
+  const btnEnregistrer = document.querySelector('#tab-documents .btn-orange');
   const btnTexteOriginal = btnEnregistrer ? btnEnregistrer.textContent : '';
   if (btnEnregistrer) { btnEnregistrer.disabled = true; btnEnregistrer.textContent = "⏳ Enregistrement…"; }
 
+  const progressEl  = document.getElementById("doc-pdf-progress");
+  const progressNom = document.getElementById("doc-pdf-progress-nom");
+  const erreurEl    = document.getElementById("doc-pdf-erreur");
+  if (erreurEl) erreurEl.style.display = "none";
+
   try {
     let newId = Date.now();
+    let attachmentIds = [];
 
     if (gristConnecte) {
-      const nomStock = (await grist.docApi.listTables()).find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
+      // ── Upload PDF ──
+      if (pdfFile) {
+        if (progressEl) progressEl.style.display = "flex";
+        if (progressNom) progressNom.textContent = pdfFile.name;
+        if (btnEnregistrer) btnEnregistrer.textContent = "⏳ Téléversement du PDF…";
+        try {
+          attachmentIds = await uploadPDFGrist(pdfFile);
+          console.log("PDF uploadé, IDs:", attachmentIds);
+        } catch(e) {
+          console.warn("Upload PDF échoué:", e.message);
+          if (erreurEl) {
+            erreurEl.textContent = `⚠ Upload PDF échoué : ${e.message}. Le dépôt sera enregistré sans émargement.`;
+            erreurEl.style.display = "block";
+          }
+          attachmentIds = [];
+        } finally {
+          if (progressEl) progressEl.style.display = "none";
+          if (btnEnregistrer) btnEnregistrer.textContent = "⏳ Enregistrement…";
+        }
+      }
 
+      // ── Trouver la table StockageDocs ──
+      const tables = await grist.docApi.listTables();
+      const nomStock = tables.find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
+
+      // ── AddRecord ──
       const record = {
-        la_classe: classeId, epreuve: epreuveId, enseignant: monId,
-        date_depot: date, commentaire, archive: false, statut_depot: statutDepot
+        la_classe: classeId, epreuve: epreuveId, enseignant: monIdLocal,
+        date_depot: date, commentaire, archive: false,
+        statut_depot: attachmentIds.length > 0 ? "Complet" : statutDepot
       };
+      if (attachmentIds.length > 0) {
+        record.emargement_pdf = ['L', ...attachmentIds];
+      }
 
       const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
       newId = r.retValues[0];
+      console.log("AddRecord StockageDocs OK, newId:", newId);
 
-      // UpdateRecord eleves_AB
+      // ── UpdateRecord élèves absents ──
       if (elevesAB.length > 0 && newId) {
         try {
           await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
@@ -2530,8 +2718,10 @@ async function declarerDepot() {
     }
 
     stockageDocs.push({
-      id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monId,
-      date_depot: date, commentaire, archive: false, statut_depot: statutDepot
+      id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monIdLocal,
+      date_depot: date, commentaire, archive: false,
+      statut_depot: attachmentIds.length > 0 ? "Complet" : statutDepot,
+      emargement_pdf: attachmentIds
     });
 
     rendreListeDocs();
@@ -2545,18 +2735,25 @@ async function declarerDepot() {
     renderDocTags();
     document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
     document.getElementById("doc-search").disabled = true;
+    docSupprimerPDF();
 
-    // Popup de confirmation avec rappel d'attacher le PDF
-    ouvrirPopupConfirm(1, 0, { intitule: "N\'oublie pas d\'attacher le PDF dans Grist !" });
+    if (attachmentIds.length > 0) {
+      toast("✓ Dépôt complet enregistré avec émargement PDF", "ok");
+    } else if (pdfPresent) {
+      toast("⚠ Dépôt enregistré — PDF non joint (CORS bloqué)", "err");
+    } else {
+      toast("⚠ Dépôt enregistré sans émargement (Incomplet)", "err");
+    }
 
   } catch(e) {
-    console.error(e);
+    console.error("Erreur declarerDepot:", e);
     toast("Erreur d'enregistrement : " + (e.message || e), "err");
   } finally {
     if (btnEnregistrer) {
       btnEnregistrer.disabled = false;
       btnEnregistrer.textContent = btnTexteOriginal;
     }
+    if (progressEl) progressEl.style.display = "none";
   }
 }
 
