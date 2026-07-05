@@ -1642,12 +1642,12 @@ async function enregistrerGrilleSaisie() {
         if (noteId) {
           // note_finale est une colonne formule dans Grist : ne jamais l'écrire directement
           await grist.docApi.applyUserActions([["UpdateRecord", "Notes", noteId, {
-            note_seq1: val
+            note_seq1: val, bareme: s.bareme
           }]]);
         } else {
           const r = await grist.docApi.applyUserActions([["AddRecord", "Notes", null, {
             enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
-            note_seq1: val, publier: false
+            note_seq1: val, bareme: s.bareme, publier: false
           }]]);
           const newId = r.retValues[0];
           notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
@@ -1657,7 +1657,7 @@ async function enregistrerGrilleSaisie() {
       } else {
         if (noteId) {
           const n = notes.find(n => n.id === noteId);
-          if (n) { n.note_seq1 = val; n.note_finale = val; n.couleur = couleur; }
+          if (n) { n.note_seq1 = val; n.note_finale = val; n.couleur = couleur; n.bareme = s.bareme; }
         } else {
           const newId = Date.now() + eleveId;
           notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
