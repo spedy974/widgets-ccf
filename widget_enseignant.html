@@ -814,24 +814,32 @@ function chargerDonnees() {
   gristConnecte = true;
   if (document.getElementById("notice")) document.getElementById("notice").style.display = "none";
 
+  // Vider le localStorage pour éviter un profil mis en cache qui bloquerait le changement de rôle
+  try { localStorage.removeItem('ccf_enseignant_id'); localStorage.removeItem('ccf_enseignant_nom'); } catch(e) {}
+
   var emailConnecte = null;
 
-  // Étape 1 : getUserProfile (rapide, sans écriture)
-  Promise.resolve()
-    .then(function() {
+  // Identification via SessionUtilisateurs (reflète le vrai profil "Voir en tant que")
+  grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
+    .then(function(result) {
+      var newRowId = result.retValues[0];
+      return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
+        var idx = sessions.id.indexOf(newRowId);
+        emailConnecte = idx !== -1 && sessions.email_session
+          ? sessions.email_session[idx] : null;
+        return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]]);
+      });
+    })
+    .catch(function(e) {
+      console.warn("SessionUtilisateurs non disponible:", e.message);
+      // Fallback getUserProfile
       if (grist.docApi.getUserProfile) {
         return grist.docApi.getUserProfile().then(function(profile) {
-          if (profile && profile.email) {
-            emailConnecte = profile.email;
-            console.log("Email via getUserProfile:", emailConnecte);
-          }
-        }).catch(function(e) {
-          console.warn("getUserProfile non disponible:", e.message);
-        });
+          emailConnecte = profile && profile.email ? profile.email : null;
+        }).catch(function() {});
       }
     })
     .then(function() {
-      // Étape 2 : charger toutes les tables
       return grist.docApi.listTables();
     })
     .then(function(tables) {
@@ -865,58 +873,13 @@ function chargerDonnees() {
       window._stock_raw = stock;
       window._aff_raw   = aff;
 
-      // Chercher l'enseignant via getUserProfile
+      // Identifier l'enseignant depuis l'email
       if (emailConnecte) {
         var moi = enseignants.find(function(e) {
           return e.email_academique &&
             e.email_academique.toLowerCase().trim() === emailConnecte.toLowerCase().trim();
         });
         if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
-      }
-
-      // Fallback SessionUtilisateurs si pas encore identifié
-      if (!monId) {
-        return grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
-          .then(function(result) {
-            var newRowId = result.retValues[0];
-            return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
-              var idx = sessions.id.indexOf(newRowId);
-              var emailSession = idx !== -1 && sessions.email_session
-                ? sessions.email_session[idx] : null;
-              console.log("Email via SessionUtilisateurs:", emailSession);
-              return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]])
-                .then(function() { return emailSession; });
-            });
-          })
-          .then(function(emailSession) {
-            if (emailSession) {
-              var moi = enseignants.find(function(e) {
-                return e.email_academique &&
-                  e.email_academique.toLowerCase().trim() === emailSession.toLowerCase().trim();
-              });
-              if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
-            }
-          })
-          .catch(function(e) {
-            console.warn("SessionUtilisateurs fallback échoué:", e.message);
-          });
-      }
-    })
-    .then(function() {
-      // Fallback localStorage
-      if (!monId) {
-        try {
-          var sid  = localStorage.getItem('ccf_enseignant_id');
-          var snom = localStorage.getItem('ccf_enseignant_nom');
-          if (sid && snom) { monId = parseInt(sid); monNom = snom; }
-        } catch(e) {}
-      }
-
-      if (monId) {
-        try {
-          localStorage.setItem('ccf_enseignant_id', monId);
-          localStorage.setItem('ccf_enseignant_nom', monNom);
-        } catch(e) {}
       }
 
       if (document.getElementById("notice")) document.getElementById("notice").style.display = "none";
@@ -1901,6 +1864,7 @@ function rendreListePlanning() {
 
           <!-- Boutons -->
           <td style="white-space:nowrap">
+            ${p.statut === 'Réalisé' ? '' : `
             <button id="pl-btn-edit-${p.id}" onclick="activerEditionPlanning(${p.id})"
               style="background:#f0f4ff;color:var(--blue);border:1px solid #c7d7f8;border-radius:5px;
                      padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
@@ -1915,7 +1879,7 @@ function rendreListePlanning() {
               style="display:none;background:#f1efe8;color:var(--muted);border:1px solid var(--border);
                      border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;margin-left:4px">
               ✕
-            </button>
+            </button>`}
           </td>
         </tr>`;
       }).join('')}</tbody>
@@ -2961,6 +2925,9 @@ async function impImporter() {
     document.getElementById("imp-preview-card").style.display = "none";
     impOnClasseChange();
     peuplerSelects();
+    rendreDashboard();
+    verifierAccesDocuments();
+    updateBadges();
   } catch(e) {
     toast("Erreur lors de l'import : " + e.message, "err");
   }
