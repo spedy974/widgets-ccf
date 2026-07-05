@@ -809,39 +809,24 @@ document.addEventListener('click', function(e) {
 /* ══════════════════════════════════════════
    INIT GRIST
 ══════════════════════════════════════════ */
-function chargerDonnees() {
+function chargerDonnees(recordsFromGrist) {
   if (gristConnecte) return;
   gristConnecte = true;
   if (document.getElementById("notice")) document.getElementById("notice").style.display = "none";
 
-  // Vider le localStorage pour éviter un profil mis en cache qui bloquerait le changement de rôle
-  try { localStorage.removeItem('ccf_enseignant_id'); localStorage.removeItem('ccf_enseignant_nom'); } catch(e) {}
-
   var emailConnecte = null;
 
-  // Identification via SessionUtilisateurs (reflète le vrai profil "Voir en tant que")
-  grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
-    .then(function(result) {
-      var newRowId = result.retValues[0];
-      return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
-        var idx = sessions.id.indexOf(newRowId);
-        emailConnecte = idx !== -1 && sessions.email_session
-          ? sessions.email_session[idx] : null;
-        return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]]);
-      });
-    })
-    .catch(function(e) {
-      console.warn("SessionUtilisateurs non disponible:", e.message);
-      // Fallback getUserProfile
-      if (grist.docApi.getUserProfile) {
-        return grist.docApi.getUserProfile().then(function(profile) {
-          emailConnecte = profile && profile.email ? profile.email : null;
-        }).catch(function() {});
-      }
-    })
-    .then(function() {
-      return grist.docApi.listTables();
-    })
+  // Si Grist nous a envoyé des enregistrements filtrés (table source = Enseignants)
+  // l'utilisateur connecté ne voit que sa propre ligne
+  if (recordsFromGrist && recordsFromGrist.length > 0) {
+    var rec = recordsFromGrist[0];
+    if (rec.email_academique) {
+      emailConnecte = rec.email_academique;
+      console.log("Email via onRecords (ligne filtrée):", emailConnecte);
+    }
+  }
+
+  grist.docApi.listTables()
     .then(function(tables) {
       var nomAff   = tables.find(function(t) { return t.toLowerCase().includes("affectation"); }) || "AffectationEnseignants";
       var nomStock = tables.find(function(t) { return t.toLowerCase().includes("stockage"); })    || "StockageDocs";
@@ -879,6 +864,13 @@ function chargerDonnees() {
           return e.email_academique &&
             e.email_academique.toLowerCase().trim() === emailConnecte.toLowerCase().trim();
         });
+        if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
+      }
+
+      // Si toujours pas identifié, prendre le premier enseignant de la liste filtrée
+      if (!monId && recordsFromGrist && recordsFromGrist.length > 0) {
+        var rec = recordsFromGrist[0];
+        var moi = enseignants.find(function(e) { return e.id === rec.id; });
         if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
       }
 
@@ -1258,10 +1250,12 @@ function rendreMesAffectations() {
 function initGrist() {
   if (typeof grist !== "undefined") {
     grist.ready({ requiredAccess: "full" });
-    grist.onRecords(function() { chargerDonnees(); });
-    grist.onRecord(function() { chargerDonnees(); });
+    grist.onRecords(function(records) { chargerDonnees(records); });
+    grist.onRecord(function(record) {
+      if (!gristConnecte && record) chargerDonnees([record]);
+    });
     [500, 1000, 2000, 3500, 5000].forEach(function(d) {
-      setTimeout(chargerDonnees, d);
+      setTimeout(function() { chargerDonnees(null); }, d);
     });
   } else {
     if (document.getElementById("notice")) document.getElementById("notice").style.display = "block";
