@@ -816,17 +816,43 @@ function chargerDonnees(recordsFromGrist) {
 
   var emailConnecte = null;
 
-  // Si Grist nous a envoyé des enregistrements filtrés (table source = Enseignants)
-  // l'utilisateur connecté ne voit que sa propre ligne
-  if (recordsFromGrist && recordsFromGrist.length > 0) {
-    var rec = recordsFromGrist[0];
-    if (rec.email_academique) {
-      emailConnecte = rec.email_academique;
-      console.log("Email via onRecords (ligne filtrée):", emailConnecte);
-    }
+  // Vérifier si on a déjà l'email dans sessionStorage (évite une nouvelle écriture dans Grist)
+  try {
+    var cached = sessionStorage.getItem('ccf_email_session');
+    if (cached) { emailConnecte = cached; console.log("Email depuis sessionStorage:", emailConnecte); }
+  } catch(e) {}
+
+  var identificationPromise;
+
+  if (emailConnecte) {
+    // Email déjà en cache → pas d'écriture dans Grist
+    identificationPromise = Promise.resolve();
+  } else {
+    // Identification via SessionUtilisateurs (une seule fois par session)
+    identificationPromise = grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
+      .then(function(result) {
+        var newRowId = result.retValues[0];
+        return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
+          var idx = sessions.id.indexOf(newRowId);
+          emailConnecte = idx !== -1 && sessions.email_session
+            ? sessions.email_session[idx] : null;
+          console.log("Email via SessionUtilisateurs:", emailConnecte);
+          // Sauvegarder dans sessionStorage pour éviter la boucle au prochain rechargement
+          if (emailConnecte) {
+            try { sessionStorage.setItem('ccf_email_session', emailConnecte); } catch(e) {}
+          }
+          return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]]);
+        });
+      })
+      .catch(function(e) {
+        console.warn("SessionUtilisateurs échoué:", e.message);
+      });
   }
 
-  grist.docApi.listTables()
+  identificationPromise
+    .then(function() {
+      return grist.docApi.listTables();
+    })
     .then(function(tables) {
       var nomAff   = tables.find(function(t) { return t.toLowerCase().includes("affectation"); }) || "AffectationEnseignants";
       var nomStock = tables.find(function(t) { return t.toLowerCase().includes("stockage"); })    || "StockageDocs";
@@ -858,19 +884,12 @@ function chargerDonnees(recordsFromGrist) {
       window._stock_raw = stock;
       window._aff_raw   = aff;
 
-      // Identifier l'enseignant depuis l'email
+      // Identifier l'enseignant
       if (emailConnecte) {
         var moi = enseignants.find(function(e) {
           return e.email_academique &&
             e.email_academique.toLowerCase().trim() === emailConnecte.toLowerCase().trim();
         });
-        if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
-      }
-
-      // Si toujours pas identifié, prendre le premier enseignant de la liste filtrée
-      if (!monId && recordsFromGrist && recordsFromGrist.length > 0) {
-        var rec = recordsFromGrist[0];
-        var moi = enseignants.find(function(e) { return e.id === rec.id; });
         if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
       }
 
