@@ -816,18 +816,17 @@ function chargerDonnees() {
 
   var emailConnecte = null;
 
-  grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
-    .then(function(result) {
-      var newRowId = result.retValues[0];
-      return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
-        var idx = sessions.id.indexOf(newRowId);
-        emailConnecte = idx !== -1 && sessions.email_session
-          ? sessions.email_session[idx] : null;
-        return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]]);
-      });
-    })
-    .catch(function(e) {
-      console.warn("SessionUtilisateurs non disponible:", e.message);
+  // Identifier l'utilisateur via getUserProfile (sans modifier de données)
+  Promise.resolve()
+    .then(function() {
+      if (grist.docApi.getUserProfile) {
+        return grist.docApi.getUserProfile().then(function(profile) {
+          emailConnecte = profile && profile.email ? profile.email : null;
+          console.log("Email via getUserProfile:", emailConnecte);
+        }).catch(function(e) {
+          console.warn("getUserProfile non disponible:", e.message);
+        });
+      }
     })
     .then(function() {
       return grist.docApi.listTables();
@@ -848,9 +847,9 @@ function chargerDonnees() {
       ]);
     })
     .then(function(resultats) {
-      var ens   = resultats[0], cls  = resultats[1], epr  = resultats[2];
-      var elv   = resultats[3], pl   = resultats[4], nt   = resultats[5];
-      var conv  = resultats[6], stock = resultats[7], aff = resultats[8];
+      var ens   = resultats[0], cls   = resultats[1], epr  = resultats[2];
+      var elv   = resultats[3], pl    = resultats[4], nt   = resultats[5];
+      var conv  = resultats[6], stock = resultats[7], aff  = resultats[8];
 
       enseignants = parseTable(ens);
       classes     = parseTable(cls);
