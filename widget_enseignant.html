@@ -816,19 +816,22 @@ function chargerDonnees() {
 
   var emailConnecte = null;
 
-  // Identifier l'utilisateur via getUserProfile (sans modifier de données)
+  // Étape 1 : getUserProfile (rapide, sans écriture)
   Promise.resolve()
     .then(function() {
       if (grist.docApi.getUserProfile) {
         return grist.docApi.getUserProfile().then(function(profile) {
-          emailConnecte = profile && profile.email ? profile.email : null;
-          console.log("Email via getUserProfile:", emailConnecte);
+          if (profile && profile.email) {
+            emailConnecte = profile.email;
+            console.log("Email via getUserProfile:", emailConnecte);
+          }
         }).catch(function(e) {
           console.warn("getUserProfile non disponible:", e.message);
         });
       }
     })
     .then(function() {
+      // Étape 2 : charger toutes les tables
       return grist.docApi.listTables();
     })
     .then(function(tables) {
@@ -862,7 +865,7 @@ function chargerDonnees() {
       window._stock_raw = stock;
       window._aff_raw   = aff;
 
-      // Identifier l'enseignant
+      // Chercher l'enseignant via getUserProfile
       if (emailConnecte) {
         var moi = enseignants.find(function(e) {
           return e.email_academique &&
@@ -871,6 +874,35 @@ function chargerDonnees() {
         if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
       }
 
+      // Fallback SessionUtilisateurs si pas encore identifié
+      if (!monId) {
+        return grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
+          .then(function(result) {
+            var newRowId = result.retValues[0];
+            return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
+              var idx = sessions.id.indexOf(newRowId);
+              var emailSession = idx !== -1 && sessions.email_session
+                ? sessions.email_session[idx] : null;
+              console.log("Email via SessionUtilisateurs:", emailSession);
+              return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]])
+                .then(function() { return emailSession; });
+            });
+          })
+          .then(function(emailSession) {
+            if (emailSession) {
+              var moi = enseignants.find(function(e) {
+                return e.email_academique &&
+                  e.email_academique.toLowerCase().trim() === emailSession.toLowerCase().trim();
+              });
+              if (moi) { monId = moi.id; monNom = moi.nom_prenom; }
+            }
+          })
+          .catch(function(e) {
+            console.warn("SessionUtilisateurs fallback échoué:", e.message);
+          });
+      }
+    })
+    .then(function() {
       // Fallback localStorage
       if (!monId) {
         try {
