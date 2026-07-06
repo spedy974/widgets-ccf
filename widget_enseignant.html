@@ -907,16 +907,16 @@ function parseTable(data) {
 function initialiserInterface() {
   document.getElementById("user-name").textContent = monNom || "Mon espace CCF";
 
-  // Afficher le sélecteur de profil si RRUPN
+  // Afficher le sélecteur de profil si pas un simple enseignant
   var monEnseignant = enseignants.find(function(e) { return e.id === monId; });
-  var monRole = monEnseignant ? monEnseignant.role : '';
+  var monRole = monEnseignant ? (monEnseignant.role || '').toLowerCase() : '';
   var selectorEl = document.getElementById("rrupn-selector");
-  if (selectorEl && monRole === "RRUPN") {
+  if (selectorEl && monRole !== "enseignant") {
     selectorEl.style.display = "block";
     var sel = document.getElementById("sel-profil-enseignant");
     sel.innerHTML = '<option value="">👁 Voir en tant que...</option>';
     enseignants
-      .filter(function(e) { return e.role === "Enseignant"; })
+      .filter(function(e) { return (e.role || '').toLowerCase() === "enseignant"; })
       .sort(function(a, b) { return (a.nom_prenom||'').localeCompare(b.nom_prenom||''); })
       .forEach(function(e) {
         var o = document.createElement("option");
