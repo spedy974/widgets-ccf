@@ -809,47 +809,26 @@ document.addEventListener('click', function(e) {
 /* ══════════════════════════════════════════
    INIT GRIST
 ══════════════════════════════════════════ */
-function chargerDonnees(recordsFromGrist) {
+function chargerDonnees() {
   if (gristConnecte) return;
   gristConnecte = true;
   if (document.getElementById("notice")) document.getElementById("notice").style.display = "none";
 
   var emailConnecte = null;
 
-  // Vérifier si on a déjà l'email dans sessionStorage (évite une nouvelle écriture dans Grist)
-  try {
-    var cached = sessionStorage.getItem('ccf_email_session');
-    if (cached) { emailConnecte = cached; console.log("Email depuis sessionStorage:", emailConnecte); }
-  } catch(e) {}
-
-  var identificationPromise;
-
-  if (emailConnecte) {
-    // Email déjà en cache → pas d'écriture dans Grist
-    identificationPromise = Promise.resolve();
-  } else {
-    // Identification via SessionUtilisateurs (une seule fois par session)
-    identificationPromise = grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
-      .then(function(result) {
-        var newRowId = result.retValues[0];
-        return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
-          var idx = sessions.id.indexOf(newRowId);
-          emailConnecte = idx !== -1 && sessions.email_session
-            ? sessions.email_session[idx] : null;
-          console.log("Email via SessionUtilisateurs:", emailConnecte);
-          // Sauvegarder dans sessionStorage pour éviter la boucle au prochain rechargement
-          if (emailConnecte) {
-            try { sessionStorage.setItem('ccf_email_session', emailConnecte); } catch(e) {}
+  Promise.resolve()
+    .then(function() {
+      if (grist.docApi.getUserProfile) {
+        return grist.docApi.getUserProfile().then(function(profile) {
+          if (profile && profile.email) {
+            emailConnecte = profile.email;
+            console.log("Email via getUserProfile:", emailConnecte);
           }
-          return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]]);
+        }).catch(function(e) {
+          console.warn("getUserProfile non disponible:", e.message);
         });
-      })
-      .catch(function(e) {
-        console.warn("SessionUtilisateurs échoué:", e.message);
-      });
-  }
-
-  identificationPromise
+      }
+    })
     .then(function() {
       return grist.docApi.listTables();
     })
@@ -884,7 +863,6 @@ function chargerDonnees(recordsFromGrist) {
       window._stock_raw = stock;
       window._aff_raw   = aff;
 
-      // Identifier l'enseignant
       if (emailConnecte) {
         var moi = enseignants.find(function(e) {
           return e.email_academique &&
@@ -1269,12 +1247,10 @@ function rendreMesAffectations() {
 function initGrist() {
   if (typeof grist !== "undefined") {
     grist.ready({ requiredAccess: "full" });
-    grist.onRecords(function(records) { chargerDonnees(records); });
-    grist.onRecord(function(record) {
-      if (!gristConnecte && record) chargerDonnees([record]);
-    });
+    grist.onRecords(function() { chargerDonnees(); });
+    grist.onRecord(function() { chargerDonnees(); });
     [500, 1000, 2000, 3500, 5000].forEach(function(d) {
-      setTimeout(function() { chargerDonnees(null); }, d);
+      setTimeout(chargerDonnees, d);
     });
   } else {
     if (document.getElementById("notice")) document.getElementById("notice").style.display = "block";
