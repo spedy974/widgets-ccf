@@ -1344,6 +1344,8 @@ function simulerProfil(enseignantId) {
     monId  = cible.id;
     monNom = cible.nom_prenom;
   }
+
+  // Mettre à jour le bandeau
   document.getElementById("user-name").textContent = monNom;
 
   // Recharger toutes les données filtrées pour ce profil
@@ -1364,10 +1366,12 @@ function simulerProfil(enseignantId) {
   peuplerConvClasses();
   rendreEmargement();
   rendreMesAffectations();
-  rendreDashboard();
   updateBadges();
 
-  // Revenir au tableau de bord pour voir l'effet immédiatement
+  // rendreDashboard en dernier pour que monNom soit bien pris en compte
+  rendreDashboard();
+
+  // Basculer sur le tableau de bord
   showTab('dashboard');
 }
 
