@@ -1335,9 +1335,7 @@ function chargerDemoMode() {
 
 function simulerProfil(enseignantId) {
   if (!enseignantId) {
-    // Revenir au profil RRUPN
     var moi = enseignants.find(function(e) { return e.email_academique && e.email_academique.toLowerCase().trim() === (monEmail||'').toLowerCase().trim(); });
-    // Recalculer avec le vrai monId
     monId  = moi ? moi.id : monId;
     monNom = moi ? moi.nom_prenom : monNom;
   } else {
@@ -1348,13 +1346,14 @@ function simulerProfil(enseignantId) {
   }
   document.getElementById("user-name").textContent = monNom;
 
-  // Recharger les données filtrées pour ce profil
+  // Recharger toutes les données filtrées pour ce profil
   plannings    = parseTable(window._pl_raw).filter(function(p) { return !monId || p.enseignant === monId; });
   notes        = parseTable(window._nt_raw).filter(function(n) { return !monId || n.enseignant === monId; });
   convocations = parseTable(window._conv_raw).filter(function(c) { return !monId || c.enseignant === monId; });
   stockageDocs = parseTable(window._stock_raw).filter(function(s) { return !monId || s.enseignant === monId; });
   affectations = parseTable(window._aff_raw).filter(function(a) { return !monId || a.enseignant === monId; });
 
+  // Recharger toutes les vues
   peuplerSelects();
   rendreListePlanning();
   rendreListeNotes();
@@ -1367,6 +1366,9 @@ function simulerProfil(enseignantId) {
   rendreMesAffectations();
   rendreDashboard();
   updateBadges();
+
+  // Revenir au tableau de bord pour voir l'effet immédiatement
+  showTab('dashboard');
 }
 
 /* ══════════════════════════════════════════
