@@ -212,6 +212,14 @@
     <div class="user-name" id="user-name">Mon espace CCF</div>
     <div class="user-role">Lycée Polyvalent Gérard Ethève — 2026-2027</div>
   </div>
+  <!-- Sélecteur de profil visible uniquement pour le RRUPN -->
+  <div id="rrupn-selector" style="display:none">
+    <select id="sel-profil-enseignant" onchange="simulerProfil(this.value)"
+      style="font-size:11px;padding:4px 8px;border:1.5px solid var(--blue);border-radius:6px;
+             background:#e8ecfe;color:#2d4ecc;font-weight:700;cursor:pointer;outline:none">
+      <option value="">👁 Voir en tant que...</option>
+    </select>
+  </div>
 </div>
 
 <!-- TABS GROUPÉS -->
@@ -899,6 +907,25 @@ function parseTable(data) {
 function initialiserInterface() {
   document.getElementById("user-name").textContent = monNom || "Mon espace CCF";
 
+  // Afficher le sélecteur de profil si RRUPN
+  var monEnseignant = enseignants.find(function(e) { return e.id === monId; });
+  var monRole = monEnseignant ? monEnseignant.role : '';
+  var selectorEl = document.getElementById("rrupn-selector");
+  if (selectorEl && monRole === "RRUPN") {
+    selectorEl.style.display = "block";
+    var sel = document.getElementById("sel-profil-enseignant");
+    sel.innerHTML = '<option value="">👁 Voir en tant que...</option>';
+    enseignants
+      .filter(function(e) { return e.role === "Enseignant"; })
+      .sort(function(a, b) { return (a.nom_prenom||'').localeCompare(b.nom_prenom||''); })
+      .forEach(function(e) {
+        var o = document.createElement("option");
+        o.value = e.id;
+        o.textContent = e.nom_prenom;
+        sel.appendChild(o);
+      });
+  }
+
   plannings   = parseTable(window._pl_raw).filter(p => !monId || p.enseignant === monId);
   notes       = parseTable(window._nt_raw).filter(n => !monId || n.enseignant === monId);
   convocations= parseTable(window._conv_raw).filter(c => !monId || c.enseignant === monId);
@@ -1306,8 +1333,43 @@ function chargerDemoMode() {
   updateBadges();
 }
 
+function simulerProfil(enseignantId) {
+  if (!enseignantId) {
+    // Revenir au profil RRUPN
+    var moi = enseignants.find(function(e) { return e.email_academique && e.email_academique.toLowerCase().trim() === (monEmail||'').toLowerCase().trim(); });
+    // Recalculer avec le vrai monId
+    monId  = moi ? moi.id : monId;
+    monNom = moi ? moi.nom_prenom : monNom;
+  } else {
+    var cible = enseignants.find(function(e) { return e.id === parseInt(enseignantId); });
+    if (!cible) return;
+    monId  = cible.id;
+    monNom = cible.nom_prenom;
+  }
+  document.getElementById("user-name").textContent = monNom;
+
+  // Recharger les données filtrées pour ce profil
+  plannings    = parseTable(window._pl_raw).filter(function(p) { return !monId || p.enseignant === monId; });
+  notes        = parseTable(window._nt_raw).filter(function(n) { return !monId || n.enseignant === monId; });
+  convocations = parseTable(window._conv_raw).filter(function(c) { return !monId || c.enseignant === monId; });
+  stockageDocs = parseTable(window._stock_raw).filter(function(s) { return !monId || s.enseignant === monId; });
+  affectations = parseTable(window._aff_raw).filter(function(a) { return !monId || a.enseignant === monId; });
+
+  peuplerSelects();
+  rendreListePlanning();
+  rendreListeNotes();
+  rendreNotesCouleurs();
+  rendreListeDocs();
+  verifierAccesDocuments();
+  peuplerConvocations();
+  peuplerConvClasses();
+  rendreEmargement();
+  rendreMesAffectations();
+  rendreDashboard();
+  updateBadges();
+}
+
 /* ══════════════════════════════════════════
-   PEUPLER LES SELECTS
 ══════════════════════════════════════════ */
 /* ── Helpers : restreindre aux seules affectations de l'enseignant ── */
 function mesClasses() {
