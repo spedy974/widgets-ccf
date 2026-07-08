@@ -2076,7 +2076,7 @@ function rendreBilanClasse() {
   var titre = [cls && cls.code_classe, epr && epr.repere, epr && epr.libelle].filter(Boolean).join(' · ') || 'Bilan global';
 
   // ── SVG Boxplot ──
-  var W=280,H=180,PL=45,PR=15,PT=15,PB=25,CH=H-PT-PB,CW=W-PL-PR;
+  var W=160,H=260,PL=40,PR=10,PT=15,PB=25,CH=H-PT-PB,CW=W-PL-PR;
   var sc = function(v) { return PT + CH - (v/bareme)*CH; };
   var BX=PL+CW*0.25, BW=CW*0.5;
   var ticks=[0,bareme*0.25,bareme*0.5,bareme*0.75,bareme];
@@ -2092,7 +2092,7 @@ function rendreBilanClasse() {
     '</svg>';
 
   // ── SVG Camembert ──
-  var PR2=55,PW=120,PH=120; var sa=-Math.PI/2;
+  var PR2=70,PW=150,PH=150; var sa=-Math.PI/2;
   var slicesSvg = niveaux.filter(function(n) { return n.count > 0; }).map(function(n) {
     var a=(n.count/vals.length)*2*Math.PI;
     var x1=PR2+PR2*Math.cos(sa),y1=PR2+PR2*Math.sin(sa); sa+=a;
@@ -2102,7 +2102,7 @@ function rendreBilanClasse() {
     return '<path d="M' + PR2 + ',' + PR2 + ' L' + x1 + ',' + y1 + ' A' + PR2 + ',' + PR2 + ' 0 ' + (a>Math.PI?1:0) + ',1 ' + x2 + ',' + y2 + ' Z" fill="' + n.color + '" stroke="#fff" stroke-width="1.5"/>' +
       (pct>6 ? '<text x="' + lx + '" y="' + (ly+3) + '" font-size="8" fill="#fff" font-weight="700" text-anchor="middle">' + pct + '%</text>' : '');
   }).join('');
-  var svgPie = '<svg viewBox="0 0 ' + PW + ' ' + PH + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:120px">' + slicesSvg + '</svg>';
+  var svgPie = '<svg viewBox="0 0 ' + PW + ' ' + PH + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:150px">' + slicesSvg + '</svg>';
 
   // ── Tableau style Pronote ──
   // Épreuves de la classe
@@ -2265,7 +2265,7 @@ function rendreBilanClasse() {
     '</div>' +
 
     // Tableau style Pronote (à la place du classement, dans la même grille)
-    '<div style="display:grid;grid-template-columns:3fr 1fr;gap:0;border-top:1px solid var(--border)">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--border)">' +
 
       // Gauche : relevé style Pronote
       '<div style="padding:14px 16px;border-right:1px solid var(--border);overflow:auto;max-height:420px">' +
@@ -2275,7 +2275,7 @@ function rendreBilanClasse() {
       // Droite : graphiques (boxplot + camembert)
       '<div style="padding:14px 16px">' +
         '<div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px">Dispersion des notes</div>' +
-        '<div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap">' + svgBox.replace('max-width:260px', 'max-width:140px') +
+        '<div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap">' + svgBox.replace('max-width:260px', 'max-width:160px') +
           '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px;white-space:nowrap">' +
             [{l:"Maximum",v:maxV,b:false},{l:"Q3",v:q3,b:false},{l:"Médiane",v:median,b:true,c:"#4a6cf7"},{l:"Q1",v:q1,b:false},{l:"Minimum",v:minV,b:false}]
             .map(function(r) { return "<div style=\"display:flex;justify-content:space-between;gap:10px;" + (r.b?"color:"+r.c+";font-weight:700":"color:#888") + "\"><span>" + r.l + "</span><span>" + r.v.toFixed(2) + "</span></div>"; }).join("") +
