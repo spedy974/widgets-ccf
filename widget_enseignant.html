@@ -2235,56 +2235,59 @@ function genererBlocBilanClasse(cls) {
       }).join('') +
     '</div>' +
 
-    // Corps : relevé gauche | graphiques droite
+    // Corps : relevé gauche | graphiques droite (graphiques masqués si pas de notes)
     '<div style="display:grid;grid-template-columns:1fr auto;gap:0">' +
 
       // Gauche : tableau Pronote
-      '<div style="padding:8px 10px;border-right:1px solid var(--border);overflow-y:auto;max-height:300px">' +
+      '<div style="padding:8px 10px;border-right:' + (toutesVals.length > 0 ? '1px solid var(--border)' : 'none') + ';overflow-y:auto;max-height:300px">' +
         '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Classement des élèves</div>' +
         tablePronote +
       '</div>' +
 
-      // Droite : graphiques
-      '<div style="padding:8px 10px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;width:340px">' +
+      // Droite : graphiques uniquement si des notes existent
+      (toutesVals.length > 0 ?
+        '<div style="padding:8px 10px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;width:340px">' +
 
-        '<div style="width:100%">' +
-          '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Dispersion des notes (Boîte à moustaches)</div>' +
-          '<div style="display:flex;gap:10px;align-items:center">' +
-            svgBox +
-            '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px">' +
-              [
-                {l:'Maximum',      v:maxV,  b:false},
-                {l:'3e quartile (Q3)', v:q3, b:false},
-                {l:'Médiane',      v:median,b:true,c:'#4a6cf7'},
-                {l:'1er quartile (Q1)',v:q1, b:false},
-                {l:'Minimum',      v:minV,  b:false},
-              ].map(function(r) {
-                var vStr = r.v !== null ? r.v.toFixed(2) : '—';
-                return '<div style="display:flex;justify-content:space-between;gap:12px;' +
-                  (r.b ? 'color:'+r.c+';font-weight:700' : 'color:#888') + '">' +
-                  '<span>'+r.l+'</span><span>'+vStr+'</span></div>';
-              }).join('') +
+          '<div style="width:100%">' +
+            '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Dispersion des notes (Boîte à moustaches)</div>' +
+            '<div style="display:flex;gap:10px;align-items:center">' +
+              svgBox +
+              '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px">' +
+                [
+                  {l:'Maximum',          v:maxV,   b:false},
+                  {l:'3e quartile (Q3)', v:q3,     b:false},
+                  {l:'Médiane',          v:median, b:true, c:'#4a6cf7'},
+                  {l:'1er quartile (Q1)',v:q1,     b:false},
+                  {l:'Minimum',          v:minV,   b:false},
+                ].map(function(r) {
+                  var vStr = r.v !== null ? r.v.toFixed(2) : '—';
+                  return '<div style="display:flex;justify-content:space-between;gap:12px;' +
+                    (r.b ? 'color:'+r.c+';font-weight:700' : 'color:#888') + '">' +
+                    '<span>'+r.l+'</span><span>'+vStr+'</span></div>';
+                }).join('') +
+              '</div>' +
             '</div>' +
           '</div>' +
-        '</div>' +
 
-        '<div style="width:100%">' +
-          '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Répartition par niveaux</div>' +
-          '<div style="display:flex;gap:10px;align-items:center">' +
-            svgPie +
-            '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px">' +
-              niveaux.map(function(n) {
-                return '<div style="display:flex;align-items:center;gap:5px">' +
-                  '<span style="width:9px;height:9px;border-radius:2px;background:'+n.color+';flex-shrink:0"></span>' +
-                  '<span style="color:#555">'+n.label+'<br>' +
-                  '<span style="color:#1a1a18;font-weight:700">'+n.count+' élèves ('+Math.round(n.count/Math.max(toutesVals.length,1)*100)+' %)</span></span>' +
-                '</div>';
-              }).join('') +
+          '<div style="width:100%">' +
+            '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Répartition par niveaux</div>' +
+            '<div style="display:flex;gap:10px;align-items:center">' +
+              svgPie +
+              '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px">' +
+                niveaux.map(function(n) {
+                  return '<div style="display:flex;align-items:center;gap:5px">' +
+                    '<span style="width:9px;height:9px;border-radius:2px;background:'+n.color+';flex-shrink:0"></span>' +
+                    '<span style="color:#555">'+n.label+'<br>' +
+                    '<span style="color:#1a1a18;font-weight:700">'+n.count+' élèves ('+Math.round(n.count/toutesVals.length*100)+' %)</span></span>' +
+                  '</div>';
+                }).join('') +
+              '</div>' +
             '</div>' +
           '</div>' +
-        '</div>' +
 
-      '</div>' +
+        '</div>'
+      : '') +
+
     '</div>' +
   '</div>';
 }
