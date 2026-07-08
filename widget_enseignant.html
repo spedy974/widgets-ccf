@@ -2140,7 +2140,7 @@ function genererBlocBilanClasse(cls) {
   var moyGen = avecMoy.length ? avecMoy.reduce(function(s,l){return s+l.moy;},0)/avecMoy.length : null;
 
   // ── SVG Boxplot ──
-  var W=200,H=220,PL=32,PR=8,PT=10,PB=20,CH=H-PT-PB,CW=W-PL-PR;
+  var W=130,H=145,PL=25,PR=6,PT=8,PB=15,CH=H-PT-PB,CW=W-PL-PR;
   var sc = function(v){return PT+CH-(v/20)*CH;};
   var BX=PL+CW*0.25,BW=CW*0.5;
   var ticks=[0,5,10,15,20];
@@ -2157,7 +2157,7 @@ function genererBlocBilanClasse(cls) {
     '</svg>' : '<div style="width:'+W+'px;height:'+H+'px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px">Pas de données</div>';
 
   // ── SVG Camembert ──
-  var PR2=60,PW=130,PH=130; var sa=-Math.PI/2;
+  var PR2=38,PW=88,PH=88; var sa=-Math.PI/2;
   var slicesSvg = niveaux.filter(function(n){return n.count>0;}).map(function(n){
     var tot=toutesVals.length, a=(n.count/tot)*2*Math.PI;
     var x1=PR2+PR2*Math.cos(sa),y1=PR2+PR2*Math.sin(sa); sa+=a;
@@ -2210,9 +2210,9 @@ function genererBlocBilanClasse(cls) {
   return '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px">' +
 
     // En-tête
-    '<div style="background:linear-gradient(135deg,#4a6cf7,#2d4ecc);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px">' +
-      '<span style="font-size:18px">📊</span>' +
-      '<div style="font-weight:800;font-size:15px">'+cls.code_classe+'</div>' +
+    '<div style="background:linear-gradient(135deg,#4a6cf7,#2d4ecc);color:#fff;padding:6px 12px;display:flex;align-items:center;gap:8px">' +
+      '<span style="font-size:14px">📊</span>' +
+      '<div style="font-weight:800;font-size:12px">'+cls.code_classe+'</div>' +
       '<div style="font-size:11px;opacity:0.8;margin-left:4px">Session 2026-2027</div>' +
     '</div>' +
 
@@ -2227,9 +2227,9 @@ function genererBlocBilanClasse(cls) {
         {lbl:'Note maximale',  val:maxV!==null?maxV.toFixed(2):'—', sub:'/20', col:'#27ae60'},
         {lbl:'Taux de réussite',val:tauxR+'%',       sub:nbReuss+' élèves ≥ 10/20',                  col:'#d68910'},
       ].map(function(c) {
-        return '<div style="flex:1;min-width:80px;background:#fff;padding:8px 10px">' +
+        return '<div style="flex:1;min-width:60px;background:#fff;padding:5px 8px">' +
           '<div style="font-size:10px;color:#888;margin-bottom:2px">'+c.lbl+'</div>' +
-          '<div style="font-size:18px;font-weight:800;color:'+c.col+';line-height:1.1">'+c.val+'</div>' +
+          '<div style="font-size:13px;font-weight:800;color:'+c.col+';line-height:1.1">'+c.val+'</div>' +
           '<div style="font-size:10px;color:#aaa">'+c.sub+'</div>' +
         '</div>';
       }).join('') +
@@ -2239,16 +2239,16 @@ function genererBlocBilanClasse(cls) {
     '<div style="display:grid;grid-template-columns:1fr auto;gap:0">' +
 
       // Gauche : tableau Pronote
-      '<div style="padding:12px 14px;border-right:1px solid var(--border);overflow:auto">' +
-        '<div style="font-size:12px;font-weight:700;color:#4a6cf7;margin-bottom:6px">Classement des élèves</div>' +
+      '<div style="padding:8px 10px;border-right:1px solid var(--border);overflow:auto">' +
+        '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Classement des élèves</div>' +
         tablePronote +
       '</div>' +
 
       // Droite : graphiques
-      '<div style="padding:12px 14px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;width:340px">' +
+      '<div style="padding:8px 10px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;width:230px">' +
 
         '<div style="width:100%">' +
-          '<div style="font-size:12px;font-weight:700;color:#4a6cf7;margin-bottom:6px">Dispersion des notes (Boîte à moustaches)</div>' +
+          '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Dispersion des notes (Boîte à moustaches)</div>' +
           '<div style="display:flex;gap:10px;align-items:center">' +
             svgBox +
             '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px">' +
@@ -2269,7 +2269,7 @@ function genererBlocBilanClasse(cls) {
         '</div>' +
 
         '<div style="width:100%">' +
-          '<div style="font-size:12px;font-weight:700;color:#4a6cf7;margin-bottom:6px">Répartition par niveaux</div>' +
+          '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Répartition par niveaux</div>' +
           '<div style="display:flex;gap:10px;align-items:center">' +
             svgPie +
             '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px">' +
