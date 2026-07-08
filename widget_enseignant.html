@@ -2265,34 +2265,36 @@ function rendreBilanClasse() {
       }).join('') +
     '</div>' +
 
-    // Graphiques
-    '<div style="display:grid;grid-template-columns:1fr 1fr;padding:14px 16px;gap:16px">' +
-      '<div>' +
-        '<div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px">Dispersion des notes</div>' +
-        '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' + svgBox +
-          '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px;white-space:nowrap">' +
-            [{l:'Maximum',v:maxV,b:false},{l:'Q3',v:q3,b:false},{l:'Médiane',v:median,b:true,c:'#4a6cf7'},{l:'Q1',v:q1,b:false},{l:'Minimum',v:minV,b:false}]
-            .map(function(r) { return '<div style="display:flex;justify-content:space-between;gap:10px;' + (r.b?'color:'+r.c+';font-weight:700':'color:#888') + '"><span>' + r.l + '</span><span>' + r.v.toFixed(2) + '</span></div>'; }).join('') +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div>' +
-        '<div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px">Répartition par niveaux</div>' +
-        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' + svgPie +
-          '<div style="font-size:10px;display:flex;flex-direction:column;gap:5px">' +
-            niveaux.map(function(n) {
-              return '<div style="display:flex;align-items:flex-start;gap:6px">' +
-                '<span style="width:9px;height:9px;border-radius:2px;background:' + n.color + ';flex-shrink:0;margin-top:2px"></span>' +
-                '<span><span style="color:#555">' + n.label + '</span><br><span style="color:#1a1a18;font-weight:700">' + n.count + ' (' + Math.round(n.count/vals.length*100) + ' %)</span></span>' +
-              '</div>';
-            }).join('') +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
+    // Tableau style Pronote (à la place du classement, dans la même grille)
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--border)">' +
 
-    // Tableau style Pronote
-    '<div style="padding:0 16px 16px">' + tablePronote + '</div>' +
+      // Gauche : relevé style Pronote
+      '<div style="padding:14px 16px;border-right:1px solid var(--border);overflow:auto;max-height:420px">' +
+        tablePronote +
+      '</div>' +
+
+      // Droite : graphiques (boxplot + camembert)
+      '<div style="padding:14px 16px">' +
+        '<div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px">Dispersion des notes</div>' +
+        '<div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap">' + svgBox +
+          '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px;white-space:nowrap">' +
+            [{l:"Maximum",v:maxV,b:false},{l:"Q3",v:q3,b:false},{l:"Médiane",v:median,b:true,c:"#4a6cf7"},{l:"Q1",v:q1,b:false},{l:"Minimum",v:minV,b:false}]
+            .map(function(r) { return "<div style=\"display:flex;justify-content:space-between;gap:10px;" + (r.b?"color:"+r.c+";font-weight:700":"color:#888") + "\"><span>" + r.l + "</span><span>" + r.v.toFixed(2) + "</span></div>"; }).join("") +
+          "</div>" +
+        "</div>" +
+        "<div style=\"font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px\">Répartition par niveaux</div>" +
+        "<div style=\"display:flex;gap:12px;align-items:center;flex-wrap:wrap\">" + svgPie +
+          "<div style=\"font-size:10px;display:flex;flex-direction:column;gap:5px\">" +
+            niveaux.map(function(n) {
+              return "<div style=\"display:flex;align-items:flex-start;gap:6px\">" +
+                "<span style=\"width:9px;height:9px;border-radius:2px;background:" + n.color + ";flex-shrink:0;margin-top:2px\"></span>" +
+                "<span><span style=\"color:#555\">" + n.label + "</span><br><span style=\"color:#1a1a18;font-weight:700\">" + n.count + " (" + Math.round(n.count/vals.length*100) + " %)</span></span>" +
+              "</div>";
+            }).join("") +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+    "</div>" +
 
     '</div>';
 }
