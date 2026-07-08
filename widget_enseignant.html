@@ -2140,7 +2140,7 @@ function genererBlocBilanClasse(cls) {
   var moyGen = avecMoy.length ? avecMoy.reduce(function(s,l){return s+l.moy;},0)/avecMoy.length : null;
 
   // ── SVG Boxplot ──
-  var W=130,H=145,PL=25,PR=6,PT=8,PB=15,CH=H-PT-PB,CW=W-PL-PR;
+  var W=200,H=220,PL=32,PR=8,PT=10,PB=20,CH=H-PT-PB,CW=W-PL-PR;
   var sc = function(v){return PT+CH-(v/20)*CH;};
   var BX=PL+CW*0.25,BW=CW*0.5;
   var ticks=[0,5,10,15,20];
@@ -2157,7 +2157,7 @@ function genererBlocBilanClasse(cls) {
     '</svg>' : '<div style="width:'+W+'px;height:'+H+'px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px">Pas de données</div>';
 
   // ── SVG Camembert ──
-  var PR2=38,PW=88,PH=88; var sa=-Math.PI/2;
+  var PR2=60,PW=130,PH=130; var sa=-Math.PI/2;
   var slicesSvg = niveaux.filter(function(n){return n.count>0;}).map(function(n){
     var tot=toutesVals.length, a=(n.count/tot)*2*Math.PI;
     var x1=PR2+PR2*Math.cos(sa),y1=PR2+PR2*Math.sin(sa); sa+=a;
@@ -2239,13 +2239,13 @@ function genererBlocBilanClasse(cls) {
     '<div style="display:grid;grid-template-columns:1fr auto;gap:0">' +
 
       // Gauche : tableau Pronote
-      '<div style="padding:8px 10px;border-right:1px solid var(--border);overflow:auto">' +
+      '<div style="padding:8px 10px;border-right:1px solid var(--border);overflow-y:auto;max-height:300px">' +
         '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Classement des élèves</div>' +
         tablePronote +
       '</div>' +
 
       // Droite : graphiques
-      '<div style="padding:8px 10px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;width:230px">' +
+      '<div style="padding:8px 10px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;width:340px">' +
 
         '<div style="width:100%">' +
           '<div style="font-size:10px;font-weight:700;color:#4a6cf7;margin-bottom:4px">Dispersion des notes (Boîte à moustaches)</div>' +
