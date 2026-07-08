@@ -2221,9 +2221,8 @@ function rendreBilanClasse() {
         '<td style="padding:5px 8px;text-align:center;border:1px solid #eee;font-weight:800;color:' + moyColor + '">' + moyStr + '</td>' +
         l.vals.map(function(v, j) {
           if (!v) return '<td style="padding:5px 8px;text-align:center;border:1px solid #eee;color:#ccc">—</td>';
-          var c = couleurNote(v.val, v.bareme);
-          return '<td style="padding:5px 8px;text-align:center;border:1px solid #eee;font-weight:700;color:' + c + '">' +
-            v.val.toFixed(2) + '<span style="font-size:9px;color:#aaa;font-weight:400">/' + v.bareme + '</span></td>';
+          return '<td style="padding:5px 8px;text-align:center;border:1px solid #eee;font-weight:600;color:#1a1a18">' +
+            v.val.toFixed(2) + '</td>';
         }).join('') +
       '</tr>';
     }).join('') +
@@ -2233,7 +2232,7 @@ function rendreBilanClasse() {
       '<td style="padding:5px 8px;text-align:center;border:1px solid #dde;color:#4a6cf7">' + (moyGen!==null?moyGen.toFixed(2):'—') + '</td>' +
       statsCols.map(function(s) {
         return '<td style="padding:5px 8px;text-align:center;border:1px solid #dde;color:#4a6cf7">' +
-          (s.moy!==null ? s.moy.toFixed(2)+'<span style="font-size:9px;color:#aaa;font-weight:400">/'+s.bareme+'</span>' : '—') + '</td>';
+          (s.moy!==null ? s.moy.toFixed(2) : '—') + '</td>';
       }).join('') +
     '</tr>' +
     '</tbody></table></div>';
@@ -2266,7 +2265,7 @@ function rendreBilanClasse() {
     '</div>' +
 
     // Tableau style Pronote (à la place du classement, dans la même grille)
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--border)">' +
+    '<div style="display:grid;grid-template-columns:3fr 1fr;gap:0;border-top:1px solid var(--border)">' +
 
       // Gauche : relevé style Pronote
       '<div style="padding:14px 16px;border-right:1px solid var(--border);overflow:auto;max-height:420px">' +
@@ -2276,7 +2275,7 @@ function rendreBilanClasse() {
       // Droite : graphiques (boxplot + camembert)
       '<div style="padding:14px 16px">' +
         '<div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px">Dispersion des notes</div>' +
-        '<div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap">' + svgBox +
+        '<div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap">' + svgBox.replace('max-width:260px', 'max-width:140px') +
           '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px;white-space:nowrap">' +
             [{l:"Maximum",v:maxV,b:false},{l:"Q3",v:q3,b:false},{l:"Médiane",v:median,b:true,c:"#4a6cf7"},{l:"Q1",v:q1,b:false},{l:"Minimum",v:minV,b:false}]
             .map(function(r) { return "<div style=\"display:flex;justify-content:space-between;gap:10px;" + (r.b?"color:"+r.c+";font-weight:700":"color:#888") + "\"><span>" + r.l + "</span><span>" + r.v.toFixed(2) + "</span></div>"; }).join("") +
