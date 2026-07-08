@@ -824,17 +824,24 @@ function chargerDonnees() {
 
   var emailConnecte = null;
 
-  Promise.resolve()
-    .then(function() {
+  // Identification via SessionUtilisateurs (fonctionne pour tous les profils)
+  grist.docApi.applyUserActions([["AddRecord", "SessionUtilisateurs", null, {}]])
+    .then(function(result) {
+      var newRowId = result.retValues[0];
+      return grist.docApi.fetchTable("SessionUtilisateurs").then(function(sessions) {
+        var idx = sessions.id.indexOf(newRowId);
+        emailConnecte = idx !== -1 && sessions.email_session
+          ? sessions.email_session[idx] : null;
+        return grist.docApi.applyUserActions([["RemoveRecord", "SessionUtilisateurs", newRowId]]);
+      });
+    })
+    .catch(function(e) {
+      console.warn("SessionUtilisateurs non disponible:", e.message);
+      // Fallback getUserProfile
       if (grist.docApi.getUserProfile) {
         return grist.docApi.getUserProfile().then(function(profile) {
-          if (profile && profile.email) {
-            emailConnecte = profile.email;
-            console.log("Email via getUserProfile:", emailConnecte);
-          }
-        }).catch(function(e) {
-          console.warn("getUserProfile non disponible:", e.message);
-        });
+          if (profile && profile.email) emailConnecte = profile.email;
+        }).catch(function() {});
       }
     })
     .then(function() {
@@ -1275,8 +1282,8 @@ function initGrist() {
   if (typeof grist !== "undefined") {
     grist.ready({ requiredAccess: "full" });
     grist.onRecords(function() { chargerDonnees(); });
-    grist.onRecord(function() { chargerDonnees(); });
-    [500, 1000, 2000, 3500, 5000].forEach(function(d) {
+    grist.onRecord(function()  { chargerDonnees(); });
+    [500, 1000, 2000, 3500].forEach(function(d) {
       setTimeout(chargerDonnees, d);
     });
   } else {
