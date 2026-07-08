@@ -2265,10 +2265,10 @@ function rendreBilanClasse() {
     '</div>' +
 
     // Tableau style Pronote (à la place du classement, dans la même grille)
-    '<div style="display:grid;grid-template-columns:1fr auto;gap:0;border-top:1px solid var(--border)">' +
+    '<div style="display:grid;grid-template-columns:1fr auto;gap:0;border-top:1px solid var(--border);align-items:stretch">' +
 
-      // Gauche : relevé style Pronote
-      '<div style="padding:14px 16px;border-right:1px solid var(--border);overflow:auto">' +
+      // Gauche : relevé style Pronote aligné en bas
+      '<div style="padding:14px 16px;border-right:1px solid var(--border);overflow:auto;display:flex;flex-direction:column;justify-content:flex-end">' +
         tablePronote +
       '</div>' +
 
