@@ -406,22 +406,8 @@
 
 <!-- ═══ ONGLET BILAN DE CLASSE ═══ -->
 <div class="tab-content" id="tab-notes">
-
-  <!-- Filtres -->
-  <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <div class="form-group" style="flex:1;min-width:150px;margin-bottom:0">
-      <label>Classe</label>
-      <select id="releve-filtre-classe" onchange="rendreBilanClasse()"><option value="">Toutes mes classes</option></select>
-    </div>
-    <div class="form-group" style="flex:1;min-width:150px;margin-bottom:0">
-      <label>Épreuve</label>
-      <select id="releve-filtre-epreuve" onchange="rendreBilanClasse()"><option value="">Toutes mes épreuves</option></select>
-    </div>
-  </div>
-
-  <!-- Contenu injecté par JS -->
   <div id="bilan-content">
-    <div class="empty">Sélectionne une classe et une épreuve pour afficher le bilan.</div>
+    <div class="empty">Chargement...</div>
   </div>
 </div>
 
@@ -2033,269 +2019,255 @@ function rendreBilanClasse() {
   var container = document.getElementById("bilan-content");
   if (!container) return;
 
-  var classeId  = parseInt((document.getElementById("releve-filtre-classe")  || {}).value) || 0;
-  var epreuveId = parseInt((document.getElementById("releve-filtre-epreuve") || {}).value) || 0;
+  // Récupérer toutes les classes affectées
+  var clsIds = [];
+  affectations.forEach(function(a) { if (a.classe && !clsIds.includes(a.classe)) clsIds.push(a.classe); });
+  var mesClsAff = classes.filter(function(c) { return clsIds.includes(c.id); })
+    .sort(function(a,b) { return (a.code_classe||'').localeCompare(b.code_classe||''); });
 
-  var notesFiltrees = notes.slice();
-  if (classeId) {
-    var elevesClasse = eleves.filter(function(e) { return e.classe === classeId; }).map(function(e) { return e.id; });
-    notesFiltrees = notesFiltrees.filter(function(n) { return elevesClasse.includes(n.eleve); });
-  }
-  if (epreuveId) notesFiltrees = notesFiltrees.filter(function(n) { return n.epreuve === epreuveId; });
-
-  if (!notesFiltrees.length) {
-    container.innerHTML = '<div class="empty">Aucune note pour cette sélection.</div>';
+  if (!mesClsAff.length) {
+    container.innerHTML = '<div class="empty">Aucune classe affectée.</div>';
     return;
   }
 
-  var vals = notesFiltrees.map(function(n) { return parseFloat(n.note_finale || n.note_seq1); }).filter(function(v) { return !isNaN(v); });
-  if (!vals.length) { container.innerHTML = '<div class="empty">Aucune valeur numérique.</div>'; return; }
-
-  var bareme   = parseFloat(notesFiltrees[0].bareme) || 20;
-  var nbTotal  = classeId ? eleves.filter(function(e) { return e.classe === classeId; }).length : vals.length;
-  var nbEval   = vals.length;
-  var nbAbs    = Math.max(0, nbTotal - nbEval);
-  var moy      = vals.reduce(function(a, b) { return a + b; }, 0) / vals.length;
-  var sorted   = vals.slice().sort(function(a, b) { return a - b; });
-  var median   = sorted.length % 2 === 0 ? (sorted[sorted.length/2-1] + sorted[sorted.length/2]) / 2 : sorted[Math.floor(sorted.length/2)];
-  var minV     = sorted[0], maxV = sorted[sorted.length-1];
-  var q1       = sorted[Math.floor(sorted.length * 0.25)];
-  var q3       = sorted[Math.floor(sorted.length * 0.75)];
-  var nbReuss  = vals.filter(function(v) { return v >= bareme/2; }).length;
-  var tauxR    = Math.round(nbReuss / vals.length * 100);
-
-  var niveaux = [
-    { label:'Très insuffisant', smin:0,          smax:bareme*0.4,  color:'#c0392b' },
-    { label:'Fragile',          smin:bareme*0.4, smax:bareme*0.5,  color:'#d68910' },
-    { label:'Satisfaisant',     smin:bareme*0.5, smax:bareme*0.8,  color:'#d4ac0d' },
-    { label:'Très bon',         smin:bareme*0.8, smax:bareme+0.01, color:'#27ae60' },
-  ].map(function(s) { return Object.assign({}, s, { count: vals.filter(function(v) { return v >= s.smin && v < s.smax; }).length }); });
-
-  var cls = classeId  ? classes.find(function(c) { return c.id === classeId;  }) : null;
-  var epr = epreuveId ? epreuves.find(function(e) { return e.id === epreuveId; }) : null;
-  var titre = [cls && cls.code_classe, epr && epr.repere, epr && epr.libelle].filter(Boolean).join(' · ') || 'Bilan global';
-
-  // ── SVG Boxplot ──
-  var W=160,H=260,PL=40,PR=10,PT=15,PB=25,CH=H-PT-PB,CW=W-PL-PR;
-  var sc = function(v) { return PT + CH - (v/bareme)*CH; };
-  var BX=PL+CW*0.25, BW=CW*0.5;
-  var ticks=[0,bareme*0.25,bareme*0.5,bareme*0.75,bareme];
-  var svgBox = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:260px">' +
-    '<line x1="' + PL + '" y1="' + PT + '" x2="' + PL + '" y2="' + (PT+CH) + '" stroke="#ddd" stroke-width="1"/>' +
-    ticks.map(function(v) { return '<line x1="' + PL + '" y1="' + sc(v) + '" x2="' + (PL+CW) + '" y2="' + sc(v) + '" stroke="#eee" stroke-width="1" stroke-dasharray="3"/><text x="' + (PL-4) + '" y="' + (sc(v)+4) + '" font-size="9" fill="#aaa" text-anchor="end">' + v.toFixed(0) + '</text>'; }).join('') +
-    '<line x1="' + (BX+BW/2) + '" y1="' + sc(minV) + '" x2="' + (BX+BW/2) + '" y2="' + sc(q1) + '" stroke="#4a6cf7" stroke-width="1.5"/>' +
-    '<line x1="' + (BX+BW*0.3) + '" y1="' + sc(minV) + '" x2="' + (BX+BW*0.7) + '" y2="' + sc(minV) + '" stroke="#4a6cf7" stroke-width="1.5"/>' +
-    '<rect x="' + BX + '" y="' + sc(q3) + '" width="' + BW + '" height="' + (sc(q1)-sc(q3)) + '" fill="#4a6cf720" stroke="#4a6cf7" stroke-width="1.5" rx="2"/>' +
-    '<line x1="' + BX + '" y1="' + sc(median) + '" x2="' + (BX+BW) + '" y2="' + sc(median) + '" stroke="#4a6cf7" stroke-width="2.5"/>' +
-    '<line x1="' + (BX+BW/2) + '" y1="' + sc(q3) + '" x2="' + (BX+BW/2) + '" y2="' + sc(maxV) + '" stroke="#4a6cf7" stroke-width="1.5"/>' +
-    '<line x1="' + (BX+BW*0.3) + '" y1="' + sc(maxV) + '" x2="' + (BX+BW*0.7) + '" y2="' + sc(maxV) + '" stroke="#4a6cf7" stroke-width="1.5"/>' +
-    '</svg>';
-
-  // ── SVG Camembert ──
-  var PR2=70,PW=150,PH=150; var sa=-Math.PI/2;
-  var slicesSvg = niveaux.filter(function(n) { return n.count > 0; }).map(function(n) {
-    var a=(n.count/vals.length)*2*Math.PI;
-    var x1=PR2+PR2*Math.cos(sa),y1=PR2+PR2*Math.sin(sa); sa+=a;
-    var x2=PR2+PR2*Math.cos(sa),y2=PR2+PR2*Math.sin(sa);
-    var ma=sa-a/2,lx=PR2+PR2*0.62*Math.cos(ma),ly=PR2+PR2*0.62*Math.sin(ma);
-    var pct=Math.round((n.count/vals.length)*100);
-    return '<path d="M' + PR2 + ',' + PR2 + ' L' + x1 + ',' + y1 + ' A' + PR2 + ',' + PR2 + ' 0 ' + (a>Math.PI?1:0) + ',1 ' + x2 + ',' + y2 + ' Z" fill="' + n.color + '" stroke="#fff" stroke-width="1.5"/>' +
-      (pct>6 ? '<text x="' + lx + '" y="' + (ly+3) + '" font-size="8" fill="#fff" font-weight="700" text-anchor="middle">' + pct + '%</text>' : '');
+  // Générer un bloc par classe
+  container.innerHTML = mesClsAff.map(function(cls) {
+    return genererBlocClasse(cls);
   }).join('');
-  var svgPie = '<svg viewBox="0 0 ' + PW + ' ' + PH + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:150px">' + slicesSvg + '</svg>';
+}
 
-  // ── Tableau style Pronote ──
-  // Épreuves de la classe
-  var mesAff = affectations.filter(function(a) {
-    return (!classeId || a.classe === classeId) && (!monId || a.enseignant === monId);
-  });
+function genererBlocClasse(cls) {
+  var classeId = cls.id;
+
+  // Épreuves de cette classe
+  var mesAff = affectations.filter(function(a) { return a.classe === classeId && (!monId || a.enseignant === monId); });
   var eprIds = [];
   mesAff.forEach(function(a) { if (!eprIds.includes(a.epreuve)) eprIds.push(a.epreuve); });
-  if (epreuveId) eprIds = eprIds.filter(function(id) { return id === epreuveId; });
+  var colEpreuves = eprIds.map(function(id) { return epreuves.find(function(e) { return e.id === id; }); })
+    .filter(Boolean).sort(function(a,b) { return (a.repere||'').localeCompare(b.repere||''); });
 
-  var colEpreuves = eprIds.map(function(id) {
-    return epreuves.find(function(e) { return e.id === id; });
-  }).filter(Boolean).sort(function(a, b) { return (a.repere||'').localeCompare(b.repere||''); });
+  // Élèves de la classe
+  var elevesClasse = eleves.filter(function(e) { return e.classe === classeId; })
+    .sort(function(a,b) { return (a.nom_prenom||'').localeCompare(b.nom_prenom||''); });
 
-  // Date par épreuve
-  var dateParEpreuve = {};
-  colEpreuves.forEach(function(epr2) {
-    var pl = plannings.find(function(p) {
-      return (!classeId || p.classe === classeId) && p.epreuve === epr2.id && (!monId || p.enseignant === monId);
-    });
-    var dateRef = pl && (pl.date_realisee || pl.date_prevue);
-    if (dateRef) {
-      var d = typeof dateRef === 'number' ? new Date(dateRef * 1000) : new Date(dateRef);
-      dateParEpreuve[epr2.id] = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit' });
-    } else {
-      dateParEpreuve[epr2.id] = '—';
-    }
-  });
-
-  // Index notes par élève/épreuve
+  // Notes indexées [eleveId][epreuveId]
   var notesIndex = {};
-  notesFiltrees.forEach(function(n) {
+  notes.forEach(function(n) {
+    if (!elevesClasse.some(function(e) { return e.id === n.eleve; })) return;
     if (!notesIndex[n.eleve]) notesIndex[n.eleve] = {};
     notesIndex[n.eleve][n.epreuve] = n;
   });
 
-  // Lignes élèves
-  var elevesAffClass = classeId
-    ? eleves.filter(function(e) { return e.classe === classeId; }).sort(function(a,b) { return (a.nom_prenom||'').localeCompare(b.nom_prenom||''); })
-    : [];
-
-  var lignesPronote = elevesAffClass.map(function(elv) {
-    var valsElv = colEpreuves.map(function(ep) {
-      var n = notesIndex[elv.id] && notesIndex[elv.id][ep.id];
-      if (!n) return null;
-      var v = parseFloat(n.note_finale || n.note_seq1);
-      var bm = parseFloat(n.bareme || 20);
-      return isNaN(v) ? null : { val: v, bareme: bm };
+  // Toutes les notes de la classe pour stats
+  var toutesVals = [];
+  elevesClasse.forEach(function(elv) {
+    colEpreuves.forEach(function(epr) {
+      var n = notesIndex[elv.id] && notesIndex[elv.id][epr.id];
+      if (n) {
+        var v = parseFloat(n.note_finale || n.note_seq1);
+        if (!isNaN(v)) toutesVals.push({ val: v, bareme: parseFloat(n.bareme||20) });
+      }
     });
-    var notesValides = valsElv.filter(function(v) { return v !== null; });
-    var moyElv = notesValides.length
-      ? notesValides.reduce(function(s,v) { return s + (v.val/v.bareme)*20; }, 0) / notesValides.length
-      : null;
-    return { eleve: elv, vals: valsElv, moy: moyElv };
   });
 
-  // Trier par moyenne décroissante
-  var avecMoy = lignesPronote.filter(function(l) { return l.moy !== null; })
-    .sort(function(a,b) { return b.moy - a.moy; });
-  var sansMoy = lignesPronote.filter(function(l) { return l.moy === null; });
-  var rang = 1;
-  avecMoy.forEach(function(l, i) {
-    if (i > 0 && l.moy === avecMoy[i-1].moy) l.rang = avecMoy[i-1].rang;
-    else l.rang = rang;
-    rang = i + 2;
+  if (!toutesVals.length && !elevesClasse.length) return '';
+
+  var bareme = toutesVals.length ? toutesVals[0].bareme : 20;
+  var vals20  = toutesVals.map(function(v) { return (v.val/v.bareme)*20; });
+  var sorted  = vals20.slice().sort(function(a,b){return a-b;});
+  var moy     = vals20.length ? vals20.reduce(function(s,v){return s+v;},0)/vals20.length : null;
+  var median  = sorted.length ? (sorted.length%2===0 ? (sorted[sorted.length/2-1]+sorted[sorted.length/2])/2 : sorted[Math.floor(sorted.length/2)]) : null;
+  var minV    = sorted.length ? sorted[0] : null;
+  var maxV    = sorted.length ? sorted[sorted.length-1] : null;
+  var q1      = sorted.length ? sorted[Math.floor(sorted.length*0.25)] : null;
+  var q3      = sorted.length ? sorted[Math.floor(sorted.length*0.75)] : null;
+  var nbReuss = vals20.filter(function(v){return v>=10;}).length;
+  var tauxR   = vals20.length ? Math.round(nbReuss/vals20.length*100) : 0;
+
+  var niveaux = [
+    {label:'Très insuf.',  smin:0,    smax:8,  color:'#c0392b'},
+    {label:'Fragile',      smin:8,    smax:10, color:'#d68910'},
+    {label:'Satisfaisant', smin:10,   smax:16, color:'#d4ac0d'},
+    {label:'Très bon',     smin:16,   smax:20.01, color:'#27ae60'},
+  ].map(function(s) { return Object.assign({}, s, { count: vals20.filter(function(v){return v>=s.smin&&v<s.smax;}).length }); });
+
+  // Date par épreuve
+  var dateParEpreuve = {};
+  colEpreuves.forEach(function(epr) {
+    var pl = plannings.find(function(p) { return p.classe===classeId && p.epreuve===epr.id && (!monId||p.enseignant===monId); });
+    var dr = pl && (pl.date_realisee || pl.date_prevue);
+    if (dr) {
+      var d = typeof dr==='number' ? new Date(dr*1000) : new Date(dr);
+      dateParEpreuve[epr.id] = d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    } else {
+      dateParEpreuve[epr.id] = '—';
+    }
   });
-  sansMoy.forEach(function(l) { l.rang = null; });
+
+  // Lignes élèves avec moyenne
+  var lignes = elevesClasse.map(function(elv) {
+    var valsElv = colEpreuves.map(function(epr) {
+      var n = notesIndex[elv.id] && notesIndex[elv.id][epr.id];
+      if (!n) return null;
+      var v = parseFloat(n.note_finale||n.note_seq1), bm = parseFloat(n.bareme||20);
+      return isNaN(v) ? null : {val:v, bareme:bm};
+    });
+    var valides = valsElv.filter(function(v){return v!==null;});
+    var moyElv = valides.length ? valides.reduce(function(s,v){return s+(v.val/v.bareme)*20;},0)/valides.length : null;
+    return {eleve:elv, vals:valsElv, moy:moyElv};
+  });
+
+  var avecMoy = lignes.filter(function(l){return l.moy!==null;}).sort(function(a,b){return b.moy-a.moy;});
+  var sansMoy = lignes.filter(function(l){return l.moy===null;});
+  var rang=1;
+  avecMoy.forEach(function(l,i){
+    if(i>0&&l.moy===avecMoy[i-1].moy) l.rang=avecMoy[i-1].rang; else l.rang=rang;
+    rang=i+2;
+  });
+  sansMoy.forEach(function(l){l.rang=null;});
   var toutesLignes = avecMoy.concat(sansMoy);
 
-  // Moyennes par colonne
-  var statsCols = colEpreuves.map(function(ep) {
+  var statsCols = colEpreuves.map(function(epr) {
     var vv = toutesLignes.map(function(l) {
-      return notesIndex[l.eleve.id] && notesIndex[l.eleve.id][ep.id]
-        ? parseFloat((notesIndex[l.eleve.id][ep.id]).note_finale || (notesIndex[l.eleve.id][ep.id]).note_seq1) : null;
-    }).filter(function(v) { return v !== null && !isNaN(v); });
-    var bm = vv.length && notesIndex[toutesLignes[0].eleve.id] && notesIndex[toutesLignes[0].eleve.id][ep.id]
-      ? parseFloat(notesIndex[toutesLignes[0].eleve.id][ep.id].bareme || 20) : 20;
-    return { moy: vv.length ? vv.reduce(function(s,v){return s+v;},0)/vv.length : null, bareme: bm };
+      var n = notesIndex[l.eleve.id] && notesIndex[l.eleve.id][epr.id];
+      if (!n) return null;
+      var v = parseFloat(n.note_finale||n.note_seq1);
+      return isNaN(v) ? null : v;
+    }).filter(function(v){return v!==null;});
+    return { moy: vv.length ? vv.reduce(function(s,v){return s+v;},0)/vv.length : null };
   });
   var moyGen = avecMoy.length ? avecMoy.reduce(function(s,l){return s+l.moy;},0)/avecMoy.length : null;
 
-  function couleurNote(val, bm) {
-    var p = val/bm;
-    return p >= 0.8 ? '#27ae60' : p >= 0.5 ? '#1a1a18' : p >= 0.4 ? '#f59e0b' : '#e24b4a';
-  }
+  // SVG Boxplot (compact)
+  var W=120,H=200,PL=30,PR=8,PT=10,PB=20,CH=H-PT-PB,CW=W-PL-PR;
+  var sc = function(v){return PT+CH-(v/20)*CH;};
+  var BX=PL+CW*0.2,BW=CW*0.6;
+  var ticks=[0,5,10,15,20];
+  var svgBox = vals20.length ? '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:'+W+'px;height:'+H+'px;flex-shrink:0">' +
+    '<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+CH)+'" stroke="#ddd" stroke-width="1"/>' +
+    ticks.map(function(v){return '<line x1="'+PL+'" y1="'+sc(v)+'" x2="'+(PL+CW)+'" y2="'+sc(v)+'" stroke="#eee" stroke-width="1" stroke-dasharray="2"/><text x="'+(PL-3)+'" y="'+(sc(v)+3)+'" font-size="8" fill="#aaa" text-anchor="end">'+v+'</text>';}).join('') +
+    (minV!==null?'<line x1="'+(BX+BW/2)+'" y1="'+sc(minV)+'" x2="'+(BX+BW/2)+'" y2="'+sc(q1)+'" stroke="#4a6cf7" stroke-width="1.5"/>':'') +
+    (minV!==null?'<line x1="'+(BX+BW*0.25)+'" y1="'+sc(minV)+'" x2="'+(BX+BW*0.75)+'" y2="'+sc(minV)+'" stroke="#4a6cf7" stroke-width="1.5"/>':'') +
+    (q1!==null&&q3!==null?'<rect x="'+BX+'" y="'+sc(q3)+'" width="'+BW+'" height="'+(sc(q1)-sc(q3))+'" fill="#4a6cf720" stroke="#4a6cf7" stroke-width="1.5" rx="2"/>':'') +
+    (median!==null?'<line x1="'+BX+'" y1="'+sc(median)+'" x2="'+(BX+BW)+'" y2="'+sc(median)+'" stroke="#4a6cf7" stroke-width="2"/>':'') +
+    (maxV!==null?'<line x1="'+(BX+BW/2)+'" y1="'+sc(q3)+'" x2="'+(BX+BW/2)+'" y2="'+sc(maxV)+'" stroke="#4a6cf7" stroke-width="1.5"/>':'') +
+    (maxV!==null?'<line x1="'+(BX+BW*0.25)+'" y1="'+sc(maxV)+'" x2="'+(BX+BW*0.75)+'" y2="'+sc(maxV)+'" stroke="#4a6cf7" stroke-width="1.5"/>':'') +
+    '</svg>' : '<div style="width:'+W+'px;height:'+H+'px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px">—</div>';
 
-  var tablePronote = colEpreuves.length === 0 ? '' :
-    '<div style="overflow-x:auto;margin-top:16px">' +
-    '<div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px">Relevé de notes</div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+  // SVG Camembert (compact)
+  var PR2=55,PW=120,PH=120; var sa=-Math.PI/2;
+  var slicesSvg = niveaux.filter(function(n){return n.count>0;}).map(function(n){
+    var tot=vals20.length, a=(n.count/tot)*2*Math.PI;
+    var x1=PR2+PR2*Math.cos(sa),y1=PR2+PR2*Math.sin(sa); sa+=a;
+    var x2=PR2+PR2*Math.cos(sa),y2=PR2+PR2*Math.sin(sa);
+    var ma=sa-a/2,lx=PR2+PR2*0.62*Math.cos(ma),ly=PR2+PR2*0.62*Math.sin(ma);
+    var pct=Math.round((n.count/tot)*100);
+    return '<path d="M'+PR2+','+PR2+' L'+x1+','+y1+' A'+PR2+','+PR2+' 0 '+(a>Math.PI?1:0)+',1 '+x2+','+y2+' Z" fill="'+n.color+'" stroke="#fff" stroke-width="1.5"/>'+
+      (pct>5?'<text x="'+lx+'" y="'+(ly+3)+'" font-size="8" fill="#fff" font-weight="700" text-anchor="middle">'+pct+'%</text>':'');
+  }).join('');
+  var svgPie = vals20.length ? '<svg viewBox="0 0 '+PW+' '+PH+'" xmlns="http://www.w3.org/2000/svg" style="width:'+PW+'px;height:'+PH+'px;flex-shrink:0">'+slicesSvg+'</svg>' : '';
+
+  // Tableau Pronote
+  var tablePronote = colEpreuves.length===0 ? '<div class="empty" style="padding:10px">Aucune épreuve configurée.</div>' :
+    '<table style="width:100%;border-collapse:collapse;font-size:11px">' +
     '<thead>' +
     '<tr style="background:#f0f4ff">' +
-      '<th style="padding:6px 8px;text-align:center;border:1px solid #dde;font-size:11px;color:#555;width:36px">Rang</th>' +
-      '<th style="padding:6px 10px;text-align:left;border:1px solid #dde;font-size:11px;color:#555">Élève</th>' +
-      '<th style="padding:6px 8px;text-align:center;border:1px solid #dde;font-size:11px;color:#4a6cf7;font-weight:800">Moy./20</th>' +
-      colEpreuves.map(function(ep) {
-        return '<th style="padding:6px 8px;text-align:center;border:1px solid #dde;font-size:11px;color:#2d4ecc;font-weight:700">' + ep.repere + '</th>';
-      }).join('') +
+      '<th style="padding:4px 6px;text-align:center;border:1px solid #dde;width:30px;font-size:10px;color:#555">Rang</th>' +
+      '<th style="padding:4px 8px;text-align:left;border:1px solid #dde;font-size:10px;color:#555">Élève</th>' +
+      '<th style="padding:4px 6px;text-align:center;border:1px solid #dde;font-size:10px;color:#4a6cf7;font-weight:800">Moy.</th>' +
+      colEpreuves.map(function(epr){ return '<th style="padding:4px 6px;text-align:center;border:1px solid #dde;font-size:10px;color:#2d4ecc;font-weight:700">'+epr.repere+'</th>'; }).join('') +
     '</tr>' +
     '<tr style="background:#f8f8ff">' +
       '<td style="border:1px solid #dde"></td>' +
       '<td style="border:1px solid #dde"></td>' +
       '<td style="border:1px solid #dde"></td>' +
-      colEpreuves.map(function(ep) {
-        return '<td style="padding:2px 8px;text-align:center;border:1px solid #dde;font-size:10px;color:#888;font-style:italic">' + (dateParEpreuve[ep.id]||'—') + '</td>';
-      }).join('') +
+      colEpreuves.map(function(epr){ return '<td style="padding:2px 6px;text-align:center;border:1px solid #dde;font-size:9px;color:#888;font-style:italic">'+(dateParEpreuve[epr.id]||'—')+'</td>'; }).join('') +
     '</tr>' +
     '</thead><tbody>' +
-    toutesLignes.map(function(l, i) {
-      var bg = i%2===0 ? '#fff' : '#fafaf8';
-      var moyStr = l.moy !== null ? l.moy.toFixed(2) : '—';
-      var moyColor = l.moy !== null ? couleurNote(l.moy, 20) : '#aaa';
-      return '<tr style="background:' + bg + '">' +
-        '<td style="padding:5px 8px;text-align:center;border:1px solid #eee;color:#aaa;font-size:11px">' + (l.rang||'—') + '</td>' +
-        '<td style="padding:5px 10px;border:1px solid #eee;font-weight:600">' + l.eleve.nom_prenom + '</td>' +
-        '<td style="padding:5px 8px;text-align:center;border:1px solid #eee;font-weight:800;color:' + moyColor + '">' + moyStr + '</td>' +
-        l.vals.map(function(v, j) {
-          if (!v) return '<td style="padding:5px 8px;text-align:center;border:1px solid #eee;color:#ccc">—</td>';
-          return '<td style="padding:5px 8px;text-align:center;border:1px solid #eee;font-weight:600;color:#1a1a18">' +
-            v.val.toFixed(2) + '</td>';
+    toutesLignes.map(function(l,i){
+      var bg=i%2===0?'#fff':'#fafaf8';
+      var moyStr=l.moy!==null?l.moy.toFixed(2):'—';
+      var moyC=l.moy!==null?(l.moy>=16?'#27ae60':l.moy>=10?'#1a1a18':l.moy>=8?'#f59e0b':'#e24b4a'):'#aaa';
+      return '<tr style="background:'+bg+'">' +
+        '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;color:#aaa;font-size:10px">'+(l.rang||'—')+'</td>' +
+        '<td style="padding:4px 8px;border:1px solid #eee;font-weight:600">'+l.eleve.nom_prenom+'</td>' +
+        '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;font-weight:800;color:'+moyC+'">'+moyStr+'</td>' +
+        l.vals.map(function(v){
+          if(!v) return '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;color:#ccc">—</td>';
+          return '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;font-weight:600;color:#1a1a18">'+v.val.toFixed(2)+'</td>';
         }).join('') +
       '</tr>';
     }).join('') +
     '<tr style="background:#f0f4ff;font-weight:700;border-top:2px solid #c7d7f8">' +
-      '<td style="padding:5px 8px;border:1px solid #dde;text-align:center;font-size:10px;color:#888">Moy.</td>' +
-      '<td style="padding:5px 10px;border:1px solid #dde;font-size:11px;color:#4a6cf7">Classe</td>' +
-      '<td style="padding:5px 8px;text-align:center;border:1px solid #dde;color:#4a6cf7">' + (moyGen!==null?moyGen.toFixed(2):'—') + '</td>' +
-      statsCols.map(function(s) {
-        return '<td style="padding:5px 8px;text-align:center;border:1px solid #dde;color:#4a6cf7">' +
-          (s.moy!==null ? s.moy.toFixed(2) : '—') + '</td>';
-      }).join('') +
+      '<td style="padding:4px 6px;border:1px solid #dde;text-align:center;font-size:9px;color:#888">Moy.</td>' +
+      '<td style="padding:4px 8px;border:1px solid #dde;font-size:10px;color:#4a6cf7">Classe</td>' +
+      '<td style="padding:4px 6px;text-align:center;border:1px solid #dde;color:#4a6cf7">'+(moyGen!==null?moyGen.toFixed(2):'—')+'</td>' +
+      statsCols.map(function(s){ return '<td style="padding:4px 6px;text-align:center;border:1px solid #dde;color:#4a6cf7">'+(s.moy!==null?s.moy.toFixed(2):'—')+'</td>'; }).join('') +
     '</tr>' +
-    '</tbody></table></div>';
+    '</tbody></table>';
 
-  container.innerHTML =
-    '<div class="card">' +
-    '<div style="background:linear-gradient(135deg,#4a6cf7,#2d4ecc);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:10px">' +
-      '<span style="font-size:20px">📊</span>' +
-      '<div><div style="font-weight:800;font-size:15px">' + titre + '</div>' +
-      '<div style="font-size:11px;opacity:0.85">' + nbEval + ' élève' + (nbEval>1?'s':'') + ' évalué' + (nbEval>1?'s':'') + ' · Barème /' + bareme + '</div></div>' +
+  // Légende camembert
+  var legendePie = niveaux.map(function(n){
+    return '<div style="display:flex;align-items:center;gap:4px;font-size:9px">' +
+      '<span style="width:8px;height:8px;border-radius:2px;background:'+n.color+';flex-shrink:0"></span>' +
+      '<span style="color:#555">'+n.label+'</span>' +
+    '</div>';
+  }).join('');
+
+  // Bloc horizontal (paysage)
+  return '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px">' +
+
+    // En-tête classe
+    '<div style="background:linear-gradient(135deg,#4a6cf7,#2d4ecc);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:8px">' +
+      '<span style="font-size:16px">📊</span>' +
+      '<div style="font-weight:800;font-size:14px">'+cls.code_classe+'</div>' +
+      '<div style="font-size:11px;opacity:0.8;margin-left:8px">'+elevesClasse.length+' élèves · '+colEpreuves.length+' épreuve'+(colEpreuves.length>1?'s':'')+'</div>' +
+      // Compteurs inline
+      '<div style="margin-left:auto;display:flex;gap:16px;font-size:11px">' +
+        (moy!==null?'<span>Moy. <strong>'+moy.toFixed(2)+'/20</strong></span>':'') +
+        (moy!==null?'<span>Réussite <strong>'+tauxR+'%</strong></span>':'') +
+        (minV!==null?'<span>Min <strong>'+minV.toFixed(2)+'</strong></span>':'') +
+        (maxV!==null?'<span>Max <strong>'+maxV.toFixed(2)+'</strong></span>':'') +
+      '</div>' +
     '</div>' +
 
-    // 7 compteurs
-    '<div style="display:flex;flex-wrap:wrap;gap:1px;background:#e2e0d8">' +
-      [
-        {lbl:'Élèves évalués',  val:nbEval,           sub:'sur '+nbTotal,                             col:'#4a6cf7'},
-        {lbl:'Absents',         val:nbAbs,            sub:'soit '+Math.round(nbAbs/nbTotal*100)+' %', col:'#e24b4a'},
-        {lbl:'Moyenne',         val:moy.toFixed(2),   sub:'/'+bareme,                                 col:'#0d6e50'},
-        {lbl:'Médiane',         val:median.toFixed(2),sub:'/'+bareme,                                 col:'#0d6e50'},
-        {lbl:'Note minimale',   val:minV.toFixed(2),  sub:'/'+bareme,                                 col:'#e24b4a'},
-        {lbl:'Note maximale',   val:maxV.toFixed(2),  sub:'/'+bareme,                                 col:'#27ae60'},
-        {lbl:'Taux réussite',   val:tauxR+'%',        sub:nbReuss+' ≥ '+(bareme/2).toFixed(0)+'/'+bareme, col:'#d68910'},
-      ].map(function(c) {
-        return '<div style="flex:1;min-width:90px;background:#fff;padding:10px 12px">' +
-          '<div style="font-size:10px;color:#888;margin-bottom:2px">' + c.lbl + '</div>' +
-          '<div style="font-size:20px;font-weight:800;color:' + c.col + ';line-height:1.1">' + c.val + '</div>' +
-          '<div style="font-size:10px;color:#aaa">' + c.sub + '</div>' +
-        '</div>';
-      }).join('') +
-    '</div>' +
+    // Corps horizontal
+    '<div style="display:flex;gap:0;align-items:flex-start">' +
 
-    // Tableau style Pronote (à la place du classement, dans la même grille)
-    '<div style="display:grid;grid-template-columns:1fr auto;gap:0;border-top:1px solid var(--border);align-items:stretch">' +
-
-      // Gauche : relevé style Pronote aligné en bas
-      '<div style="padding:14px 16px;border-right:1px solid var(--border);overflow:auto;display:flex;flex-direction:column;justify-content:flex-end">' +
+      // Gauche : tableau Pronote
+      '<div style="flex:1;padding:10px 12px;overflow:auto;border-right:1px solid var(--border)">' +
+        '<div style="font-size:11px;font-weight:700;color:#4a6cf7;margin-bottom:6px">Relevé de notes</div>' +
         tablePronote +
       '</div>' +
 
-      // Droite : graphiques (boxplot + camembert)
-      '<div style="padding:14px 16px;width:280px;flex-shrink:0;display:flex;flex-direction:column;align-items:center">' +
-        '<div style="font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px;align-self:flex-start">Dispersion des notes</div>' +
-        '<div style="display:flex;gap:10px;align-items:center;margin-bottom:18px">' + svgBox.replace('max-width:260px', 'max-width:160px') +
-          '<div style="font-size:10px;display:flex;flex-direction:column;gap:4px;white-space:nowrap">' +
-            [{l:"Maximum",v:maxV,b:false},{l:"Q3",v:q3,b:false},{l:"Médiane",v:median,b:true,c:"#4a6cf7"},{l:"Q1",v:q1,b:false},{l:"Minimum",v:minV,b:false}]
-            .map(function(r) { return "<div style=\"display:flex;justify-content:space-between;gap:10px;" + (r.b?"color:"+r.c+";font-weight:700":"color:#888") + "\"><span>" + r.l + "</span><span>" + r.v.toFixed(2) + "</span></div>"; }).join("") +
-          "</div>" +
-        "</div>" +
-        "<div style=\"font-size:13px;font-weight:700;color:#4a6cf7;margin-bottom:8px;align-self:flex-start\">Répartition par niveaux</div>" +
-        "<div style=\"display:flex;gap:12px;align-items:center\">" + svgPie +
-          "<div style=\"font-size:10px;display:flex;flex-direction:column;gap:5px\">" +
-            niveaux.map(function(n) {
-              return "<div style=\"display:flex;align-items:flex-start;gap:6px\">" +
-                "<span style=\"width:9px;height:9px;border-radius:2px;background:" + n.color + ";flex-shrink:0;margin-top:2px\"></span>" +
-                "<span><span style=\"color:#555\">" + n.label + "</span><br><span style=\"color:#1a1a18;font-weight:700\">" + n.count + " (" + Math.round(n.count/vals.length*100) + " %)</span></span>" +
-              "</div>";
-            }).join("") +
-          "</div>" +
-        "</div>" +
-      "</div>" +
-    "</div>" +
+      // Droite : boxplot + camembert côte à côte
+      '<div style="padding:10px 12px;display:flex;gap:12px;align-items:flex-start;flex-shrink:0">' +
+        // Boxplot
+        '<div>' +
+          '<div style="font-size:11px;font-weight:700;color:#4a6cf7;margin-bottom:6px">Dispersion</div>' +
+          '<div style="display:flex;gap:8px;align-items:center">' +
+            svgBox +
+            '<div style="font-size:9px;display:flex;flex-direction:column;gap:3px;white-space:nowrap">' +
+              (maxV!==null?'<div style="color:#888">Max <b>'+maxV.toFixed(2)+'</b></div>':'') +
+              (q3!==null?'<div style="color:#888">Q3 <b>'+q3.toFixed(2)+'</b></div>':'') +
+              (median!==null?'<div style="color:#4a6cf7;font-weight:700">Méd. <b>'+median.toFixed(2)+'</b></div>':'') +
+              (q1!==null?'<div style="color:#888">Q1 <b>'+q1.toFixed(2)+'</b></div>':'') +
+              (minV!==null?'<div style="color:#888">Min <b>'+minV.toFixed(2)+'</b></div>':'') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        // Camembert
+        '<div>' +
+          '<div style="font-size:11px;font-weight:700;color:#4a6cf7;margin-bottom:6px">Répartition</div>' +
+          '<div style="display:flex;gap:8px;align-items:center">' +
+            svgPie +
+            '<div style="font-size:9px;display:flex;flex-direction:column;gap:3px">' + legendePie + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
 
-    '</div>';
+    '</div>' +
+  '</div>';
 }
 
 /* ═════
