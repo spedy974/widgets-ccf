@@ -1657,105 +1657,92 @@ function fermerGrilleSaisie() {
   rendreListeSessions();
 }
 
-async function enregistrerGrilleSaisie() {
+function enregistrerGrilleSaisie() {
   if (!sessionCourante) {
     toast("⚠ Aucune évaluation sélectionnée — réouvre l'évaluation puis réessaie", "err");
-    console.error("enregistrerGrilleSaisie appelé sans sessionCourante");
     return;
   }
-  const s = sessionCourante;
-  const lignes = document.querySelectorAll("#sg-tbody tr[data-eleve-id]");
+  var s = sessionCourante;
+  var lignes = document.querySelectorAll("#sg-tbody tr[data-eleve-id]");
 
   if (lignes.length === 0) {
     toast("⚠ Aucun élève dans cette grille — vérifie la classe sélectionnée", "err");
     return;
   }
 
-  // ── Contrôle préalable : aucune note ne doit dépasser le barème ──
-  let hasInvalid = false;
-  lignes.forEach(tr => {
-    const inputEl = tr.querySelector('.sg-input-note');
-    const val = parseFloat(inputEl.value);
+  // Contrôle préalable : aucune note ne doit dépasser le barème
+  var hasInvalid = false;
+  lignes.forEach(function(tr) {
+    var inputEl = tr.querySelector('.sg-input-note');
+    var val = parseFloat(inputEl.value);
     if (!isNaN(val) && (val > s.bareme || val < 0)) {
       hasInvalid = true;
-      validerNoteSaisie(inputEl, s.bareme); // réaffiche le message d'erreur au cas où
+      validerNoteSaisie(inputEl, s.bareme);
     }
   });
   if (hasInvalid) {
-    toast(`⚠ Certaines notes dépassent le barème (sur ${s.bareme}) — corrige-les avant d'enregistrer`, "err");
+    toast("⚠ Certaines notes dépassent le barème — corrige-les avant d'enregistrer", "err");
     return;
   }
 
-  let nbOk = 0, nbErr = 0;
+  // Construire les actions groupées
+  var actionsUpdate = [], actionsAdd = [], lignesAdd = [];
 
-  for (const tr of lignes) {
-    const eleveId = parseInt(tr.dataset.eleveId);
-    const noteId = tr.dataset.noteId ? parseInt(tr.dataset.noteId) : null;
-    const inputEl = tr.querySelector('.sg-input-note');
-    const val = parseFloat(inputEl.value);
+  lignes.forEach(function(tr) {
+    var eleveId = parseInt(tr.dataset.eleveId);
+    var noteId  = tr.dataset.noteId ? parseInt(tr.dataset.noteId) : null;
+    var inputEl = tr.querySelector('.sg-input-note');
+    var val = parseFloat(inputEl.value);
+    if (isNaN(val)) return;
+    if (isNaN(eleveId) || !s.epreuveId) return;
 
-    if (isNaN(val)) continue; // ligne vide, on n'écrase rien
-
-    // Garde-fou : ne jamais écrire une ligne sans élève ou épreuve valides
-    if (isNaN(eleveId) || !s.epreuveId) {
-      console.error("Ligne ignorée — eleveId ou epreuveId invalide", { eleveId, epreuveId: s.epreuveId });
-      nbErr++;
-      continue;
+    if (noteId) {
+      actionsUpdate.push(["UpdateRecord", "Notes", noteId, { note_seq1: val, bareme: s.bareme }]);
+    } else {
+      actionsAdd.push(["AddRecord", "Notes", null, {
+        enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
+        note_seq1: val, bareme: s.bareme, publier: false
+      }]);
+      lignesAdd.push({ tr: tr, eleveId: eleveId, val: val });
     }
+  });
 
-    // Note ramenée sur 20 pour la couleur (cohérence avec le reste de l'appli)
-    const sur20 = (val / s.bareme) * 20;
-    const couleur = sur20 >= 12 ? "vert" : sur20 >= 8 ? "orange" : "rouge";
+  // Mise à jour locale des notes existantes
+  actionsUpdate.forEach(function(action) {
+    var noteId = action[2], data = action[3];
+    var n = notes.find(function(n) { return n.id === noteId; });
+    if (n) { n.note_seq1 = data.note_seq1; n.note_finale = data.note_seq1; n.bareme = data.bareme; n.sessionId = s.id; n.intitule = s.intitule; }
+  });
 
-    try {
-      if (gristConnecte) {
-        if (noteId) {
-          // note_finale est une colonne formule dans Grist : ne jamais l'écrire directement
-          await grist.docApi.applyUserActions([["UpdateRecord", "Notes", noteId, {
-            note_seq1: val, bareme: s.bareme
-          }]]);
-        } else {
-          const r = await grist.docApi.applyUserActions([["AddRecord", "Notes", null, {
-            enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
-            note_seq1: val, bareme: s.bareme, publier: false
-          }]]);
-          const newId = r.retValues[0];
-          notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
-            note_seq1: val, note_finale: val, couleur, publier: false, sessionId: s.id, bareme: s.bareme, intitule: s.intitule });
-          tr.dataset.noteId = newId;
-        }
-      } else {
-        if (noteId) {
-          const n = notes.find(n => n.id === noteId);
-          if (n) { n.note_seq1 = val; n.note_finale = val; n.couleur = couleur; n.bareme = s.bareme; }
-        } else {
-          const newId = Date.now() + eleveId;
-          notes.push({ id: newId, enseignant: monId, eleve: eleveId, epreuve: s.epreuveId,
-            note_seq1: val, note_finale: val, couleur, publier: false, sessionId: s.id, bareme: s.bareme, intitule: s.intitule });
-          tr.dataset.noteId = newId;
-        }
-      }
-
-      if (noteId) {
-        const n = notes.find(n => n.id === noteId);
-        if (n) {
-          n.note_seq1 = val; n.note_finale = val; n.couleur = couleur;
-          n.sessionId = s.id; n.bareme = s.bareme; n.intitule = s.intitule;
-        }
-      }
-
-      nbOk++;
-    } catch(e) {
-      nbErr++;
-      console.error("Erreur ligne élève", eleveId, "—", e.message || e);
-    }
+  var toutesActions = actionsUpdate.concat(actionsAdd);
+  if (!toutesActions.length) {
+    toast("Aucune note à enregistrer", "err");
+    return;
   }
 
-  updateBadges();
-  rendreListeNotes();
-  ouvrirGrillePourSession(s.id);
-
-  ouvrirPopupConfirm(nbOk, nbErr, s);
+  grist.docApi.applyUserActions(toutesActions)
+    .then(function(r) {
+      // Associer les nouveaux IDs aux lignes ajoutées
+      var newIds = r.retValues || [];
+      var offsetAdd = actionsUpdate.length; // les retValues des AddRecord sont après les UpdateRecord
+      lignesAdd.forEach(function(item, i) {
+        var newId = newIds[offsetAdd + i];
+        if (newId) {
+          item.tr.dataset.noteId = newId;
+          notes.push({ id: newId, enseignant: monId, eleve: item.eleveId, epreuve: s.epreuveId,
+            note_seq1: item.val, note_finale: item.val, bareme: s.bareme,
+            publier: false, sessionId: s.id, intitule: s.intitule });
+        }
+      });
+      updateBadges();
+      rendreListeNotes();
+      ouvrirGrillePourSession(s.id);
+      ouvrirPopupConfirm(toutesActions.length, 0, s);
+    })
+    .catch(function(e) {
+      console.error("Erreur enregistrement grille:", e.message);
+      toast("Erreur : " + e.message, "err");
+    });
 }
 
 function ouvrirPopupConfirm(nbOk, nbErr, session) {
@@ -1978,35 +1965,33 @@ function annulerEditionPlanning(id) {
   document.getElementById(`pl-btn-cancel-${id}`).style.display = "none";
 }
 
-async function sauvegarderLignePlanning(planningId) {
-  const newDate  = document.getElementById(`pl-date-${planningId}`).value;
-  const newSalle = document.getElementById(`pl-salle-${planningId}`).value.trim();
+function sauvegarderLignePlanning(planningId) {
+  var newDate  = document.getElementById('pl-date-' + planningId).value;
+  var newSalle = document.getElementById('pl-salle-' + planningId).value.trim();
 
   if (!newDate) { toast("La date est obligatoire", "err"); return; }
 
-  const pl = plannings.find(p => p.id === planningId);
+  var pl = plannings.find(function(p) { return p.id === planningId; });
   if (!pl) return;
 
-  const btnSave = document.getElementById(`pl-btn-save-${planningId}`);
+  var btnSave = document.getElementById('pl-btn-save-' + planningId);
   if (btnSave) { btnSave.disabled = true; btnSave.textContent = "⏳…"; }
 
-  try {
-    if (gristConnecte) {
-      await grist.docApi.applyUserActions([["UpdateRecord", "PlanningDesCCF", planningId, {
-        date_prevue: newDate,
-        salle: newSalle
-      }]]);
-    }
+  grist.docApi.applyUserActions([["UpdateRecord", "PlanningDesCCF", planningId, {
+    date_prevue: newDate, salle: newSalle
+  }]])
+  .then(function() {
     pl.date_prevue = newDate;
     pl.salle = newSalle;
     toast("✓ Planning mis à jour", "ok");
     rendreListePlanning();
     rendreDashboard();
-  } catch(e) {
+  })
+  .catch(function(e) {
     console.error("Erreur sauvegarde planning:", e.message || e);
     toast("Erreur : " + (e.message || e), "err");
     if (btnSave) { btnSave.disabled = false; btnSave.textContent = "💾 Sauver"; }
-  }
+  });
 }
 
 /* ══════════════════════════════════════════
@@ -2713,49 +2698,44 @@ function filtrerEpreuvesConv() {
   });
 }
 
-async function creerConvocation() {
-  const classeId  = parseInt(document.getElementById("conv-new-classe").value);
-  const epreuveId = parseInt(document.getElementById("conv-new-epreuve").value);
-  const date      = document.getElementById("conv-new-date").value;
-  const heure     = document.getElementById("conv-new-heure").value;
-  const salle     = document.getElementById("conv-new-salle").value.trim();
-  const annee     = document.getElementById("conv-new-annee").value.trim();
+function creerConvocation() {
+  var classeId  = parseInt(document.getElementById("conv-new-classe").value);
+  var epreuveId = parseInt(document.getElementById("conv-new-epreuve").value);
+  var date      = document.getElementById("conv-new-date").value;
+  var heure     = document.getElementById("conv-new-heure").value;
+  var salle     = document.getElementById("conv-new-salle").value.trim();
+  var annee     = document.getElementById("conv-new-annee").value.trim();
 
   if (!classeId || !epreuveId || !date) {
     toast("Remplis au minimum : classe, épreuve et date", "err");
     return;
   }
 
-  try {
-    let newId = Date.now();
-    if (gristConnecte) {
-      const r = await grist.docApi.applyUserActions([["AddRecord", "Convocations", null, {
-        classe: classeId, epreuve: epreuveId, enseignant: monId,
-        date_ccf: date, heure_debut: heure, salle, annee_scolaire: annee, statut: "Brouillon"
-      }]]);
-      newId = r.retValues[0];
-    }
+  grist.docApi.applyUserActions([["AddRecord", "Convocations", null, {
+    classe: classeId, epreuve: epreuveId, enseignant: monId,
+    date_ccf: date, heure_debut: heure, salle: salle, annee_scolaire: annee, statut: "Brouillon"
+  }]])
+  .then(function(r) {
+    var newId = r.retValues[0];
     convocations.push({
       id: newId, classe: classeId, epreuve: epreuveId, enseignant: monId,
-      date_ccf: date, heure_debut: heure, salle, annee_scolaire: annee, statut: "Brouillon"
+      date_ccf: date, heure_debut: heure, salle: salle, annee_scolaire: annee, statut: "Brouillon"
     });
-
-    // Reset formulaire
     document.getElementById("conv-new-classe").value = "";
     document.getElementById("conv-new-epreuve").innerHTML = '<option value="">Choisir une classe d\'abord…</option>';
     document.getElementById("conv-new-epreuve").disabled = true;
     document.getElementById("conv-new-date").value = "";
     document.getElementById("conv-new-heure").value = "08:00";
     document.getElementById("conv-new-salle").value = "";
-
     peuplerConvocations();
     rendreEmargement();
     updateBadges();
     toast("✓ Convocation enregistrée", "ok");
-  } catch(e) {
+  })
+  .catch(function(e) {
     console.error(e);
     toast("Erreur d'enregistrement : " + (e.message || e), "err");
-  }
+  });
 }
 
 function peuplerConvocations() {
@@ -3004,170 +2984,127 @@ function docSupprimerPDF() {
   document.getElementById("doc-pdf-zone").style.background = "var(--bg)";
 }
 
-async function uploadPDFGrist(file) {
-  try {
-    const tokenInfo = await grist.docApi.getAccessToken({ readOnly: false });
-    console.log("Token obtenu, baseUrl:", tokenInfo.baseUrl);
-
-    // Méthode 1 : token dans l'URL (évite le preflight CORS sur certaines instances)
-    const uploadUrl = `${tokenInfo.baseUrl}/attachments?auth=${tokenInfo.token}`;
-    console.log("Upload URL:", uploadUrl);
-
-    const formData = new FormData();
-    formData.append('upload', file, file.name);
-
-    const response = await fetch(uploadUrl, {
-      method: 'POST',
-      body: formData
-      // Pas de headers custom pour éviter le preflight CORS
+function uploadPDFGrist(file) {
+  return grist.docApi.getAccessToken({ readOnly: false })
+    .then(function(tokenInfo) {
+      var uploadUrl = tokenInfo.baseUrl + '/attachments?auth=' + tokenInfo.token;
+      var formData = new FormData();
+      formData.append('upload', file, file.name);
+      return fetch(uploadUrl, { method: 'POST', body: formData });
+    })
+    .then(function(response) {
+      if (!response.ok) {
+        return response.text().then(function(errText) {
+          throw new Error('Upload échoué : ' + response.status + ' ' + errText);
+        });
+      }
+      return response.json();
+    })
+    .then(function(ids) {
+      return Array.isArray(ids) ? ids : [ids];
     });
-
-    console.log("Réponse upload:", response.status, response.statusText);
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      console.error("Erreur upload:", errText);
-      throw new Error(`Upload échoué : ${response.status}`);
-    }
-
-    const ids = await response.json();
-    console.log("IDs pièces jointes:", ids);
-    return Array.isArray(ids) ? ids : [ids];
-  } catch(e) {
-    console.error("Erreur uploadPDFGrist:", e.message || e);
-    throw e;
-  }
 }
 
-async function declarerDepot() {
-  const classeId    = parseInt(document.getElementById("doc-classe").value);
-  const epreuveId   = parseInt(document.getElementById("doc-epreuve").value);
-  const date        = document.getElementById("doc-date").value;
-  const commentaire = document.getElementById("doc-commentaire").value.trim();
+function declarerDepot() {
+  var classeId    = parseInt(document.getElementById("doc-classe").value);
+  var epreuveId   = parseInt(document.getElementById("doc-epreuve").value);
+  var date        = document.getElementById("doc-date").value;
+  var commentaire = document.getElementById("doc-commentaire").value.trim();
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
-  // ── Copier TOUT avant le premier await ──
-  const elevesAB    = [...docSelectedEleves];
-  const pdfFile     = docPdfFile;
-  const monIdLocal  = monId;
-  const pdfPresent  = !!pdfFile;
-  const statutDepot = pdfPresent ? "Complet" : "Incomplet";
+  var elevesAB    = docSelectedEleves.slice();
+  var pdfFile     = docPdfFile;
+  var monIdLocal  = monId;
+  var pdfPresent  = !!pdfFile;
+  var statutDepot = pdfPresent ? "Complet" : "Incomplet";
 
-  // Popup avertissement si pas de PDF (await — doit être APRÈS les copies)
   if (!pdfPresent) {
-    const continuer = await afficherAvertissementPDF();
+    var continuer = afficherAvertissementPDFSync();
     if (!continuer) return;
   }
 
-  // Bloquer le bouton
-  const btnEnregistrer = document.querySelector('#tab-documents .btn-orange');
-  const btnTexteOriginal = btnEnregistrer ? btnEnregistrer.textContent : '';
+  var btnEnregistrer = document.querySelector('#tab-documents .btn-orange');
   if (btnEnregistrer) { btnEnregistrer.disabled = true; btnEnregistrer.textContent = "⏳ Enregistrement…"; }
 
-  const progressEl  = document.getElementById("doc-pdf-progress");
-  const progressNom = document.getElementById("doc-pdf-progress-nom");
-  const erreurEl    = document.getElementById("doc-pdf-erreur");
+  var erreurEl = document.getElementById("doc-pdf-erreur");
   if (erreurEl) erreurEl.style.display = "none";
 
-  try {
-    let newId = Date.now();
-    let attachmentIds = [];
+  var uploadPromise = pdfFile ? uploadPDFGrist(pdfFile) : Promise.resolve([]);
 
-    if (gristConnecte) {
-      // ── Upload PDF ──
-      if (pdfFile) {
-        if (progressEl) progressEl.style.display = "flex";
-        if (progressNom) progressNom.textContent = pdfFile.name;
-        if (btnEnregistrer) btnEnregistrer.textContent = "⏳ Téléversement du PDF…";
-        try {
-          attachmentIds = await uploadPDFGrist(pdfFile);
-          console.log("PDF uploadé, IDs:", attachmentIds);
-        } catch(e) {
-          console.warn("Upload PDF échoué:", e.message);
-          if (erreurEl) {
-            erreurEl.textContent = `⚠ Upload PDF échoué : ${e.message}. Le dépôt sera enregistré sans émargement.`;
-            erreurEl.style.display = "block";
-          }
-          attachmentIds = [];
-        } finally {
-          if (progressEl) progressEl.style.display = "none";
-          if (btnEnregistrer) btnEnregistrer.textContent = "⏳ Enregistrement…";
+  uploadPromise
+    .catch(function(e) {
+      console.warn("Upload PDF échoué:", e.message);
+      if (erreurEl) {
+        erreurEl.textContent = "⚠ Upload PDF échoué : " + e.message + ". Le dépôt sera enregistré sans émargement.";
+        erreurEl.style.display = "block";
+      }
+      return [];
+    })
+    .then(function(attachmentIds) {
+      return grist.docApi.listTables().then(function(tables) {
+        var nomStock = tables.find(function(t) { return t.toLowerCase().includes("stockage"); }) || "StockageDocs";
+        var record = {
+          la_classe: classeId, epreuve: epreuveId, enseignant: monIdLocal,
+          date_depot: date, commentaire: commentaire, archive: false,
+          statut_depot: attachmentIds.length > 0 ? "Complet" : statutDepot
+        };
+        if (attachmentIds.length > 0) {
+          record.emargement_pdf = ['L'].concat(attachmentIds);
         }
-      }
+        return grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]])
+          .then(function(r) { return { newId: r.retValues[0], nomStock: nomStock, attachmentIds: attachmentIds }; });
+      });
+    })
+    .then(function(res) {
+      var newId = res.newId, nomStock = res.nomStock, attachmentIds = res.attachmentIds;
 
-      // ── Trouver la table StockageDocs ──
-      const tables = await grist.docApi.listTables();
-      const nomStock = tables.find(t => t.toLowerCase().includes("stockage")) || "StockageDocs";
-
-      // ── AddRecord ──
-      const record = {
-        la_classe: classeId, epreuve: epreuveId, enseignant: monIdLocal,
-        date_depot: date, commentaire, archive: false,
-        statut_depot: attachmentIds.length > 0 ? "Complet" : statutDepot
-      };
-      if (attachmentIds.length > 0) {
-        record.emargement_pdf = ['L', ...attachmentIds];
-      }
-
-      const r = await grist.docApi.applyUserActions([["AddRecord", nomStock, null, record]]);
-      newId = r.retValues[0];
-      console.log("AddRecord StockageDocs OK, newId:", newId);
-
-      // ── UpdateRecord élèves absents ──
+      var nextPromise = Promise.resolve();
       if (elevesAB.length > 0 && newId) {
-        try {
-          await grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
-            eleves_AB: ['L', ...elevesAB.map(e => e.id)]
-          }]]);
-        } catch(e) {
-          console.error("ERREUR UpdateRecord eleves_AB:", e.message || e);
+        nextPromise = grist.docApi.applyUserActions([["UpdateRecord", nomStock, newId, {
+          eleves_AB: ['L'].concat(elevesAB.map(function(e) { return e.id; }))
+        }]]).catch(function(e) {
+          console.error("ERREUR UpdateRecord eleves_AB:", e.message);
           toast("⚠ Élèves absents non sauvegardés", "err");
-        }
+        });
       }
-    }
 
-    stockageDocs.push({
-      id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monIdLocal,
-      date_depot: date, commentaire, archive: false,
-      statut_depot: attachmentIds.length > 0 ? "Complet" : statutDepot,
-      emargement_pdf: attachmentIds
+      return nextPromise.then(function() {
+        stockageDocs.push({
+          id: newId, la_classe: classeId, epreuve: epreuveId, enseignant: monIdLocal,
+          date_depot: date, commentaire: commentaire, archive: false,
+          statut_depot: attachmentIds.length > 0 ? "Complet" : statutDepot
+        });
+        rendreListeDocs();
+        document.getElementById("doc-classe").value = "";
+        document.getElementById("doc-epreuve").innerHTML = '<option value="">Choisir une épreuve…</option>';
+        document.getElementById("doc-date").value = "";
+        document.getElementById("doc-commentaire").value = "";
+        docSelectedEleves = [];
+        renderDocTags();
+        document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
+        document.getElementById("doc-search").disabled = true;
+        docSupprimerPDF();
+
+        if (attachmentIds.length > 0) toast("✓ Dépôt complet enregistré avec émargement PDF", "ok");
+        else if (pdfPresent) toast("⚠ Dépôt enregistré — PDF non joint (CORS bloqué)", "err");
+        else toast("⚠ Dépôt enregistré sans émargement (Incomplet)", "err");
+
+        if (btnEnregistrer) { btnEnregistrer.disabled = false; btnEnregistrer.textContent = "📁 Enregistrer le dépôt"; }
+      });
+    })
+    .catch(function(e) {
+      console.error("Erreur declarerDepot:", e);
+      toast("Erreur d'enregistrement : " + (e.message || e), "err");
+      if (btnEnregistrer) { btnEnregistrer.disabled = false; btnEnregistrer.textContent = "📁 Enregistrer le dépôt"; }
     });
-
-    rendreListeDocs();
-
-    // Reset formulaire
-    document.getElementById("doc-classe").value = "";
-    document.getElementById("doc-epreuve").innerHTML = '<option value="">Choisir une épreuve…</option>';
-    document.getElementById("doc-date").value = "";
-    document.getElementById("doc-commentaire").value = "";
-    docSelectedEleves = [];
-    renderDocTags();
-    document.getElementById("doc-eleves-list").innerHTML = '<div class="empty">Sélectionne d\'abord une classe.</div>';
-    document.getElementById("doc-search").disabled = true;
-    docSupprimerPDF();
-
-    if (attachmentIds.length > 0) {
-      toast("✓ Dépôt complet enregistré avec émargement PDF", "ok");
-    } else if (pdfPresent) {
-      toast("⚠ Dépôt enregistré — PDF non joint (CORS bloqué)", "err");
-    } else {
-      toast("⚠ Dépôt enregistré sans émargement (Incomplet)", "err");
-    }
-
-  } catch(e) {
-    console.error("Erreur declarerDepot:", e);
-    toast("Erreur d'enregistrement : " + (e.message || e), "err");
-  } finally {
-    if (btnEnregistrer) {
-      btnEnregistrer.disabled = false;
-      btnEnregistrer.textContent = btnTexteOriginal;
-    }
-    if (progressEl) progressEl.style.display = "none";
-  }
 }
 
 // Popup avertissement PDF manquant — retourne true si l'enseignant confirme sans PDF
+function afficherAvertissementPDFSync() {
+  return confirm("⚠ Émargement PDF manquant\n\nLa liste d'émargement signée est obligatoire.\n\nContinuer sans PDF ? Le dépôt sera marqué INCOMPLET.");
+}
+
 function afficherAvertissementPDF() {
   return new Promise(resolve => {
     const overlay = document.createElement('div');
@@ -3322,47 +3259,50 @@ function impAnalyser() {
   document.getElementById("imp-preview-card").scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-async function impImporter() {
-  const classeId = parseInt(document.getElementById("imp-classe").value);
-  const aImporter = impParsed.filter(e => e.statut === 'ok');
+function impImporter() {
+  var classeId  = parseInt(document.getElementById("imp-classe").value);
+  var aImporter = impParsed.filter(function(e) { return e.statut === 'ok'; });
   if (aImporter.length === 0) { toast("Aucun élève à importer", "err"); return; }
 
-  const btn = document.getElementById("imp-btn-import");
+  var btn = document.getElementById("imp-btn-import");
   btn.disabled = true;
   btn.textContent = "Importation en cours…";
 
-  let nbOk = 0;
-  const maxExistant = Math.max(0, ...eleves.filter(e => e.classe === classeId).map(e => e.numero_ordre || 0));
+  var maxExistant = Math.max.apply(null, [0].concat(
+    eleves.filter(function(e) { return e.classe === classeId; }).map(function(e) { return e.numero_ordre || 0; })
+  ));
 
-  try {
-    for (let i = 0; i < aImporter.length; i++) {
-      const e = aImporter[i];
-      const numero = maxExistant + i + 1;
-      if (gristConnecte) {
-        const r = await grist.docApi.applyUserActions([["AddRecord", "Eleves", null, {
-          nom_prenom: e.nom_prenom, classe: classeId, numero_ordre: numero, absent_session: false
-        }]]);
-        eleves.push({ id: r.retValues[0], nom_prenom: e.nom_prenom, classe: classeId, numero_ordre: numero });
-      } else {
-        eleves.push({ id: Date.now() + i, nom_prenom: e.nom_prenom, classe: classeId, numero_ordre: numero });
-      }
-      nbOk++;
-    }
+  // Construire toutes les actions en une seule fois
+  var actions = aImporter.map(function(e, i) {
+    return ["AddRecord", "Eleves", null, {
+      nom_prenom: e.nom_prenom, classe: classeId,
+      numero_ordre: maxExistant + i + 1, absent_session: false
+    }];
+  });
 
-    toast(`✓ ${nbOk} élève${nbOk>1?'s':''} importé${nbOk>1?'s':''}`, "ok");
-    document.getElementById("imp-texte").value = "";
-    document.getElementById("imp-preview-card").style.display = "none";
-    impOnClasseChange();
-    peuplerSelects();
-    rendreDashboard();
-    verifierAccesDocuments();
-    updateBadges();
-  } catch(e) {
-    toast("Erreur lors de l'import : " + e.message, "err");
-  }
-
-  btn.disabled = false;
-  btn.textContent = "✓ Importer dans Grist";
+  grist.docApi.applyUserActions(actions)
+    .then(function(r) {
+      var newIds = r.retValues || [];
+      aImporter.forEach(function(e, i) {
+        eleves.push({ id: newIds[i], nom_prenom: e.nom_prenom, classe: classeId, numero_ordre: maxExistant + i + 1 });
+      });
+      var nbOk = aImporter.length;
+      toast("✓ " + nbOk + " élève" + (nbOk>1?"s":"") + " importé" + (nbOk>1?"s":""), "ok");
+      document.getElementById("imp-texte").value = "";
+      document.getElementById("imp-preview-card").style.display = "none";
+      impOnClasseChange();
+      peuplerSelects();
+      rendreDashboard();
+      verifierAccesDocuments();
+      updateBadges();
+      btn.disabled = false;
+      btn.textContent = "✓ Importer dans Grist";
+    })
+    .catch(function(e) {
+      toast("Erreur lors de l'import : " + e.message, "err");
+      btn.disabled = false;
+      btn.textContent = "✓ Importer dans Grist";
+    });
 }
 
 /* ══════════════════════════════════════════
