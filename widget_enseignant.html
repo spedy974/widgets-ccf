@@ -1836,18 +1836,13 @@ async function ajouterPlanning() {
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
-  // Vérification doublon : même classe + même épreuve + même séquence
-  const doublon = plannings.find(function(p) {
-    return p.classe === classeId && p.epreuve === epreuveId && p.sequence === sequence;
-  });
-
+  // Vérification doublon
+  const doublon = plannings.find(p => p.classe === classeId && p.epreuve === epreuveId && p.sequence === sequence);
   if (doublon) {
     const cls = classes.find(c => c.id === classeId);
     const epr = epreuves.find(e => e.id === epreuveId);
     const dateExist = doublon.date_prevue
-      ? (typeof doublon.date_prevue === 'number'
-          ? new Date(doublon.date_prevue * 1000)
-          : new Date(doublon.date_prevue)).toLocaleDateString('fr-FR')
+      ? (typeof doublon.date_prevue === 'number' ? new Date(doublon.date_prevue * 1000) : new Date(doublon.date_prevue)).toLocaleDateString('fr-FR')
       : '—';
     document.getElementById('popup-doublon-body').innerHTML =
       '<div><span style="color:#aaa;font-size:11px">Classe</span><br><strong>' + (cls ? cls.code_classe : '?') + '</strong></div>' +
