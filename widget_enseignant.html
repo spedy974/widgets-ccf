@@ -2032,7 +2032,11 @@ function rendreBilanClasse() {
 
   container.innerHTML = mesClsAff.map(function(cls) {
     return genererBlocBilanClasse(cls);
-  }).join('');
+  }).filter(Boolean).join('');
+
+  if (!container.innerHTML) {
+    container.innerHTML = '<div class="empty">Aucune note saisie pour vos classes.</div>';
+  }
 }
 
 function genererBlocBilanClasse(cls) {
@@ -2072,6 +2076,9 @@ function genererBlocBilanClasse(cls) {
 
   var bareme = 20;
   var sorted = toutesVals.slice().sort(function(a,b){return a-b;});
+
+  // Si pas de notes du tout, ne rien afficher pour cette classe
+  if (!toutesVals.length) return '';
   var moy    = toutesVals.length ? toutesVals.reduce(function(s,v){return s+v;},0)/toutesVals.length : null;
   var median = sorted.length ? (sorted.length%2===0?(sorted[sorted.length/2-1]+sorted[sorted.length/2])/2:sorted[Math.floor(sorted.length/2)]) : null;
   var minV   = sorted.length ? sorted[0] : null;
