@@ -1836,6 +1836,30 @@ async function ajouterPlanning() {
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
+  // Vérification doublon : même classe + même épreuve + même séquence
+  const doublon = plannings.find(function(p) {
+    return p.classe === classeId && p.epreuve === epreuveId && p.sequence === sequence;
+  });
+
+  if (doublon) {
+    const cls = classes.find(c => c.id === classeId);
+    const epr = epreuves.find(e => e.id === epreuveId);
+    const dateExist = doublon.date_prevue
+      ? (typeof doublon.date_prevue === 'number'
+          ? new Date(doublon.date_prevue * 1000)
+          : new Date(doublon.date_prevue)).toLocaleDateString('fr-FR')
+      : '—';
+    const msg = `⚠️ Cette épreuve est déjà programmée !\n\n` +
+      `Classe : ${cls ? cls.code_classe : '?'}\n` +
+      `Épreuve : ${epr ? epr.repere + ' — ' + epr.libelle : '?'}\n` +
+      `Séquence : ${sequence}\n` +
+      `Date prévue : ${dateExist}\n` +
+      `Salle : ${doublon.salle || '—'}\n\n` +
+      `Pour modifier cette entrée, utilise le bouton ✏️ Modifier dans le tableau ci-dessous.`;
+    alert(msg);
+    return;
+  }
+
   try {
     let newId = Date.now();
     if (gristConnecte) {
