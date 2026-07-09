@@ -1836,24 +1836,6 @@ async function ajouterPlanning() {
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
-  // Vérification doublon
-  const doublon = plannings.find(p => p.classe === classeId && p.epreuve === epreuveId && p.sequence === sequence);
-  if (doublon) {
-    const cls = classes.find(c => c.id === classeId);
-    const epr = epreuves.find(e => e.id === epreuveId);
-    const dateExist = doublon.date_prevue
-      ? (typeof doublon.date_prevue === 'number' ? new Date(doublon.date_prevue * 1000) : new Date(doublon.date_prevue)).toLocaleDateString('fr-FR')
-      : '—';
-    document.getElementById('popup-doublon-body').innerHTML =
-      '<div><span style="color:#aaa;font-size:11px">Classe</span><br><strong>' + (cls ? cls.code_classe : '?') + '</strong></div>' +
-      '<div><span style="color:#aaa;font-size:11px">Épreuve</span><br><strong>' + (epr ? epr.repere + ' — ' + epr.libelle : '?') + '</strong></div>' +
-      '<div><span style="color:#aaa;font-size:11px">Séquence</span><br><strong>' + sequence + '</strong></div>' +
-      '<div><span style="color:#aaa;font-size:11px">Date prévue</span><br><strong>' + dateExist + '</strong></div>' +
-      '<div><span style="color:#aaa;font-size:11px">Salle</span><br><strong>' + (doublon.salle || '—') + '</strong></div>';
-    document.getElementById('popup-doublon').style.display = 'flex';
-    return;
-  }
-
   try {
     let newId = Date.now();
     if (gristConnecte) {
@@ -3381,26 +3363,5 @@ function toast(msg, type) {
   }
 })();
 </script>
-
-<!-- Popup doublon planning -->
-<div id="popup-doublon" style="display:none;position:fixed;inset:0;background:rgba(26,26,24,0.45);z-index:300;align-items:center;justify-content:center;padding:16px">
-  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
-      <span style="font-size:36px;flex-shrink:0">⚠️</span>
-      <div>
-        <div style="font-size:15px;font-weight:800;color:#92400e;margin-bottom:2px">Épreuve déjà programmée</div>
-        <div style="font-size:12px;color:#aaa">Aucun doublon n'a été enregistré</div>
-      </div>
-    </div>
-    <div id="popup-doublon-body" style="background:#fff7e6;border:1px solid #f5c475;border-radius:8px;padding:14px 16px;font-size:13px;line-height:1.8;color:#78350f;margin-bottom:20px"></div>
-    <div style="font-size:12px;color:#888;margin-bottom:16px">Pour modifier cette entrée, utilise le bouton <strong>✏️ Modifier</strong> dans le tableau ci-dessous.</div>
-    <div style="text-align:right">
-      <button onclick="document.getElementById('popup-doublon').style.display='none'"
-        style="background:#4a6cf7;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer">
-        Compris
-      </button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
