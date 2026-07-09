@@ -2142,7 +2142,7 @@ function genererBlocBilanClasse(cls) {
   // ── SVG Boxplot ──
   var W=177,H=197,PL=30,PR=7,PT=9,PB=18,CH=H-PT-PB,CW=W-PL-PR;
   var sc = function(v){return PT+CH-(v/20)*CH;};
-  var BX=PL+CW*0.25,BW=CW*0.5;
+  var BW=Math.max(CW*0.5-30,10),BX=PL+(CW-BW)/2;
   var ticks=[0,5,10,15,20];
   var svgBox = toutesVals.length ?
     '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:'+W+'px;height:'+H+'px;flex-shrink:0">' +
