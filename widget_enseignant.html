@@ -2140,7 +2140,7 @@ function genererBlocBilanClasse(cls) {
   var moyGen = avecMoy.length ? avecMoy.reduce(function(s,l){return s+l.moy;},0)/avecMoy.length : null;
 
   // ── SVG Boxplot ──
-  var W=200,H=220,PL=32,PR=8,PT=10,PB=20,CH=H-PT-PB,CW=W-PL-PR;
+  var W=177,H=197,PL=30,PR=7,PT=9,PB=18,CH=H-PT-PB,CW=W-PL-PR;
   var sc = function(v){return PT+CH-(v/20)*CH;};
   var BX=PL+CW*0.25,BW=CW*0.5;
   var ticks=[0,5,10,15,20];
@@ -2177,13 +2177,15 @@ function genererBlocBilanClasse(cls) {
     '<table style="width:100%;border-collapse:collapse;font-size:11px">' +
     '<thead>' +
     '<tr style="background:#f0f4ff">' +
-      '<th style="padding:4px 6px;text-align:center;border:1px solid #dde;font-size:10px;color:#555;width:30px">Rang</th>' +
-      '<th style="padding:4px 8px;text-align:left;border:1px solid #dde;font-size:10px;color:#555">Élève</th>' +
-      '<th style="padding:4px 6px;text-align:center;border:1px solid #dde;font-size:10px;color:#4a6cf7;font-weight:800">Moy./20</th>' +
+      '<th style="padding:4px 6px;text-align:center;border:1px solid #dde;font-size:10px;color:#555;width:30px;position:sticky;left:0;z-index:2;background:#f0f4ff">Rang</th>' +
+      '<th style="padding:4px 8px;text-align:left;border:1px solid #dde;font-size:10px;color:#555;position:sticky;left:30px;z-index:2;background:#f0f4ff">Élève</th>' +
+      '<th style="padding:4px 6px;text-align:center;border:1px solid #dde;font-size:10px;color:#4a6cf7;font-weight:800;position:sticky;left:170px;z-index:2;background:#f0f4ff">Moy./20</th>' +
       colEpreuves.map(function(epr){ return '<th style="padding:4px 6px;text-align:center;border:1px solid #dde;font-size:10px;color:#2d4ecc;font-weight:700">'+epr.repere+'</th>'; }).join('') +
     '</tr>' +
     '<tr style="background:#f8f8ff">' +
-      '<td style="border:1px solid #dde"></td><td style="border:1px solid #dde"></td><td style="border:1px solid #dde"></td>' +
+      '<td style="border:1px solid #dde;position:sticky;left:0;z-index:2;background:#f8f8ff"></td>' +
+      '<td style="border:1px solid #dde;position:sticky;left:30px;z-index:2;background:#f8f8ff"></td>' +
+      '<td style="border:1px solid #dde;position:sticky;left:170px;z-index:2;background:#f8f8ff"></td>' +
       colEpreuves.map(function(epr){ return '<td style="padding:2px 6px;text-align:center;border:1px solid #dde;font-size:9px;color:#888;font-style:italic">'+(dateParEpreuve[epr.id]||'—')+'</td>'; }).join('') +
     '</tr></thead><tbody>' +
     toutesLignes.map(function(l,i){
@@ -2191,18 +2193,18 @@ function genererBlocBilanClasse(cls) {
       var moyStr=l.moy!==null?l.moy.toFixed(2):'—';
       var moyC=l.moy!==null?(l.moy>=16?'#27ae60':l.moy>=10?'#1a1a18':l.moy>=8?'#f59e0b':'#e24b4a'):'#aaa';
       return '<tr style="background:'+bg+'">' +
-        '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;color:#aaa;font-size:10px">'+(l.rang||'—')+'</td>' +
-        '<td style="padding:4px 8px;border:1px solid #eee;font-weight:600">'+l.eleve.nom_prenom+'</td>' +
-        '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;font-weight:800;color:'+moyC+'">'+moyStr+'</td>' +
+        '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;color:#aaa;font-size:10px;position:sticky;left:0;z-index:1;background:'+bg+'">'+(l.rang||'—')+'</td>' +
+        '<td style="padding:4px 8px;border:1px solid #eee;font-weight:600;position:sticky;left:30px;z-index:1;background:'+bg+'">'+l.eleve.nom_prenom+'</td>' +
+        '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;font-weight:800;color:'+moyC+';position:sticky;left:170px;z-index:1;background:'+bg+'">'+moyStr+'</td>' +
         l.vals.map(function(v){
           if(!v) return '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;color:#ccc">—</td>';
           return '<td style="padding:4px 6px;text-align:center;border:1px solid #eee;font-weight:600;color:#1a1a18">'+v.val.toFixed(2)+'</td>';
         }).join('')+'</tr>';
     }).join('') +
     '<tr style="background:#f0f4ff;border-top:2px solid #c7d7f8">' +
-      '<td style="padding:4px 6px;border:1px solid #dde;text-align:center;font-size:9px;color:#888">Moy.</td>' +
-      '<td style="padding:4px 8px;border:1px solid #dde;font-size:10px;color:#4a6cf7;font-weight:700">Classe</td>' +
-      '<td style="padding:4px 6px;text-align:center;border:1px solid #dde;color:#4a6cf7;font-weight:700">'+(moyGen!==null?moyGen.toFixed(2):'—')+'</td>' +
+      '<td style="padding:4px 6px;border:1px solid #dde;text-align:center;font-size:9px;color:#888;position:sticky;left:0;z-index:1;background:#f0f4ff">Moy.</td>' +
+      '<td style="padding:4px 8px;border:1px solid #dde;font-size:10px;color:#4a6cf7;font-weight:700;position:sticky;left:30px;z-index:1;background:#f0f4ff">Classe</td>' +
+      '<td style="padding:4px 6px;text-align:center;border:1px solid #dde;color:#4a6cf7;font-weight:700;position:sticky;left:170px;z-index:1;background:#f0f4ff">'+(moyGen!==null?moyGen.toFixed(2):'—')+'</td>' +
       statsCols.map(function(s){ return '<td style="padding:4px 6px;text-align:center;border:1px solid #dde;color:#4a6cf7;font-weight:700">'+(s.moy!==null?s.moy.toFixed(2):'—')+'</td>'; }).join('') +
     '</tr></tbody></table>';
 
