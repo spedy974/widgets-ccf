@@ -1826,25 +1826,25 @@ function updateBadges() {
 /* ══════════════════════════════════════════
    PLANNING
 ══════════════════════════════════════════ */
-async function ajouterPlanning() {
-  const classeId = parseInt(document.getElementById("pl-classe").value);
-  const epreuveId = parseInt(document.getElementById("pl-epreuve").value);
-  const sequence = document.getElementById("pl-sequence").value;
-  const date = document.getElementById("pl-date").value;
-  const salle = document.getElementById("pl-salle").value.trim();
-  const commentaire = document.getElementById("pl-commentaire").value.trim();
+function ajouterPlanning() {
+  var classeId   = parseInt(document.getElementById("pl-classe").value);
+  var epreuveId  = parseInt(document.getElementById("pl-epreuve").value);
+  var sequence   = document.getElementById("pl-sequence").value;
+  var date       = document.getElementById("pl-date").value;
+  var salle      = document.getElementById("pl-salle").value.trim();
+  var commentaire= document.getElementById("pl-commentaire").value.trim();
 
   if (!classeId || !epreuveId || !date) { toast("Remplis classe, épreuve et date", "err"); return; }
 
   // Vérification doublon : même classe + même épreuve + même séquence
-  const doublon = plannings.find(function(p) {
+  var doublon = plannings.find(function(p) {
     return p.classe === classeId && p.epreuve === epreuveId && p.sequence === sequence;
   });
 
   if (doublon) {
-    const cls = classes.find(c => c.id === classeId);
-    const epr = epreuves.find(e => e.id === epreuveId);
-    const dateExist = doublon.date_prevue
+    var cls = classes.find(function(c) { return c.id === classeId; });
+    var epr = epreuves.find(function(e) { return e.id === epreuveId; });
+    var dateExist = doublon.date_prevue
       ? (typeof doublon.date_prevue === 'number'
           ? new Date(doublon.date_prevue * 1000)
           : new Date(doublon.date_prevue)).toLocaleDateString('fr-FR')
@@ -1859,30 +1859,26 @@ async function ajouterPlanning() {
     return;
   }
 
-  try {
-    let newId = Date.now();
-    if (gristConnecte) {
-      const r = await grist.docApi.applyUserActions([["AddRecord", "PlanningDesCCF", null, {
-        enseignant: monId, classe: classeId, epreuve: epreuveId,
-        sequence, date_prevue: date, salle, commentaire
-      }]]);
-      newId = r.retValues[0];
-    }
-    const cls = classes.find(c => c.id === classeId);
-    const epr = epreuves.find(e => e.id === epreuveId);
-    const today = new Date().toISOString().split('T')[0];
-    const statut = date < today ? "En retard" : "À venir";
-    plannings.push({ id: newId, enseignant: monId, classe: classeId, epreuve: epreuveId, sequence, date_prevue: date, salle, commentaire, statut });
+  grist.docApi.applyUserActions([["AddRecord", "PlanningDesCCF", null, {
+    enseignant: monId, classe: classeId, epreuve: epreuveId,
+    sequence: sequence, date_prevue: date, salle: salle, commentaire: commentaire
+  }]])
+  .then(function(r) {
+    var newId  = r.retValues[0];
+    var today  = new Date().toISOString().split('T')[0];
+    var statut = date < today ? "En retard" : "À venir";
+    plannings.push({ id: newId, enseignant: monId, classe: classeId, epreuve: epreuveId,
+      sequence: sequence, date_prevue: date, salle: salle, commentaire: commentaire, statut: statut });
     rendreListePlanning();
     updateBadges();
-    // Reset
     document.getElementById("pl-classe").value = "";
     document.getElementById("pl-epreuve").value = "";
     document.getElementById("pl-date").value = "";
     document.getElementById("pl-salle").value = "";
     document.getElementById("pl-commentaire").value = "";
     toast("✓ Épreuve ajoutée au planning", "ok");
-  } catch(e) { toast("Erreur d'enregistrement", "err"); }
+  })
+  .catch(function(e) { toast("Erreur d'enregistrement : " + e.message, "err"); });
 }
 
 function rendreListePlanning() {
