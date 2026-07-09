@@ -738,6 +738,24 @@
 <!-- Zone impression -->
 <div id="zone-impression" style="display:none"></div>
 <div id="toast"></div>
+<!-- Popup doublon planning -->
+<div id="popup-doublon" style="display:none;position:fixed;inset:0;background:rgba(26,26,24,0.45);z-index:300;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:14px;padding:28px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <span style="font-size:32px">⚠️</span>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#92400e">Épreuve déjà programmée</div>
+        <div style="font-size:12px;color:#aaa">Aucun doublon enregistré</div>
+      </div>
+    </div>
+    <div id="popup-doublon-body" style="background:#fff7e6;border:1px solid #f5c475;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.9;color:#78350f;margin-bottom:16px"></div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px">Utilise le bouton <strong>✏️ Modifier</strong> dans le tableau pour changer la date ou la salle.</div>
+    <div style="text-align:right">
+      <button onclick="document.getElementById('popup-doublon').style.display='none'"
+        style="background:#4a6cf7;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer">Compris</button>
+    </div>
+  </div>
+</div>
 <script>
 /* ══════════════════════════════════════════
    ÉTAT GLOBAL
