@@ -85,7 +85,7 @@
 
   .profils-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     margin-bottom: 32px;
   }
@@ -279,13 +279,6 @@
   <h2>Cliquez sur votre profil pour accéder à votre espace</h2>
   <div class="profils-grid">
 
-    <div class="profil-card rrupn" onclick="allerVers('rrupn')">
-      <div class="profil-check">✓</div>
-      <div class="profil-icon">🛡️</div>
-      <div class="profil-name">RRUPN</div>
-      <div class="profil-desc">Référent Ressource des Usages Pédagogiques Numériques — Accès complet</div><div class="profil-arrow">→ Accéder</div>
-    </div>
-
     <div class="profil-card enseignant" onclick="allerVers('enseignant')">
       <div class="profil-check">✓</div>
       <div class="profil-icon">👨‍🏫</div>
@@ -317,7 +310,6 @@
   // ── Liens directs par profil ──
   // Remplace les numéros par les vrais numéros de pages de ton document
   const LIENS_PROFIL = {
-    rrupn:      BASE + "11",  // Page tableau de bord RRUPN (p/11 = Tableau de bord CCF)
     enseignant: BASE + "19",  // Page widget enseignant (p/19 = Mon espace enseignant)
     direction:  BASE + "20",  // Page widget direction (p/20 = Tableau de bord Direction)
   };
