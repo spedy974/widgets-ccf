@@ -85,7 +85,7 @@
 
   .profils-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     margin-bottom: 32px;
   }
@@ -113,6 +113,9 @@
   }
 
   .profil-card.rrupn .profil-arrow { color: var(--rrupn); }
+  .profil-card.declaration .profil-arrow, .profil-card.declaration .profil-name { color: #1D9E75; }
+  .profil-card.declaration.selected { border-color: #1D9E75; background: #e0f5ee; }
+  .profil-card.declaration.selected .profil-check { background: #1D9E75; display: flex; }
   .profil-card.enseignant .profil-arrow { color: var(--enseignant); }
   .profil-card.direction .profil-arrow { color: var(--direction); }
 
@@ -279,6 +282,13 @@
   <h2>Cliquez sur votre profil pour accéder à votre espace</h2>
   <div class="profils-grid">
 
+    <div class="profil-card declaration" onclick="allerVers('declaration')">
+      <div class="profil-check">✓</div>
+      <div class="profil-icon">📋</div>
+      <div class="profil-name">Mes épreuves CCF</div>
+      <div class="profil-desc">À faire en début d'année : déclarer ses épreuves et ses classes</div><div class="profil-arrow">→ Déclarer</div>
+    </div>
+
     <div class="profil-card enseignant" onclick="allerVers('enseignant')">
       <div class="profil-check">✓</div>
       <div class="profil-icon">👨‍🏫</div>
@@ -311,6 +321,7 @@
   // ?style=singlePage masque le menu de gauche de Grist (la saisie reste possible)
   // Remplace les numéros par les vrais numéros de pages de ton document
   const LIENS_PROFIL = {
+    declaration: BASE + "29?style=singlePage", // Page « Mes épreuves CCF » (p/29)
     enseignant: BASE + "19?style=singlePage",  // Page widget enseignant (p/19 = Mon espace enseignant)
     direction:  BASE + "20?style=singlePage",  // Page widget direction (p/20 = Tableau de bord Direction)
   };
