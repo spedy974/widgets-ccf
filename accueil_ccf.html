@@ -92,6 +92,15 @@
     margin-bottom: 20px;
   }
 
+  #qr-zone { width:100%; max-width:640px; margin:8px auto 28px; display:flex; align-items:center; gap:20px; background:#fff;
+             border:1px solid var(--border); border-radius:14px; padding:16px 20px; }
+  #qr-zone img { border-radius:8px; flex-shrink:0; }
+  .qr-titre { font-weight:800; font-size:15px; color:#6d28d9; margin-bottom:6px; }
+  .qr-texte { font-size:13px; color:var(--muted); line-height:1.55; }
+  .qr-lien { font-size:11px; color:#a8a6a0; margin-top:8px; word-break:break-all; }
+  /* Inutile sur un téléphone ou dans l'application installée */
+  @media (max-width: 700px) { #qr-zone { display:none; } }
+  @media (display-mode: standalone) { #qr-zone { display:none; } }
   #install-zone { width:100%; max-width:640px; margin:0 auto 24px; }
   #btn-installer { width:100%; display:flex; align-items:center; gap:12px; text-align:left; background:#fff; border:1.5px solid #c4b5fd;
                    border-radius:12px; padding:10px 14px; cursor:pointer; font-family:inherit; color:#1a1a18; box-shadow:0 2px 8px rgba(109,40,217,.08); }
@@ -337,6 +346,17 @@
       <div class="profil-desc">Consultation de l'avancement, programmation et archivage</div><div class="profil-arrow">→ Accéder</div>
     </div>
 
+  </div>
+</div>
+
+<!-- QR CODE : ouvrir la page sur un smartphone -->
+<div id="qr-zone">
+  <img src="icones/qrcode-accueil.png" alt="QR code vers la page d'accueil Gestion CCF" width="150" height="150">
+  <div>
+    <div class="qr-titre">📱 Sur votre smartphone</div>
+    <div class="qr-texte">Flashez ce QR code avec l'appareil photo de votre téléphone pour ouvrir cette page,
+      puis touchez <strong>« Installer l'application »</strong> pour ajouter l'icône <strong>Gestion CCF</strong> sur votre écran d'accueil.</div>
+    <div class="qr-lien">spedy974.github.io/widgets-ccf/accueil_ccf.html</div>
   </div>
 </div>
 
