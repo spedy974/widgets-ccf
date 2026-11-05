@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestion CCF — Lycée Gérard Ethève</title>
+<!-- Application installable (icône sur l'écran d'accueil) -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#6d28d9">
+<link rel="icon" type="image/png" sizes="32x32" href="icones/favicon-32.png">
+<link rel="apple-touch-icon" href="icones/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gestion CCF">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -82,6 +91,18 @@
     letter-spacing: 0.08em;
     margin-bottom: 20px;
   }
+
+  #install-zone { width:100%; max-width:640px; margin:0 auto 24px; }
+  #btn-installer { width:100%; display:flex; align-items:center; gap:12px; text-align:left; background:#fff; border:1.5px solid #c4b5fd;
+                   border-radius:12px; padding:10px 14px; cursor:pointer; font-family:inherit; color:#1a1a18; box-shadow:0 2px 8px rgba(109,40,217,.08); }
+  #btn-installer img { border-radius:8px; flex-shrink:0; }
+  #btn-installer strong { color:#6d28d9; font-size:14px; }
+  #btn-installer small { color:#6b6b68; font-size:12px; }
+  #ios-aide { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; align-items:flex-end; justify-content:center; padding:16px; }
+  .ios-carte { background:#fff; border-radius:16px; padding:20px; max-width:380px; width:100%; text-align:center; margin-bottom:10px; }
+  .ios-carte ol { text-align:left; font-size:14px; line-height:1.6; padding-left:22px; margin:6px 0 14px; }
+  .ios-ico { display:inline-block; background:#eef2ff; color:#4a6cf7; border-radius:5px; padding:0 6px; font-weight:700; }
+  .ios-carte button { background:#6d28d9; color:#fff; border:none; border-radius:8px; padding:10px 22px; font-weight:700; font-size:14px; }
 
   .profils-grid {
     display: grid;
@@ -270,11 +291,31 @@
 
 <!-- HEADER -->
 <div class="header">
-  <div class="logo">🎓</div>
+  <div class="logo"><img src="icones/icon-192.png" alt="Gestion CCF" width="72" height="72" style="border-radius:16px;box-shadow:0 4px 14px rgba(109,40,217,.25)"></div>
   <h1>Gestion des CCF</h1>
   <div class="subtitle">Lycée Polyvalent Gérard Ethève — La Réunion</div>
   <div class="subtitle">Académie de La Réunion</div>
   <span class="annee">Année scolaire 2026-2027</span>
+</div>
+
+<!-- INSTALLATION SUR SMARTPHONE / ORDINATEUR -->
+<div id="install-zone" style="display:none">
+  <button id="btn-installer" type="button" onclick="installerApp()">
+    <img src="icones/icon-192.png" alt="" width="34" height="34">
+    <span><strong>Installer l'application</strong><br><small>Ajoute l'icône « Gestion CCF » sur votre écran d'accueil</small></span>
+  </button>
+</div>
+<div id="ios-aide" onclick="if(event.target===this)this.style.display='none'">
+  <div class="ios-carte">
+    <img src="icones/icon-192.png" alt="" width="64" height="64" style="border-radius:14px">
+    <div style="font-weight:800;font-size:16px;margin:10px 0 6px">Installer « Gestion CCF »</div>
+    <ol>
+      <li>Touchez le bouton <strong>Partager</strong> <span class="ios-ico">⬆︎</span> en bas de Safari</li>
+      <li>Faites défiler et touchez <strong>« Sur l'écran d'accueil »</strong> <span class="ios-ico">＋</span></li>
+      <li>Touchez <strong>Ajouter</strong> en haut à droite</li>
+    </ol>
+    <button type="button" onclick="document.getElementById('ios-aide').style.display='none'">J'ai compris</button>
+  </div>
 </div>
 
 <!-- SÉLECTION PROFIL -->
@@ -332,6 +373,34 @@
     setTimeout(() => {
       window.location.href = LIENS_PROFIL[profil];
     }, 300);
+  }
+
+  // ── Application installable ──
+  let invitationInstall = null;
+  const estInstallee = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const estIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function() {});
+  }
+  // Android / ordinateur : le navigateur propose l'installation → on affiche notre bouton
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    invitationInstall = e;
+    if (!estInstallee) document.getElementById('install-zone').style.display = 'block';
+  });
+  window.addEventListener('appinstalled', function() {
+    document.getElementById('install-zone').style.display = 'none';
+  });
+  // iPhone / iPad : pas d'installation automatique, le bouton affiche la marche à suivre
+  if (estIOS && !estInstallee) document.getElementById('install-zone').style.display = 'block';
+
+  function installerApp() {
+    if (invitationInstall) {
+      invitationInstall.prompt();
+      invitationInstall.userChoice.then(function() { invitationInstall = null; });
+    } else {
+      document.getElementById('ios-aide').style.display = 'flex';
+    }
   }
 
   // Restaurer l'animation du dernier profil visité
