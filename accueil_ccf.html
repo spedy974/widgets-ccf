@@ -148,6 +148,12 @@
   .profil-card.declaration.selected .profil-check { background: #1D9E75; display: flex; }
   .profil-card.enseignant .profil-arrow { color: var(--enseignant); }
   .profil-card.direction .profil-arrow { color: var(--direction); }
+  .profil-card.labo .profil-arrow, .profil-card.labo .profil-name { color: #0891b2; }
+  .profil-card.labo.selected { border-color: #0891b2; background: #e6f6fa; }
+  .profil-card.labo.selected .profil-check { background: #0891b2; display: flex; }
+  /* 3e carte : centrée sous les deux autres sur grand écran */
+  .profils-grid .profil-card.labo { grid-column: 1 / -1; max-width: calc(50% - 8px); justify-self: center; width: 100%; }
+  @media (max-width: 600px) { .profils-grid .profil-card.labo { max-width: none; } }
 
   .profil-card:hover .profil-arrow { opacity: 1; }
 
@@ -346,6 +352,13 @@
       <div class="profil-desc">Consultation de l'avancement, programmation et archivage</div><div class="profil-arrow">→ Accéder</div>
     </div>
 
+    <div class="profil-card labo" onclick="allerVers('labo')">
+      <div class="profil-check">✓</div>
+      <div class="profil-icon">🔬</div>
+      <div class="profil-name">Espace labo</div>
+      <div class="profil-desc">Aides de laboratoire : calendrier des CCF de sciences pour préparer le matériel</div><div class="profil-arrow">→ Accéder</div>
+    </div>
+
   </div>
 </div>
 
@@ -378,6 +391,7 @@
     declaration: BASE + "29?style=singlePage", // Page « Mes épreuves CCF » (p/29)
     enseignant: BASE + "19?style=singlePage",  // Page widget enseignant (p/19 = Mon espace enseignant)
     direction:  BASE + "20?style=singlePage",  // Page widget direction (p/20 = Tableau de bord Direction)
+    labo:       BASE + "30?style=singlePage",  // Page widget Espace labo (p/30 = aides de laboratoire)
   };
 
   // ── Navigation directe au clic ──
