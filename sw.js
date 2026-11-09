@@ -1,6 +1,6 @@
 // Service worker minimal : rend la page d'accueil installable et disponible hors connexion.
-// Les pages Grist (espace enseignant, Direction) ne sont jamais mises en cache.
-const CACHE = "gestion-ccf-v5";
+// Les pages Grist (espace enseignant, espace pilotage) ne sont jamais mises en cache.
+const CACHE = "gestion-ccf-v6";
 const FICHIERS = ["./accueil_ccf.html", "./manifest.webmanifest", "./icones/icon-192.png", "./icones/icon-512.png"];
 
 self.addEventListener("install", e => {
